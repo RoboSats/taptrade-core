@@ -1,0 +1,58 @@
+### <u>Relevant BIPs</u>
+
+Understanding the following BIPs is relevant for the project.
+#### BIP documents
+
+* [BIP 340 - Schnorr Signatures for secp256k1](https://github.com/bitcoin/bips/blob/master/bip-0340.mediawiki)
+* [BIP 341 - SegWit version 1 spending rules](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki)
+* [BIP 342 - Validation of Taproot Scripts](https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki)
+* [BIP 114(Rejected but interesting) - Merkelized Abstract Syntax Tree](https://github.com/bitcoin/bips/blob/master/bip-0114.mediawiki)
+
+#### BIP Readtrough videos
+
+* [BIP 340 Readtrough - Jimmy Song](https://www.youtube.com/watch?v=rVsNFMzQUck)
+* [BIP 341 Readtrough - Jimmy Song](https://www.youtube.com/watch?v=pkS9aorpxNc)
+* [BIP 342 Readtrough - Jimmy Song](https://www.youtube.com/watch?v=fAEcXh6nZ9U)
+
+### <u>Taproot</u>
+
+![[Taproot output structure.canvas]]
+
+#### [[Spending Taproot UTXOs]]
+#### Videos 
+
+* [Introduction to Taproot - Nicolas Dorier - short video](https://www.youtube.com/watch?v=I7HsXKgtD2I)
+* [Very good, practical introduction to coding taproot Transactions - Bitdevs LA](https://www.youtube.com/watch?v=E-HxgNkPB-8) 
+
+### <u>Descriptors/Miniscript</u>
+
+We can use Descriptors/Miniscript to precisely and human readable describe the Transaction outputs of the escrow transaction pipeline. This improves readability and portability of the pipeline.
+#### Videos
+
+* [Using BDK and Wallet descriptors for Taproot - Video - Bitdevs LA](https://www.youtube.com/watch?v=wsQIZRY2BD0)
+* [Introduction to Miniscript - Port of Bitcoin](https://www.youtube.com/watch?v=uNZpfHEtP4U)
+#### Websites
+
+* [Miniscript introduction/compiler/specification](https://bitcoin.sipa.be/miniscript/)
+
+### <u>Signature/Pubkey aggregation</u>
+
+To combine multiple parties pubkeys to a single combined Taproot pubkey and to create a aggregated signature with all participants MuSig2 is relevant.
+
+* [Paper, very (probably too) deep](https://eprint.iacr.org/2020/1261)
+
+#### Videos
+
+* [MuSig2 in Taproot - Nicolas Dorier - higher level explanation](https://www.youtube.com/watch?v=hrUyGW91JBc)
+* [MuSig2: Simple Two-Round Schnorr Multi-Signatures - very detailed, more crypto focused explanation](https://www.youtube.com/watch?v=Dzqj236cVHk)
+
+### <u>Sighashes</u>
+
+Maybe sighashes could be a useful tool?
+Need to do research on Sighashes in Schnorr signatures (taproot).
+#### Canvas
+
+![[Signature and Flags.canvas]]
+#### Blog articles
+
+[Signature Hash Flags Medium Article - enigbe ochekliye](https://enigbe.medium.com/signature-hash-flags-f059d035ddd0)
