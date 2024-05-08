@@ -4,22 +4,15 @@
     "type": "split",
     "children": [
       {
-        "id": "569fa596d7e5f0e4",
+        "id": "83f3e4f8fc8a23bd",
         "type": "tabs",
         "children": [
           {
-            "id": "a55c01f7d8f62386",
+            "id": "a6f226df420e6a1a",
             "type": "leaf",
             "state": {
-              "type": "canvas",
-              "state": {
-                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
-                "viewState": {
-                  "x": 1051.5,
-                  "y": -8.026990156291024,
-                  "zoom": -0.28644350006291147
-                }
-              }
+              "type": "empty",
+              "state": {}
             }
           }
         ]
@@ -88,7 +81,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +97,6 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -127,9 +118,7 @@
             "type": "leaf",
             "state": {
               "type": "outline",
-              "state": {
-                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas"
-              }
+              "state": {}
             }
           }
         ]
@@ -149,11 +138,12 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "a55c01f7d8f62386",
+  "active": "a6f226df420e6a1a",
   "lastOpenFiles": [
-    "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+    "assets/anyonecanpay.webp",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
+    "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Implementation/UI ideas.canvas",
     "Research/Implementation/Libraries.md",
