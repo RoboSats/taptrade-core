@@ -1,2 +1,7 @@
 # taptrade-core
-Research and implementation of the TapTrade P2P onchain trading pipeline for escrowed fiat &lt;-> bitcoin exchange
+
+### Research
+Find the current research as [Obsidian](https://obsidian.md/) formatted documents under /docs/TapTrade_obs
+
+### Implementation
+TBD
