@@ -46,13 +46,15 @@ To combine multiple parties pubkeys to a single combined Taproot pubkey and to c
 * [MuSig2 in Taproot - Nicolas Dorier - higher level explanation](https://www.youtube.com/watch?v=hrUyGW91JBc)
 * [MuSig2: Simple Two-Round Schnorr Multi-Signatures - very detailed, more crypto focused explanation](https://www.youtube.com/watch?v=Dzqj236cVHk)
 
-### <u>Sighashes</u>
+### <u>Sighash Types</u>
 
-Maybe sighashes could be a useful tool?
-Need to do research on Sighashes in Schnorr signatures (taproot).
+Maybe sighash flags could be a useful tool?
+It's possible to construct a transaction with multiple inputs/outputs from different parties using signatures committing only to specific inputs or outputs.
 #### Canvas
 
 ![[Signature and Flags.canvas]]
 #### Blog articles
+
+[Blog article on Sighashes - good examples - Raghav Sood](https://raghavsood.com/blog/2018/06/10/bitcoin-signature-types-sighash)
 
 [Signature Hash Flags Medium Article - enigbe ochekliye](https://enigbe.medium.com/signature-hash-flags-f059d035ddd0)
