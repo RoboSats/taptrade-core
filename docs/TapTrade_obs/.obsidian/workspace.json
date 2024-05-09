@@ -11,14 +11,11 @@
             "id": "a6f226df420e6a1a",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Taproot output structure.canvas",
-                "viewState": {
-                  "x": 590,
-                  "y": -30.17362449201255,
-                  "zoom": -0.6919547202544427
-                }
+                "file": "Research/Trade Pipelines/Existing research.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -88,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+                "file": "Research/Trade Pipelines/Existing research.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+                "file": "Research/Trade Pipelines/Existing research.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Taproot output structure.canvas"
+                "file": "Research/Trade Pipelines/Existing research.md"
               }
             }
           }
@@ -151,11 +148,11 @@
   },
   "active": "a6f226df420e6a1a",
   "lastOpenFiles": [
+    "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Bitcoin fundamentals/Signature and Flags.canvas",
     "Research/Trade Pipelines/Existing research.md",
-    "Research/Trade Pipelines/current trade flow.canvas",
-    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "assets/anyonecanpay.webp",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
     "Research/Implementation/UI ideas.canvas",
