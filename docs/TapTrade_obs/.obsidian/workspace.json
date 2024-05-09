@@ -1,0 +1,183 @@
+{
+  "main": {
+    "id": "80a386d23cb49933",
+    "type": "split",
+    "children": [
+      {
+        "id": "83f3e4f8fc8a23bd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "a6f226df420e6a1a",
+            "type": "leaf",
+            "state": {
+              "type": "canvas",
+              "state": {
+                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+                "viewState": {
+                  "x": 1337.3998874565568,
+                  "y": -91.84205258234509,
+                  "zoom": -0.28644350006291147
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "e6a26e5c5b019a1e",
+    "type": "split",
+    "children": [
+      {
+        "id": "3f3159116396a08c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "35cfcb845e434840",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "0e07985fb8283f1e",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "738df028c16ab1b9",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "5f13d93e126071cf",
+    "type": "split",
+    "children": [
+      {
+        "id": "985598abe7b3b823",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "dc77dc1e126c6c92",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "1cfcab3d82b07a15",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          },
+          {
+            "id": "d24ff84f08dd4825",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true
+              }
+            }
+          },
+          {
+            "id": "623d6cb84168c727",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "Research/Bitcoin fundamentals/Signature and Flags.canvas"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "daily-notes:Open today's daily note": false,
+      "canvas:Create new canvas": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "a6f226df420e6a1a",
+  "lastOpenFiles": [
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
+    "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+    "assets/anyonecanpay.webp",
+    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
+    "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+    "Research/Implementation/UI ideas.canvas",
+    "Research/Implementation/Libraries.md",
+    "assets/sighash_flags.webp",
+    "assets/DER_encoded_signature.webp",
+    "assets",
+    "assets/onchain_lightning_switch_screenshot.png",
+    "assets/advanced_trade_mode_switch.png",
+    "Research/Implementation/Untitled.md",
+    "Project Timeline.md",
+    "Research/Trade Pipelines/Existing research.md",
+    "2024-05-08.md",
+    "Obsidian How-To.md",
+    "Research/Bitcoin fundamentals/Miniscript.md",
+    "Research/Bitcoin fundamentals",
+    "Research/Trade Pipelines",
+    "Research/Implementation",
+    "Research/Untitled.md",
+    "Research/Bitcoin&Taproot",
+    "Research",
+    "Welcome.md",
+    "note.md",
+    "Ctrl+N.md"
+  ]
+}
