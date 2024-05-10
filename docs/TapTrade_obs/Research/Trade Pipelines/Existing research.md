@@ -17,7 +17,6 @@ Collection of existing onchain p2p trade protocols and research.
 ##### Remove maker fee tx and taker fee tx
 Maybe contains concepts on how to handle the **trade bond**
 [Github Issue](https://github.com/bisq-network/proposals/issues/265#)
-
 ##### Current bisq flow as taker
 [Wiki](https://docs.bisq.network/getting-started#take-an-offer)
 [Anatomy of a Bisq trade - Forum](https://bisq.community/t/anatomy-of-a-bisq-trade/10979/2)

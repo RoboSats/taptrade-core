@@ -4,18 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "83f3e4f8fc8a23bd",
+        "id": "ecf79a0752cdbb44",
         "type": "tabs",
         "children": [
           {
-            "id": "a6f226df420e6a1a",
+            "id": "4cb88f1468c68f7e",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Research/Trade Pipelines/Existing research.md",
-                "mode": "source",
-                "source": false
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
+                "viewState": {
+                  "x": 162.3828125,
+                  "y": 54.00916748046863,
+                  "zoom": 0
+                }
               }
             }
           }
@@ -69,7 +72,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 329.5
   },
   "right": {
     "id": "5f13d93e126071cf",
@@ -85,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/Existing research.md",
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/Existing research.md",
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/Existing research.md"
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas"
               }
             }
           }
@@ -146,13 +149,16 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "a6f226df420e6a1a",
+  "active": "4cb88f1468c68f7e",
   "lastOpenFiles": [
     "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
+    "Research/Trade Pipelines/new concepts/Untitled.md",
+    "Research/Trade Pipelines/new concepts",
+    "Research/Trade Pipelines/Existing research.md",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Bitcoin fundamentals/Signature and Flags.canvas",
-    "Research/Trade Pipelines/Existing research.md",
     "assets/anyonecanpay.webp",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
     "Research/Implementation/UI ideas.canvas",
