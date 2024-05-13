@@ -13,11 +13,11 @@
             "state": {
               "type": "canvas",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "viewState": {
-                  "x": 162.3828125,
-                  "y": 54.00916748046863,
-                  "zoom": 0
+                  "x": 314.9412816959537,
+                  "y": 743.9130469552407,
+                  "zoom": -0.7517198294462054
                 }
               }
             }
@@ -88,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1.canvas"
+                "file": "Research/Trade Pipelines/current trade flow.canvas"
               }
             }
           }
@@ -151,9 +151,10 @@
   },
   "active": "4cb88f1468c68f7e",
   "lastOpenFiles": [
+    "Research/Implementation/Libraries.md",
+    "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
     "signet-instance.md",
     "Research/Trade Pipelines/current trade flow.canvas",
-    "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
     "Research/Trade Pipelines/new concepts/Untitled.md",
     "Research/Trade Pipelines/new concepts",
     "Research/Trade Pipelines/Existing research.md",
@@ -163,7 +164,6 @@
     "assets/anyonecanpay.webp",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
     "Research/Implementation/UI ideas.canvas",
-    "Research/Implementation/Libraries.md",
     "assets/sighash_flags.webp",
     "assets/DER_encoded_signature.webp",
     "assets",
