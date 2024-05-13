@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"5b8863761f608702","type":"text","text":"Just going to write some stuff down here while thinking about it. **Don't expect it to make sense yet!**","x":-415,"y":-360,"width":460,"height":80,"color":"1"},
+		{"id":"8b7862709255b800","type":"text","text":"\n***MSTB*** (Maker seller taker buyer)","x":-345,"y":-440,"width":320,"height":60,"color":"3"},
+		{"id":"428c2dc0767db819","type":"text","text":"semi trusted - coordinator could steal/burn bond - but low risk as bonds are small and reputation would be damaged. Also no control on full trade amount.","x":-402,"y":-260,"width":434,"height":120,"color":"5"},
+		{"id":"dba9c662192cf5bb","type":"text","text":"**Maker**","x":-600,"y":42,"width":125,"height":60},
+		{"id":"93c73227c82f1a81","type":"text","text":"**Coordinator**\n\nwatches Mempool and Chain, could publish the bond TX. Essentially just to prevent orderbook spam / for skin in the game.\n\n*SIGHASH_ALL | ANYONECANPAY* could make it possible for the coordinator to add inputs up to the height of the bond to push the TX fees without losing capital itself. \nAlso out of band mining would cause a cost for the Maker so there is always a price to being unreliable. \n\nThe Maker could be required to use Inputs at least the value of the trade amount to proof that he owns enough sats to fulfill the trade.","x":80,"y":-118,"width":500,"height":380},
+		{"id":"810eebcd41474f56","x":-310,"y":360,"width":250,"height":60,"type":"text","text":"...tbc"}
+	],
+	"edges":[
+		{"id":"77d1ff9130716b53","fromNode":"dba9c662192cf5bb","fromSide":"right","toNode":"93c73227c82f1a81","toSide":"left","label":"signed TX\n\n-> Bond to coordinator\n -> change to self"}
+	]
+}

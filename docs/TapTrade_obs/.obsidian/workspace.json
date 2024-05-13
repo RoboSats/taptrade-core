@@ -4,22 +4,15 @@
     "type": "split",
     "children": [
       {
-        "id": "ecf79a0752cdbb44",
+        "id": "c01e7ef9b6783479",
         "type": "tabs",
         "children": [
           {
-            "id": "4cb88f1468c68f7e",
+            "id": "117cb3f7c46e67c9",
             "type": "leaf",
             "state": {
-              "type": "canvas",
-              "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
-                "viewState": {
-                  "x": 525.2459763356514,
-                  "y": -31.37831648394331,
-                  "zoom": -1.4335164388020833
-                }
-              }
+              "type": "empty",
+              "state": {}
             }
           }
         ]
@@ -72,8 +65,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 329.5,
-    "collapsed": true
+    "width": 329.5
   },
   "right": {
     "id": "5f13d93e126071cf",
@@ -89,7 +81,6 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -106,7 +97,6 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,9 +118,7 @@
             "type": "leaf",
             "state": {
               "type": "outline",
-              "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas"
-              }
+              "state": {}
             }
           }
         ]
@@ -150,18 +138,18 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "4cb88f1468c68f7e",
+  "active": "117cb3f7c46e67c9",
   "lastOpenFiles": [
-    "Research/Implementation/Libraries.md",
-    "Research/Trade Pipelines/new concepts/random pipeline 1.canvas",
-    "signet-instance.md",
+    "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
     "Research/Trade Pipelines/current trade flow.canvas",
-    "Research/Trade Pipelines/new concepts/Untitled.md",
-    "Research/Trade Pipelines/new concepts",
-    "Research/Trade Pipelines/Existing research.md",
-    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+    "Research/Implementation/Libraries.md",
+    "Research/Trade Pipelines/Existing research.md",
+    "signet-instance.md",
+    "Research/Trade Pipelines/new concepts/Untitled.md",
+    "Research/Trade Pipelines/new concepts",
+    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "assets/anyonecanpay.webp",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
     "Research/Implementation/UI ideas.canvas",

@@ -15,6 +15,9 @@ This crate provides a flexible rust implementation of [MuSig2](https://eprint.ia
 
 MuSig2 allows groups of mutually distrusting parties to cooperatively sign data and aggregate their signatures into a single aggregated signature which is indistinguishable from a signature made by a single private key. The group collectively controls an _aggregated public key_ which can only create signatures if everyone in the group cooperates (AKA an N-of-N multisignature scheme). MuSig2 is optimized to support secure signature aggregation with only **two round-trips of network communication.**
 
+## [LND MuSig2 implementation](https://github.com/guggero/lnd/blob/93e069f3bd4cdb2198a0ff158b6f8f43a649e476/docs/musig2.md)
+
+
 ## [frost crate](https://github.com/ZcashFoundation/frost)
 
 This should work with bitcoin as it supports secp256k1.
