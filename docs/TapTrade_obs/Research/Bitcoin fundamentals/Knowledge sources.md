@@ -34,6 +34,8 @@ We can use Descriptors/Miniscript to precisely and human readable describe the T
 #### Websites
 
 * [Miniscript introduction/compiler/specification](https://bitcoin.sipa.be/miniscript/)
+* [https://bitcoinops.org/en/preparing-for-taproot/#taproot-descriptors](https://bitcoinops.org/en/preparing-for-taproot/#taproot-descriptors)
+
 
 ### <u>Signature/Pubkey aggregation</u>
 
@@ -58,3 +60,20 @@ It's possible to construct a transaction with multiple inputs/outputs from diffe
 [Blog article on Sighashes - good examples - Raghav Sood](https://raghavsood.com/blog/2018/06/10/bitcoin-signature-types-sighash)
 
 [Signature Hash Flags Medium Article - enigbe ochekliye](https://enigbe.medium.com/signature-hash-flags-f059d035ddd0)
+
+
+
+### <u>How to make taproot transactions? (Example transactions)</u>
+
+  
+
+https://github.com/danielabrozzoni/multisigs_and_carrots (Best Example I could find)
+
+https://bitcoindevkit.org/blog/2021/11/first-bdk-taproot-tx-look-at-the-code-part-1/ (Interesting read)
+
+https://github.com/bitcoin-core/btcdeb/blob/master/doc/tapscript-example-with-tap.md (Good code for spending taproot transactions)
+
+https://dev.to/eunovo/a-guide-to-creating-taproot-scripts-with-bitcoinjs-lib-4oph (Can look at this, this uses bitcoinjs-lib to create taproot scripts)
+
+  
+  
