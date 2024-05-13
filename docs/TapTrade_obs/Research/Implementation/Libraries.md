@@ -19,3 +19,14 @@ MuSig2 allows groups of mutually distrusting parties to cooperatively sign data 
 
 This should work with bitcoin as it supports secp256k1.
 IIUC frost supports schnorr treshold signatures, unlike N-of-N in MuSig2, Frost can do M-of-N.
+
+
+## [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib?tab=readme-ov-file)
+
+  
+
+A javascript Bitcoin library for node.js and browsers. Written in TypeScript, but committing the JS files to verify.
+
+  
+
+Can look at this library. Example taproot spending using bitcoinjs-lib: https://github.com/bitcoinjs/bitcoinjs-lib/blob/master/test/integration/taproot.spec.ts
