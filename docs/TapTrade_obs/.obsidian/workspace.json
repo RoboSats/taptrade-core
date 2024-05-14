@@ -4,16 +4,16 @@
     "type": "split",
     "children": [
       {
-        "id": "beaad7e2dbdb6c54",
+        "id": "3f4f04a94aff6fa7",
         "type": "tabs",
         "children": [
           {
-            "id": "1982ff791d557542",
+            "id": "5b040089919f2e28",
             "type": "leaf",
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Research/Implementation/Libraries.md",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "mode": "source",
                 "source": false
               }
@@ -85,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Implementation/Libraries.md",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Implementation/Libraries.md",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Implementation/Libraries.md"
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md"
               }
             }
           }
@@ -146,6 +146,12 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "1982ff791d557542",
-  "lastOpenFiles": []
+  "active": "5b040089919f2e28",
+  "lastOpenFiles": [
+    "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
+    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+    "Research/Implementation/Libraries.md"
+  ]
 }

@@ -31,6 +31,7 @@ We can use Descriptors/Miniscript to precisely and human readable describe the T
 
 * [Using BDK and Wallet descriptors for Taproot - Video - Bitdevs LA](https://www.youtube.com/watch?v=wsQIZRY2BD0)
 * [Introduction to Miniscript - Port of Bitcoin](https://www.youtube.com/watch?v=uNZpfHEtP4U)
+* [Getting started with Miniscript - Andrew Poelstra](https://www.youtube.com/watch?v=eTUuwASdUBE)
 #### Websites
 
 * [Miniscript introduction/compiler/specification](https://bitcoin.sipa.be/miniscript/)
