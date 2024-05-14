@@ -12,7 +12,7 @@
 		{"id":"09c6192278d0c20c","type":"text","text":"Maker","x":-1000,"y":430,"width":120,"height":60,"color":"4"},
 		{"id":"1939841fedec6c0f","type":"text","text":"***Possible Keyspend***","x":-1203,"y":580,"width":263,"height":60,"color":"3"},
 		{"id":"ab10f89dba11c188","type":"text","text":"***Protocol A***\n***MSTB*** (Maker seller taker buyer), maybe some nomenclature could be useful for further thoughts\n\nAdapted a bit to onchain possibilities (no time limitations with onchain, so payout address can be submitted upfront/Escrow can be locked with Bond)","x":-340,"y":-760,"width":405,"height":260,"color":"3"},
-		{"id":"f61c6285cefa3b31","type":"text","text":"**Timeout**\nMaker gets his own Bond and Taker bond","x":-757,"y":660,"width":374,"height":79},
+		{"id":"f61c6285cefa3b31","type":"text","text":"**Timeout**\nMaker gets his own Bond and Taker bond","x":-757,"y":660,"width":398,"height":79},
 		{"id":"b9b6ba151bbae01d","type":"text","text":"Maker","x":-637,"y":920,"width":134,"height":60,"color":"2"},
 		{"id":"425368ae6596b423","type":"text","text":"**Cooperative Cancellation**\nMaker and Taker accept to cancel trade","x":-196,"y":550,"width":362,"height":60},
 		{"id":"0cb3e5ea0f8dfb8b","type":"text","text":"Maker","x":-196,"y":920,"width":115,"height":60,"color":"2"},
@@ -55,7 +55,17 @@
 		{"id":"4c786c80eaae0328","type":"text","text":"2.Buy-order in Orderbook","x":2421,"y":-320,"width":305,"height":60},
 		{"id":"a2878365b55bb0dd","type":"text","text":"Taker | **selling sats**","x":2823,"y":-310,"width":250,"height":50},
 		{"id":"ae0873e7f893c725","type":"text","text":"***Protocol B***\n***MBTS*** (Maker buyer taker seller)\n\nAdapted a bit to onchain possibilities (no time limitations with onchain, so payout address can be submitted upfront/Escrow can be locked with Bond)","x":2543,"y":-760,"width":405,"height":190,"color":"3"},
-		{"id":"1eb173a56b45f948","type":"text","text":"Taker","x":1625,"y":273,"width":110,"height":60,"color":"4"}
+		{"id":"1eb173a56b45f948","type":"text","text":"Taker","x":1625,"y":273,"width":110,"height":60,"color":"4"},
+		{"id":"826f1b6a518c2a10","type":"text","text":"","x":-2000,"y":1360,"width":250,"height":60},
+		{"id":"91eb76b688aa2fa3","type":"text","text":"","x":5040,"y":1360,"width":250,"height":60},
+		{"id":"85053658a29a3bb7","type":"text","text":"Script D\n\nAND(SIG(TAKER), SIG(COORDINATOR))\n\nFees to coordinator.\nRemaining to Taker.","x":816,"y":1860,"width":447,"height":200},
+		{"id":"9dde114e072e9785","type":"text","text":"Script B\nAND(SIG(Maker) && SIG(Taker))\n\nEscrow + Maker Bond to Maker.\n\nTaker Bond to Taker","x":133,"y":1860,"width":250,"height":240},
+		{"id":"91fe39ac62950c10","type":"text","text":"SCRIPT C\n\nAND(SIG(Maker), SIG(COORDINATOR))\n\nFees to coordinator.\nRemaining to Maker\n\n","x":418,"y":1860,"width":385,"height":200},
+		{"id":"5f8cc10757f876b2","type":"text","text":"Script A\n\nAND(AND(TIMELOCK, SIG(MAKER)), SIG(COORDINATOR))\n\nTimeout if Taker doesn't respond anymore.\n\nEverything to Maker.","x":-152,"y":1860,"width":250,"height":280},
+		{"id":"ef48e8e586afd9c9","type":"text","text":"Script E\nAND(TIMELOCK(**Very** long timelock) & SIG(Maker))\n\neverything to Maker\n\nbackup in case coordinator and Taker is gone.\nTimelock has to be longer than maximum escrow period. Timelock needs to be very long to incentivise cosigning with coordinator in Script C to get Fees to coordinator.\n\nAlso as protection against extortion trough Coordinator (aka. hey i help you in your dipute but it will cost 90% fees)","x":-152,"y":2180,"width":240,"height":660},
+		{"id":"9652d176ca6f0655","type":"text","text":"Possible script conditions","x":-197,"y":1520,"width":285,"height":60,"color":"5"},
+		{"id":"513e29d4bb6616cd","type":"text","text":"MSTB Escrow locking key\n(External key of taproot contract where trade participants lock their money to)","x":-457,"y":1660,"width":260,"height":160},
+		{"id":"7a1cd17e5924c237","type":"text","text":"Internal Key\nSigned by Taker, Maker and Coordinator via MuSig2 in case of complete trade\n","x":-804,"y":1860,"width":287,"height":140}
 	],
 	"edges":[
 		{"id":"0452390c8e326418","fromNode":"fe94f3c9a67875b6","fromSide":"bottom","toNode":"9d82ff6bff57a83c","toSide":"top","label":"1. paying/locking Maker bond and Escrow"},
@@ -119,6 +129,13 @@
 		{"id":"797f33fc3f6591ba","fromNode":"508af0ac065cc414","fromSide":"top","toNode":"f37650cb37821ec1","toSide":"bottom"},
 		{"id":"a1ee13348f08da96","fromNode":"58af737d4b901b93","fromSide":"bottom","toNode":"f37650cb37821ec1","toSide":"top","label":"Fees"},
 		{"id":"ed04b15bb0b41fcc","fromNode":"da056e0d063f396b","fromSide":"top","toNode":"eaabe56112938e2c","toSide":"bottom"},
-		{"id":"10b87549eefddaae","fromNode":"cae35a028b34a2f8","fromSide":"bottom","toNode":"eaabe56112938e2c","toSide":"top","label":"Fees"}
+		{"id":"10b87549eefddaae","fromNode":"cae35a028b34a2f8","fromSide":"bottom","toNode":"eaabe56112938e2c","toSide":"top","label":"Fees"},
+		{"id":"472a8a46eb9b23ae","fromNode":"91eb76b688aa2fa3","fromSide":"left","toNode":"826f1b6a518c2a10","toSide":"right","label":"Untested/incomplete thoughts below this line"},
+		{"id":"aa8b98f0cfd897fe","fromNode":"7a1cd17e5924c237","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"left"},
+		{"id":"316934cbb245da9e","fromNode":"ef48e8e586afd9c9","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
+		{"id":"6262986d7025c285","fromNode":"9dde114e072e9785","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
+		{"id":"3326fc6ba63a6040","fromNode":"5f8cc10757f876b2","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
+		{"id":"730bcb6bb8477259","fromNode":"91fe39ac62950c10","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
+		{"id":"fb50e1e7bbd04c9a","fromNode":"85053658a29a3bb7","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"}
 	]
 }

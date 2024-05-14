@@ -4,18 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "3f4f04a94aff6fa7",
+        "id": "9151bc6da6fbbb91",
         "type": "tabs",
         "children": [
           {
-            "id": "5b040089919f2e28",
+            "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
-                "mode": "source",
-                "source": false
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
+                "viewState": {
+                  "x": 37.5,
+                  "y": 1161.15233274725,
+                  "zoom": -0.702925838075446
+                }
               }
             }
           }
@@ -85,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md"
+                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas"
               }
             }
           }
@@ -146,12 +149,14 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "5b040089919f2e28",
+  "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
-    "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
-    "Research/Bitcoin fundamentals/Knowledge sources.md",
+    "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
+    "Research/Trade Pipelines/Existing research.md",
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Implementation/Libraries.md"
   ]
 }
