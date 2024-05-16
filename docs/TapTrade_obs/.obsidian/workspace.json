@@ -13,11 +13,11 @@
             "state": {
               "type": "canvas",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "viewState": {
-                  "x": 37.5,
-                  "y": 1161.15233274725,
-                  "zoom": -0.702925838075446
+                  "x": 691.5201009303707,
+                  "y": 2353.5880104568555,
+                  "zoom": -0.048799810246148365
                 }
               }
             }
@@ -88,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
+                "file": "Research/Trade Pipelines/current trade flow.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas"
+                "file": "Research/Trade Pipelines/current trade flow.canvas"
               }
             }
           }

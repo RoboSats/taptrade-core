@@ -58,14 +58,16 @@
 		{"id":"1eb173a56b45f948","type":"text","text":"Taker","x":1625,"y":273,"width":110,"height":60,"color":"4"},
 		{"id":"826f1b6a518c2a10","type":"text","text":"","x":-2000,"y":1360,"width":250,"height":60},
 		{"id":"91eb76b688aa2fa3","type":"text","text":"","x":5040,"y":1360,"width":250,"height":60},
-		{"id":"85053658a29a3bb7","type":"text","text":"Script D\n\nAND(SIG(TAKER), SIG(COORDINATOR))\n\nFees to coordinator.\nRemaining to Taker.","x":816,"y":1860,"width":447,"height":200},
-		{"id":"9dde114e072e9785","type":"text","text":"Script B\nAND(SIG(Maker) && SIG(Taker))\n\nEscrow + Maker Bond to Maker.\n\nTaker Bond to Taker","x":133,"y":1860,"width":250,"height":240},
-		{"id":"91fe39ac62950c10","type":"text","text":"SCRIPT C\n\nAND(SIG(Maker), SIG(COORDINATOR))\n\nFees to coordinator.\nRemaining to Maker\n\n","x":418,"y":1860,"width":385,"height":200},
-		{"id":"5f8cc10757f876b2","type":"text","text":"Script A\n\nAND(AND(TIMELOCK, SIG(MAKER)), SIG(COORDINATOR))\n\nTimeout if Taker doesn't respond anymore.\n\nEverything to Maker.","x":-152,"y":1860,"width":250,"height":280},
-		{"id":"ef48e8e586afd9c9","type":"text","text":"Script E\nAND(TIMELOCK(**Very** long timelock) & SIG(Maker))\n\neverything to Maker\n\nbackup in case coordinator and Taker is gone.\nTimelock has to be longer than maximum escrow period. Timelock needs to be very long to incentivise cosigning with coordinator in Script C to get Fees to coordinator.\n\nAlso as protection against extortion trough Coordinator (aka. hey i help you in your dipute but it will cost 90% fees)","x":-152,"y":2180,"width":240,"height":660},
+		{"id":"9dde114e072e9785","type":"text","text":"(Script B)\nCould also be keyspend MuSig2 spend!\n\nMUSIG(SIG(Maker) && SIG(Taker) && SIG(COORDINATOR))\n\n`and_v(v:pk(MAKER),and_v(v:pk(TAKER),pk(COORDINATOR)))`\n\nEscrow + Maker Bond to Maker.\n\nTaker Bond to Taker\n\nNeeds Coordinator signature to prevent Maker and Taker from stealing Fees of coordinator after successful trade.","x":133,"y":1860,"width":250,"height":560},
+		{"id":"5f8cc10757f876b2","type":"text","text":"Script A\n\nAND(AND(TIMELOCK(escrow timer), SIG(MAKER)), SIG(COORDINATOR))\n\nTimeout if Taker doesn't respond anymore.\n\nEverything to Maker\n\n`and_v(v:pk(COORDINATOR),and_v(v:pk(MAKER),after(144)))`","x":-180,"y":1860,"width":278,"height":320},
 		{"id":"9652d176ca6f0655","type":"text","text":"Possible script conditions","x":-197,"y":1520,"width":285,"height":60,"color":"5"},
 		{"id":"513e29d4bb6616cd","type":"text","text":"MSTB Escrow locking key\n(External key of taproot contract where trade participants lock their money to)","x":-457,"y":1660,"width":260,"height":160},
-		{"id":"7a1cd17e5924c237","type":"text","text":"Internal Key\nSigned by Taker, Maker and Coordinator via MuSig2 in case of complete trade\n","x":-804,"y":1860,"width":287,"height":140}
+		{"id":"7a1cd17e5924c237","type":"text","text":"Internal Key\nSigned by Taker, Maker and Coordinator via MuSig2 in case of complete trade\n","x":-804,"y":1860,"width":287,"height":140},
+		{"id":"ef48e8e586afd9c9","type":"text","text":"Script E\nAND(TIMELOCK(**Very** long timelock) & SIG(Maker))\n\n`and_v(v:pk(MAKER),after(12228))`\n\neverything to Maker\n\nbackup in case coordinator and Taker is gone.\nTimelock has to be longer than maximum escrow period. Timelock needs to be very long to incentivise cosigning with coordinator in Script C to get Fees to coordinator.\n\nAlso as protection against extortion trough Coordinator (aka. hey i help you in your dipute but it will cost 90% fees)","x":-183,"y":2220,"width":285,"height":740},
+		{"id":"91fe39ac62950c10","type":"text","text":"SCRIPT C\n\nAND(SIG(Maker), SIG(COORDINATOR))\n`and_v(v:pk(MAKER),pk(COORDINATOR))`\n\nFees to coordinator.\nRemaining to Maker\n\n","x":400,"y":1860,"width":385,"height":200},
+		{"id":"85053658a29a3bb7","type":"text","text":"Script D\n\nAND(SIG(TAKER), SIG(COORDINATOR))\n`and_v(v:pk(TAKER),pk(COORDINATOR))`\n\nFees to coordinator.\nRemaining to Taker.","x":800,"y":1860,"width":447,"height":200},
+		{"id":"15325febea2b856b","x":133,"y":2460,"width":250,"height":580,"type":"text","text":"SCRIPT F\nAND(TIMELOCK(2048), AND(SIG(TAKER), SIG(MAKER)))\n`and_v(and_v(v:pk(MAKER),v:pk(TAKER)),after(2048))`\n\nCooperative close without coordinator, in case coordinator vanishes or doesn't cosign.\n\nCould be used to prevent paying fees to coordinator after successful trade but both maker and taker would have to cooperate and wait at least some time.\n\n"},
+		{"id":"c82c619d813331ac","x":-220,"y":3040,"width":280,"height":100,"color":"1","type":"text","text":"Check size, op_checksigadd 2of2 vs just checking 2 sigs"}
 	],
 	"edges":[
 		{"id":"0452390c8e326418","fromNode":"fe94f3c9a67875b6","fromSide":"bottom","toNode":"9d82ff6bff57a83c","toSide":"top","label":"1. paying/locking Maker bond and Escrow"},
@@ -136,6 +138,7 @@
 		{"id":"6262986d7025c285","fromNode":"9dde114e072e9785","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
 		{"id":"3326fc6ba63a6040","fromNode":"5f8cc10757f876b2","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
 		{"id":"730bcb6bb8477259","fromNode":"91fe39ac62950c10","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
-		{"id":"fb50e1e7bbd04c9a","fromNode":"85053658a29a3bb7","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"}
+		{"id":"fb50e1e7bbd04c9a","fromNode":"85053658a29a3bb7","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"},
+		{"id":"d3e522d4c66fd50d","fromNode":"15325febea2b856b","fromSide":"top","toNode":"513e29d4bb6616cd","toSide":"right"}
 	]
 }
