@@ -1,0 +1,23 @@
+{
+	"nodes":[
+		{"id":"deac0e8159d44e7f","x":300,"y":-170,"width":250,"height":80,"type":"text","text":"Trading only logic"},
+		{"id":"fa909bd36f010298","x":-400,"y":-600,"width":250,"height":60,"type":"text","text":"CLI input parsing"},
+		{"id":"66a07a00114aaee3","x":-1060,"y":-160,"width":250,"height":60,"type":"text","text":"Coordination only logic"},
+		{"id":"190c13d27acfe062","x":-740,"y":-160,"width":220,"height":60,"color":"2","type":"text","text":"Coordinator module"},
+		{"id":"3090e35b6908a516","x":0,"y":-160,"width":250,"height":60,"color":"4","type":"text","text":"Trader module"},
+		{"id":"5d7f46a9378f9d00","x":-380,"y":-235,"width":250,"height":150,"type":"text","text":"Shared logic\nblockchain scanning,\nBDK functions"},
+		{"id":"a42a47db35e79b8a","x":-380,"y":160,"width":250,"height":200,"type":"text","text":"Communication module\n\nModule to exchange messages between Coordinator and Trader. Possibly http requests over Tor"},
+		{"id":"71bd23cde637dcfa","x":-455,"y":-780,"width":360,"height":120,"color":"6","type":"text","text":"**How we could split the code into different parts** to keep the trader module as lightweight as possible"},
+		{"id":"9d377d1901605378","x":-80,"y":-820,"width":280,"height":160,"type":"text","text":"We should prevent hardcoding a specific trade contract as far as possible to make changes easier"}
+	],
+	"edges":[
+		{"id":"0a9f63d0d4d620de","fromNode":"3090e35b6908a516","fromSide":"bottom","toNode":"a42a47db35e79b8a","toSide":"top"},
+		{"id":"ed2f5444cd6d2e87","fromNode":"190c13d27acfe062","fromSide":"bottom","toNode":"a42a47db35e79b8a","toSide":"top"},
+		{"id":"ef6dbff0181ef315","fromNode":"fa909bd36f010298","fromSide":"bottom","toNode":"3090e35b6908a516","toSide":"top"},
+		{"id":"1c0ad74a3e07f73d","fromNode":"fa909bd36f010298","fromSide":"bottom","toNode":"190c13d27acfe062","toSide":"top"},
+		{"id":"523c400735298a49","fromNode":"deac0e8159d44e7f","fromSide":"left","toNode":"3090e35b6908a516","toSide":"right"},
+		{"id":"c095e026270628b6","fromNode":"66a07a00114aaee3","fromSide":"right","toNode":"190c13d27acfe062","toSide":"left"},
+		{"id":"dd546164c04d757c","fromNode":"5d7f46a9378f9d00","fromSide":"right","toNode":"3090e35b6908a516","toSide":"left"},
+		{"id":"5b25907153b1f3f8","fromNode":"5d7f46a9378f9d00","fromSide":"left","toNode":"190c13d27acfe062","toSide":"right"}
+	]
+}
