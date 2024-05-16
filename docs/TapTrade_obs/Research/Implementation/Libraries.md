@@ -3,6 +3,8 @@
 A modern, lightweight, descriptor-based wallet library written in Rust. 
 Higher level, with wallet functionality. Supports Miniscript descriptors.
 
+[BDK-CLI Introduction video](https://www.youtube.com/watch?v=-Q8OD8NCEe4)
+
 ## [rust-bitcoin crate](https://docs.rs/bitcoin/latest/bitcoin/)
 
 Lower level, lighter library for assembling transactions, generating addresses etc.

@@ -11,14 +11,11 @@
             "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
-                "viewState": {
-                  "x": -114.64351428525751,
-                  "y": -105.99427714297474,
-                  "zoom": -0.06112889783968051
-                }
+                "file": "Research/Implementation/Libraries.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -88,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
+                "file": "Research/Implementation/Libraries.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
+                "file": "Research/Implementation/Libraries.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas"
+                "file": "Research/Implementation/Libraries.md"
               }
             }
           }
@@ -152,13 +149,13 @@
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
     "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+    "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
     "Research/Trade Pipelines/Existing research.md",
     "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Implementation/UI ideas.canvas",
     "Research/Implementation/Libraries.md",
     "Research/Implementation/CLI demonstrator architecture/demonstrator architecture.canvas",
     "Research/Implementation/CLI demonstrator architecture",
-    "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
     "Research/Trade Pipelines/new concepts/Untitled.md",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
