@@ -13,11 +13,11 @@
             "state": {
               "type": "canvas",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
+                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
                 "viewState": {
-                  "x": 691.5201009303707,
-                  "y": 2353.5880104568555,
-                  "zoom": -0.048799810246148365
+                  "x": 200.29145596293188,
+                  "y": 1110.762218345142,
+                  "zoom": -0.5681202822884297
                 }
               }
             }
@@ -88,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
+                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas",
+                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/current trade flow.canvas"
+                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas"
               }
             }
           }
@@ -151,8 +151,10 @@
   },
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
-    "Research/Trade Pipelines/new concepts/random pipeline 1 tbd.canvas",
     "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
+    "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+    "Research/Trade Pipelines/new concepts/Untitled.md",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
     "Research/Trade Pipelines/Existing research.md",
