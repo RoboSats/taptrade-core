@@ -148,17 +148,18 @@
   },
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
+    "Research/Bitcoin fundamentals/Signature and Flags.canvas",
     "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
     "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
+    "Research/Implementation/CLI demonstrator architecture/demonstrator architecture.canvas",
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Implementation/UI ideas.canvas",
     "Research/Implementation/Libraries.md",
-    "Research/Implementation/CLI demonstrator architecture/demonstrator architecture.canvas",
     "Research/Trade Pipelines/Existing research.md",
     "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Implementation/CLI demonstrator architecture",
     "Research/Trade Pipelines/new concepts/Untitled.md",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
-    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
-    "Research/Bitcoin fundamentals/Knowledge sources.md"
+    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md"
   ]
 }
