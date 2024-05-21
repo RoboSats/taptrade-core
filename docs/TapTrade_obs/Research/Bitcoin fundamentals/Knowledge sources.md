@@ -24,6 +24,9 @@ Understanding the following BIPs is relevant for the project.
 * [Introduction to Taproot - Nicolas Dorier - short video](https://www.youtube.com/watch?v=I7HsXKgtD2I)
 * [Very good, practical introduction to coding taproot Transactions - Bitdevs LA](https://www.youtube.com/watch?v=E-HxgNkPB-8) 
 
+#### Workshop
+[Bitcoin Optech Schnorr Taproot Workshop](https://bitcoinops.org/en/schorr-taproot-workshop/)
+
 ### <u>Descriptors/Miniscript</u>
 
 We can use Descriptors/Miniscript to precisely and human readable describe the Transaction outputs of the escrow transaction pipeline. This improves readability and portability of the pipeline.
