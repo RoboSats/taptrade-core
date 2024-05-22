@@ -25,6 +25,7 @@ MuSig2 allows groups of mutually distrusting parties to cooperatively sign data 
 This should work with bitcoin as it supports secp256k1.
 IIUC frost supports schnorr treshold signatures, unlike N-of-N in MuSig2, Frost can do M-of-N.
 
+Roast also seems really useful but there is no production ready implementation yet.
 
 ## [bitcoinjs-lib](https://github.com/bitcoinjs/bitcoinjs-lib?tab=readme-ov-file)
 

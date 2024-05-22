@@ -52,6 +52,9 @@ To combine multiple parties pubkeys to a single combined Taproot pubkey and to c
 * [MuSig2 in Taproot - Nicolas Dorier - higher level explanation](https://www.youtube.com/watch?v=hrUyGW91JBc)
 * [MuSig2: Simple Two-Round Schnorr Multi-Signatures - very detailed, more crypto focused explanation](https://www.youtube.com/watch?v=Dzqj236cVHk)
 
+### ROAST
+[Roast scheme explanation](https://www.youtube.com/watch?v=f2soc95MWWY)
+
 ### <u>Sighash Types</u>
 
 Maybe sighash flags could be a useful tool?
