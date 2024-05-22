@@ -55,8 +55,7 @@
 		{"id":"4c786c80eaae0328","type":"text","text":"2.Buy-order in Orderbook","x":2421,"y":-320,"width":305,"height":60},
 		{"id":"a2878365b55bb0dd","type":"text","text":"Taker | **selling sats**","x":2823,"y":-310,"width":250,"height":50},
 		{"id":"ae0873e7f893c725","type":"text","text":"***Protocol B***\n***MBTS*** (Maker buyer taker seller)\n\nAdapted a bit to onchain possibilities (no time limitations with onchain, so payout address can be submitted upfront/Escrow can be locked with Bond)","x":2543,"y":-760,"width":405,"height":190,"color":"3"},
-		{"id":"1eb173a56b45f948","type":"text","text":"Taker","x":1625,"y":273,"width":110,"height":60,"color":"4"},
-		{"id":"91eb76b688aa2fa3","type":"text","text":"","x":5040,"y":1360,"width":250,"height":60}
+		{"id":"1eb173a56b45f948","type":"text","text":"Taker","x":1625,"y":273,"width":110,"height":60,"color":"4"}
 	],
 	"edges":[
 		{"id":"0452390c8e326418","fromNode":"fe94f3c9a67875b6","fromSide":"bottom","toNode":"9d82ff6bff57a83c","toSide":"top","label":"1. paying/locking Maker bond and Escrow"},
