@@ -82,5 +82,10 @@ https://github.com/bitcoin-core/btcdeb/blob/master/doc/tapscript-example-with-ta
 
 https://dev.to/eunovo/a-guide-to-creating-taproot-scripts-with-bitcoinjs-lib-4oph (Can look at this, this uses bitcoinjs-lib to create taproot scripts)
 
-  
+
+### <u>Partially signed bitcoin transactions</u>
+
+[Bitcoin Optech collection of sources](https://bitcoinops.org/en/topics/psbt/)
+
+
   
