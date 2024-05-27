@@ -11,8 +11,6 @@
 		{"id":"bdce49ceea829893","type":"text","text":"Taker","x":-652,"y":690,"width":192,"height":60},
 		{"id":"961e75c701b7f68f","type":"text","text":"Coordinator","x":80,"y":690,"width":250,"height":60},
 		{"id":"73a7dae830df4443","type":"text","text":"PSBT of contract\nTaker adds bond input sig","x":-320,"y":660,"width":250,"height":120},
-		{"id":"b500fab6ba26abf1","type":"text","text":"Maker","x":-665,"y":1120,"width":250,"height":60},
-		{"id":"9b054e655a321517","type":"text","text":"PSBT of contract\nMaker adds escrow input sig","x":-320,"y":1010,"width":250,"height":110},
 		{"id":"de1642ddfdfed1df","type":"text","text":"Coordinator \npublishes contract TX and waits for confirmation","x":80,"y":1180,"width":250,"height":120,"color":"2"},
 		{"id":"910e5a3ee7688d0b","type":"text","text":"Escrow and Bond locked in contract.\n**Chat can begin**","x":-300,"y":1380,"width":250,"height":120,"color":"6"},
 		{"id":"880c77a2d23f2cec","type":"text","text":"+signed TX\n\n-> Bond to coordinator\n -> change to self\n -> SIGHASH_ALL | ANYONECANPAY\n\n+MuSig2 public nonce\n+taproot public key (for agg. internal key)","x":-390,"y":-39,"width":390,"height":230},
@@ -21,8 +19,10 @@
 		{"id":"e3b8669b30d1c80e","type":"text","text":"+ signed psbt\n+ additional signed punishment TX in case the taker tries to spend the input somewhere else before the maker signs, the coordinator can claim or burn the bond (same like the maker bond). In case of out of band mining the maker would not lose money and the taker has a cost associated to doing this act","x":-610,"y":800,"width":815,"height":140},
 		{"id":"90704c232582cd52","type":"text","text":"Coordinator","x":80,"y":950,"width":250,"height":60},
 		{"id":"0d1d6b982cbde6e2","type":"file","file":"Research/Trade Pipelines/new concepts/concept locking script 1.canvas","x":420,"y":1220,"width":400,"height":400},
-		{"id":"2f645456949ecdb8","x":580,"y":186,"width":340,"height":114,"type":"text","text":"Addendum: We could just publish a child transaction instead of adding an input to increase the fee."},
-		{"id":"9a5c83be6a5d2b73","x":580,"y":91,"width":340,"height":100,"type":"text","text":"[Making Transaction invalid after certain blockheight - Stackexchange](https://bitcoin.stackexchange.com/questions/123021/make-signed-transaction-invalid-after-specified-time/123029#123029)"}
+		{"id":"2f645456949ecdb8","type":"text","text":"Addendum: We could just publish a child transaction instead of adding an input to increase the fee.","x":580,"y":186,"width":340,"height":114},
+		{"id":"9a5c83be6a5d2b73","type":"text","text":"[Making Transaction invalid after certain blockheight - Stackexchange](https://bitcoin.stackexchange.com/questions/123021/make-signed-transaction-invalid-after-specified-time/123029#123029)","x":580,"y":91,"width":340,"height":100},
+		{"id":"b500fab6ba26abf1","type":"text","text":"Maker","x":-710,"y":1210,"width":250,"height":60},
+		{"id":"9b054e655a321517","type":"text","text":"PSBT of contract\nMaker adds escrow input sig\n\nMaker only gets PSBT without the Sig of the Taker, so he can't maliciously hold the tx and publish it at a later point in time.","x":-345,"y":980,"width":295,"height":210}
 	],
 	"edges":[
 		{"id":"77d1ff9130716b53","fromNode":"dba9c662192cf5bb","fromSide":"right","toNode":"93c73227c82f1a81","toSide":"left"},
