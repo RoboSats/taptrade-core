@@ -1,9 +1,7 @@
 use clap::{command, Arg, Command, ArgMatches};
 
 #[derive(Debug)]
-pub struct Coordinator { 
-
-}
+pub struct Coordinator;
 
 #[derive(Debug)]
 pub struct TraderSettings {
@@ -26,16 +24,16 @@ impl ArgMatchesParser for ArgMatches {
 	fn parse_into_enum(&self) -> CliSettings {
 		if let Some(_mode) = self.subcommand_matches("coordinator") {
 			CliSettings::Coordinator(Coordinator { })
-		} else if let Some(_mode) = self.subcommand_matches("trader") {
+		} else if let Some(mode) = self.subcommand_matches("trader") {
 			let trader_settings = TraderSettings {
-				coordinator_endpoint: self.get_one::<String>("coordinator-ep")
+				coordinator_endpoint: mode.get_one::<String>("coordinator-ep")
 										.expect("Coordinator endpoint not provided!").clone(),
-				electrum_endpoint: self.get_one::<String>("electrum-ep")
+				electrum_endpoint: mode.get_one::<String>("electrum-ep")
 										.expect("Electrum endpoint not provided").clone()
 			};
-			if self.contains_id("maker") {
+			if mode.contains_id("maker") {
 				CliSettings::Maker( trader_settings )
-			} else if self.contains_id("taker") {
+			} else if mode.contains_id("taker") {
 				CliSettings::Taker( trader_settings )
 			} else {
 				panic!("Wrong arguments for Trader mode!")
