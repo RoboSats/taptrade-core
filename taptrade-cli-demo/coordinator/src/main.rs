@@ -1,10 +1,13 @@
 mod trader;
 mod coordinator;
 mod cli;
+mod communication;
 
 use cli::parse_cli_args;
+use communication::webserver;
 
 fn main() {
+    webserver();
     let mode = parse_cli_args();
     dbg!(mode);
 }

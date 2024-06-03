@@ -1,2 +1,4 @@
 ./taptrade-cli-demo/target
 taptrade-cli-demo/target
+taptrade-cli-demo/coordinator/target
+taptrade-cli-demo/trader/target

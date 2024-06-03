@@ -1,10 +1,10 @@
 [package]
-name = "taptrade-cli-demo"
+name = "coordinator"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+axum = "0.7.5"
 bdk = "0.29.0"
 clap = { version = "4.5.4", features = ["derive", "cargo"] }
 frost-secp256k1 = "1.0.0"
-ipc-channel = "0.18.0"

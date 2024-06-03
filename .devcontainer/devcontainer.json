@@ -10,7 +10,13 @@
 			"profile": "complete"
 		},
 		"devwasm.azurecr.io/dev-wasm/dev-wasm-feature/rust-wasi:0": {},
-		"ghcr.io/lumenpink/devcontainer-features/wasm-pack:0": {}
+		"ghcr.io/lumenpink/devcontainer-features/wasm-pack:0": {},
+		"runArgs": [
+			"--userns=keep-id"
+		  ],
+		  "containerEnv": {
+			"HOME": "/home/node"
+		  }
 	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

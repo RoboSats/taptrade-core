@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "taptrade-cli-demo/coordinator/Cargo.toml",
+        "taptrade-cli-demo/trader/Cargo.toml",
+    ]
+}
