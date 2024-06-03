@@ -15,9 +15,9 @@
               "state": {
                 "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
                 "viewState": {
-                  "x": 127.5,
-                  "y": 870.3121012187327,
-                  "zoom": -0.787814735661959
+                  "x": -50.073215095096614,
+                  "y": 431.1066731460583,
+                  "zoom": -0.5377950532849703
                 }
               }
             }
@@ -72,7 +72,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200
   },
   "right": {
     "id": "218b4a302bff5924",
@@ -151,10 +151,10 @@
   },
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
-    "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
-    "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+    "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Implementation/Libraries.md",
     "Research/Bitcoin fundamentals/Taproot output structure.canvas",
     "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
