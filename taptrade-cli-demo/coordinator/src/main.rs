@@ -1,4 +1,3 @@
-mod trader;
 mod coordinator;
 mod cli;
 mod communication;

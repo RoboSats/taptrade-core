@@ -1,3 +1,9 @@
+mod cli;
+mod communication;
+
+use cli::parse_cli_args;
+
 fn main() {
-    println!("Hello, world!");
+    let mode = parse_cli_args();
+    dbg!(mode);
 }
