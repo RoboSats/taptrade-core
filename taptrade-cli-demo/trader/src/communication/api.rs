@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize)]
 pub struct OfferCreationResponse {
     pub locking_address: String,
-    pub locking_amount: u32,  // validate
+    pub locking_amount: u64,  // validate
 }
 
 #[derive(Serialize)]
