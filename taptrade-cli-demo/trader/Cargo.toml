@@ -5,7 +5,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
+base91 = "0.1.0"
 bdk = "0.29.0"
 clap = { version = "4.5.4", features = ["derive", "cargo"] }
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = "1.0.203"
+sha2 = "0.10.8"

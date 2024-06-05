@@ -1,7 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
-        "taptrade-cli-demo/coordinator/Cargo.toml",
-        "taptrade-cli-demo/trader/Cargo.toml",
+        "${workspaceFolder}/taptrade-cli-demo/coordinator/Cargo.toml",
+        "${workspaceFolder}/taptrade-cli-demo/trader/Cargo.toml",
     ],
     "nixEnvSelector.suggestion": true,
     "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix"
