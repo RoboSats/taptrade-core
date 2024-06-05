@@ -4,7 +4,7 @@
 fn index() -> &'static str {
     "Hello, world!"
 }
-j
+
 #[launch]
 pub fn webserver() -> Rocket<build> {
     rocket::build().mount("/", routes![index])
