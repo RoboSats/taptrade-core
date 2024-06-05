@@ -1,25 +1,14 @@
-use reqwest;
+pub mod api;
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::cli::{TraderSettings, OfferType};
-
-#[derive(Debug, Deserialize)]
-pub struct OfferCreationResponse {
-	pub locking_address: String,
-}
-
-#[derive(Serialize)]
-struct OrderRequest {
-	robohash_base91: String,
-	amount_satoshi: u32,
-	order_type: String, // buy or sell
-	bond_ratio: u8 // [x > 2, 50]
-}
+use api::{OrderRequest, OfferCreationResponse};
 
 impl OfferCreationResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
-		let amount: u32;
+		let amount: u64;
 		let trade_type = match &trader_setup.trade_type {
             OfferType::Buy(val) => {
                 amount = *val;

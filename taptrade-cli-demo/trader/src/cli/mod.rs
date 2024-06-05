@@ -1,15 +1,14 @@
 use std::io::{self, Write};
 use anyhow::{anyhow, Result};
 use sha2::{Sha256, Digest};
-use base91;
 
 #[derive(Debug)]
 pub struct Coordinator;
 
 #[derive(Debug)]
 pub enum OfferType {
-    Buy(u32),
-    Sell(u32),
+    Buy(u64),
+    Sell(u64),
 }
 
 #[derive(Debug)]

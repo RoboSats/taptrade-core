@@ -3,9 +3,12 @@
 // use utils;
 use anyhow::Result;
 use crate::cli::TraderSettings;
-use crate::communication::create_offer;
+use crate::communication::api::OfferCreationResponse;
 
 pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
-    let offer_conditions = create_offer(maker_config)?;
+    let offer_conditions = OfferCreationResponse::fetch(maker_config)?;
+
     // maker_utils::maker(offer_conditions, maker_config)
+
+    Ok(())
 }

@@ -6,19 +6,23 @@ mod trading;
 use core::panic;
 
 use cli::CliSettings;
-use anyhow::Result;
-use communication::fetch_offer;
+use anyhow::{anyhow, Result};
+
+fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
+    if let CliSettings::Maker(maker_data) = cli_input {
+        Ok(trading::run_maker(maker_data)?)
+    } else if let CliSettings::Taker(taker_data) = cli_input {
+        Err(anyhow!("not implemented!"))
+        // trading::taker::run_taker(taker_data)?;
+    } else {
+        Err(anyhow!("Wrong mode selected!"))
+    }
+}
 
 fn main() -> Result<()> {
     let mode = CliSettings::parse_cli_args()?;
     dbg!("CLI input :", &mode);
+    start_trade_pipeline(&mode)?;
 
-    // if let CliSettings::Maker(maker_data) = &mode {
-    //     trading::maker::run_maker(maker_data)?;
-    // } else if let CliSettings::Taker(taker_data) = &mode {
-    //     trading::taker::run_taker(taker_data)?;
-    // } else {
-    //     panic!("Wrong mode selected!")
-    // }
     Ok(())
 }
