@@ -11,14 +11,11 @@
             "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
-                "viewState": {
-                  "x": 1740.5027037159439,
-                  "y": 81.67024816929342,
-                  "zoom": -0.5999999999999999
-                }
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -88,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas"
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md"
               }
             }
           }
@@ -151,9 +148,9 @@
   },
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
+    "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
     "Pasted image 20240605185325.png",
     "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
-    "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
     "Research/Trade Pipelines/current trade flow.canvas",
     "Research/Bitcoin fundamentals/Knowledge sources.md",
     "Research/Implementation/Libraries.md",

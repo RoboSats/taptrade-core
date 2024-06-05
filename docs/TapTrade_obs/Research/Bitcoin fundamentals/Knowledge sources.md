@@ -91,3 +91,9 @@ https://dev.to/eunovo/a-guide-to-creating-taproot-scripts-with-bitcoinjs-lib-4op
 
 
   
+### <u>PTLC's</u>
+
+[Replacing HTLC's](https://suredbits.com/payment-points-part-1/#references)
+https://bitcointalk.org/index.php?topic=5455282.0
+https://extheo.hashnode.dev/point-time-locked-contracts-part-one
+https://suredbits.com/ptlc-proof-of-concept/
