@@ -76,7 +76,7 @@ impl CliSettings {
         let trade_type: OfferType = Self::get_trade_type(None);
         let payout_address = Self::get_user_input("Enter a payout address for refunded bonds or your trade payout: ");  // bdk can be used for validation
         let bond_ratio: u8 = Self::get_user_input("Enter bond ration in [2, 50]%: ").parse()?;
-        let funded_wallet_descriptor = Self::get_wallet_descriptors(Some(Self::get_user_input("Enter funded testnet wallet descriptor: ")))?;
+        let funded_wallet_descriptor = Self::get_wallet_descriptors(Some(Self::get_user_input("Enter funded testnet wallet xprv or leave empty to generate: ")))?;
         Ok(TraderSettings {
             electrum_endpoint,
             coordinator_endpoint,
@@ -91,13 +91,10 @@ impl CliSettings {
     fn get_wallet_descriptors(cli_input: Option<String>) -> Result<WalletDescriptors> {
         if let Some(user_input) = cli_input {
             if !(user_input.is_empty()) {
-                return Ok(WalletDescriptors {
-                    descriptor: user_input,
-                    change_descriptor: None
-                });
+                return generate_descriptor_wallet(Some(user_input));
             }
         };
-        generate_descriptor_wallet()
+        generate_descriptor_wallet(None)
     }
 
     fn load_from_env() -> Result<TraderSettings> {
@@ -109,7 +106,7 @@ impl CliSettings {
             trade_type: Self::get_trade_type(Some(env::var("TRADE_TYPE")?)),
             payout_address: env::var("PAYOUT_ADDRESS")?,
             bond_ratio: env::var("BOND_RATIO")?.parse()?,
-            funded_wallet_descriptor: Self::get_wallet_descriptors(Some(env::var("FUNDED_WALLET_DESCRIPTOR")?))?,
+            funded_wallet_descriptor: Self::get_wallet_descriptors(Some(env::var("XPRV")?))?,
         })
     }
 
