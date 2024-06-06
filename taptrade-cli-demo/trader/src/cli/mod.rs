@@ -1,6 +1,9 @@
 use std::io::{self, Write};
 use anyhow::{anyhow, Result};
 use sha2::{Sha256, Digest};
+use std::env;
+
+use crate::wallet::{generate_descriptor_wallet, WalletDescriptors};
 
 #[derive(Debug)]
 pub struct Coordinator;
@@ -19,6 +22,7 @@ pub struct TraderSettings {
     pub trade_type: OfferType,
     pub payout_address: String,
     pub bond_ratio: u8,
+    pub funded_wallet_descriptor: WalletDescriptors,
 }
 
 #[derive(Debug)]
@@ -53,8 +57,11 @@ impl CliSettings {
         buffer.trim().to_string()
     }
 
-    fn get_trade_type() -> OfferType {
-        let trade_type = Self::get_user_input("Do you want to buy or sell satoshis: ");
+    fn get_trade_type(trade_type: Option<String>) -> OfferType {
+        let trade_type = match trade_type {
+            Some(value) => value,
+            None => Self::get_user_input("Do you want to buy or sell satoshis: "),
+        };
         match trade_type.as_str() {
             "buy" => OfferType::Buy(Self::get_user_input("How many satoshi do you want to buy: ").parse().unwrap()),
             "sell" => OfferType::Sell(Self::get_user_input("How many satoshi do you want to sell: ").parse().unwrap()),
@@ -66,22 +73,53 @@ impl CliSettings {
         let electrum_endpoint = Self::get_user_input("Enter electrum endpoint: ");
         let coordinator_endpoint = Self::get_user_input("Enter coordinator endpoint: ");
         let robosats_robohash_base91 = bytes_to_base91(&hash256(&Self::get_user_input("Enter your robosats robot key: ")));
-        let trade_type = Self::get_trade_type();
+        let trade_type: OfferType = Self::get_trade_type(None);
         let payout_address = Self::get_user_input("Enter a payout address for refunded bonds or your trade payout: ");  // bdk can be used for validation
         let bond_ratio: u8 = Self::get_user_input("Enter bond ration in [2, 50]%: ").parse()?;
+        let funded_wallet_descriptor = Self::get_wallet_descriptors(Some(Self::get_user_input("Enter funded testnet wallet descriptor: ")))?;
         Ok(TraderSettings {
             electrum_endpoint,
             coordinator_endpoint,
             robosats_robohash_base91,
             trade_type,
             payout_address,
-            bond_ratio
+            bond_ratio,
+            funded_wallet_descriptor
+        })
+    }
+
+    fn get_wallet_descriptors(cli_input: Option<String>) -> Result<WalletDescriptors> {
+        if let Some(user_input) = cli_input {
+            if !(user_input.is_empty()) {
+                return Ok(WalletDescriptors {
+                    descriptor: user_input,
+                    change_descriptor: None
+                });
+            }
+        };
+        generate_descriptor_wallet()
+    }
+
+    fn load_from_env() -> Result<TraderSettings> {
+        dotenv::from_filename(".env")?;
+        Ok(TraderSettings {
+            electrum_endpoint: env::var("ELECTRUM_ENDPOINT")?,
+            coordinator_endpoint: env::var("COORDINATOR_ENDPOINT")?,
+            robosats_robohash_base91: env::var("ROBOHASH_BASE91")?,
+            trade_type: Self::get_trade_type(Some(env::var("TRADE_TYPE")?)),
+            payout_address: env::var("PAYOUT_ADDRESS")?,
+            bond_ratio: env::var("BOND_RATIO")?.parse()?,
+            funded_wallet_descriptor: Self::get_wallet_descriptors(Some(env::var("FUNDED_WALLET_DESCRIPTOR")?))?,
         })
     }
 
     pub fn parse_cli_args() -> Result<Self> {
         let mode = Self::get_user_input("Enter mode, 'taker' or 'maker': ");
-        let trader_settings = Self::get_trader_settings()?;
+        let trader_settings = match Self::get_user_input("Load from .env (y/N): ").trim() {
+            "y" => Self::load_from_env()?,
+            "N" => Self::get_trader_settings()?,
+            _ => return Err(anyhow!("Not a valid input!")),
+        };
         match mode.to_lowercase().as_str() {
             "maker" => Ok(Self::Maker(trader_settings)),
             "taker" => Ok(Self::Taker(trader_settings)),

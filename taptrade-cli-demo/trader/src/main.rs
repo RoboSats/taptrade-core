@@ -2,6 +2,7 @@
 mod cli;
 mod communication;
 mod trading;
+mod wallet;
 
 use core::panic;
 
