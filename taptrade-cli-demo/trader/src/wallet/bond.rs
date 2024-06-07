@@ -1,6 +1,11 @@
-use anyhow::Result;
-use bdk::{database::MemoryDatabase, wallet::coin_selection::BranchAndBoundCoinSelection, Wallet};
+use anyhow::{Result, anyhow};
+use bdk::bitcoin::psbt::PartiallySignedTransaction;
+use bdk::bitcoin::ScriptBuf;
+use bdk::{database::MemoryDatabase, wallet::coin_selection::BranchAndBoundCoinSelection, Wallet, SignOptions, FeeRate};
 use serde::de::value;
+use std::str::FromStr;
+use bdk::bitcoin::{Address, Network};
+use bdk::bitcoin::address::{NetworkUnchecked, NetworkChecked};
 
 use crate::communication::api::OfferCreationResponse;
 use crate::wallet::TraderSettings;
@@ -18,25 +23,28 @@ pub struct Bond {
 impl Bond {
 	pub fn assemble(wallet: &Wallet<MemoryDatabase>,
 					bond_target: &OfferCreationResponse,
-					trader_input: &TraderSettings) -> Result<Bond> {
-		// let send_to = wallet.get_address(New)?;
-
-		let (psbt, details) = {
+					trader_input: &TraderSettings) -> Result<PartiallySignedTransaction> {
+		// parse bond locking address as Address struct and verify network is testnet
+		let address: Address = Address::from_str(&bond_target.bond_address)?
+               							.require_network(Network::Testnet)?;
+		
+		// build bond locking transaction. Use coin selection to add at least enough outputs 
+		// to have the full trading sum as change as evidence for the coordinator that the maker owns 
+		// enough funds to cover the trade
+		let (mut psbt, details) = {
 			let mut builder =  wallet.build_tx();
 			builder
 				.coin_selection(BranchAndBoundCoinSelection::new(trader_input.trade_type.value()))
-				.add_recipient(bond_target.locking_address, bond_target.locking_amount)
-				.enable_rbf()
+				.add_recipient(address.script_pubkey(), bond_target.locking_amount)
 				.do_not_spend_change()
-				.fee_rate(FeeRate::from_sat_per_vb(5.0));
-			// coin_select
-			// manually_selected_only
-			// add_unspendable
-			// do_not_spend_change
-			// builder.finish()?
-    };
-
-		Ok(_)
+				.fee_rate(FeeRate::from_sat_per_vb(201.0));
+			builder.finish()?
+    	};
+		let finalized = wallet.sign(&mut psbt, SignOptions::default())?;
+		if !finalized {
+			return Err(anyhow!("Transaction could not be finalized"));
+		};
+		Ok(psbt)
 	}
 }
 
