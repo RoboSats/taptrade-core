@@ -1,5 +1,6 @@
 use anyhow::Result;
 use bdk::{database::MemoryDatabase, wallet::coin_selection::BranchAndBoundCoinSelection, Wallet};
+use serde::de::value;
 
 use crate::communication::api::OfferCreationResponse;
 use crate::wallet::TraderSettings;
@@ -23,8 +24,8 @@ impl Bond {
 		let (psbt, details) = {
 			let mut builder =  wallet.build_tx();
 			builder
-				.coin_selection(BranchAndBoundCoinSelection::new(10000))
-				.add_recipient(send_to.script_pubkey(), 50_000)
+				.coin_selection(BranchAndBoundCoinSelection::new(trader_input.trade_type.value()))
+				.add_recipient(bond_target.locking_address, bond_target.locking_amount)
 				.enable_rbf()
 				.do_not_spend_change()
 				.fee_rate(FeeRate::from_sat_per_vb(5.0));

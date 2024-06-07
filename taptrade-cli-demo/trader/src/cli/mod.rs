@@ -46,6 +46,15 @@ fn bytes_to_base91(input: &[u8; 32]) -> String {
     encoded_robohash
 }
 
+impl OfferType {
+    pub fn value(&self) -> u64 {
+        match self {
+            OfferType::Buy(value) => *value,
+            OfferType::Sell(value) => *value,
+        }
+    }
+}
+
 impl CliSettings {
     fn get_user_input(prompt: &str) -> String {
         let mut buffer = String::new();
