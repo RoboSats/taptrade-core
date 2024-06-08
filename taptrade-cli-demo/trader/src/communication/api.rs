@@ -13,3 +13,4 @@ pub struct OrderRequest {
     pub order_type: String, // buy or sell
     pub bond_ratio: u8 // [2, 50]
 }
+ 
