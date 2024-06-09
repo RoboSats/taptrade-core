@@ -4,7 +4,7 @@
   "name": "Taptrade api",
   "endpointPrefix": "",
   "latency": 0,
-  "port": 3001,
+  "port": 9999,
   "hostname": "",
   "folders": [],
   "routes": [
@@ -17,7 +17,7 @@
       "responses": [
         {
           "uuid": "a746f8e0-fdda-4086-b3a3-1bf65ba7bdb3",
-          "body": "{\n  \"locking_address\": \"bc1xxx\",\n  \"locking_amount\": 69420\n}",
+          "body": "{\n  \"bond_address\": \"tb1pfdvgfzwp8vhmelpv8w9kezz7nsmxw68jz6yehgze6mzx0t6r9t2qv9ynmm\",\n  \"locking_amount\": 69420\n}",
           "latency": 0,
           "statusCode": 200,
           "label": "",

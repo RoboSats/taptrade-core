@@ -21,6 +21,7 @@ pub struct Bond {
 }
 
 impl Bond {
+	println!("assembling bond transaction");
 	pub fn assemble(wallet: &Wallet<MemoryDatabase>,
 					bond_target: &OfferCreationResponse,
 					trader_input: &TraderSettings) -> Result<PartiallySignedTransaction> {
