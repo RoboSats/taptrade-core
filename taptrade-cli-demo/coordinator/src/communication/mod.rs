@@ -12,7 +12,7 @@ struct OrderRequest {
     robohash_base91: String,
     amount_satoshi: u64,
     order_type: String,
-    bond_ratio: f64,
+    bond_ratio: u8,
 }
 // Handler function to process the received data
 async fn receive_order(Json(order): Json<OrderRequest>) {

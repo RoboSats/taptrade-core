@@ -12,7 +12,6 @@
 		{"id":"73a7dae830df4443","type":"text","text":"PSBT of contract\nTaker adds bond input sig","x":-320,"y":660,"width":250,"height":120},
 		{"id":"de1642ddfdfed1df","type":"text","text":"Coordinator \npublishes contract TX and waits for confirmation","x":80,"y":1180,"width":250,"height":120,"color":"2"},
 		{"id":"910e5a3ee7688d0b","type":"text","text":"Escrow and Bond locked in contract.\n**Chat can begin**","x":-300,"y":1380,"width":250,"height":120,"color":"6"},
-		{"id":"880c77a2d23f2cec","type":"text","text":"+signed TX\n\n-> Bond to coordinator\n -> change to self\n -> SIGHASH_ALL | ANYONECANPAY\n\n+MuSig2 public nonce\n+taproot public key (for agg. internal key)","x":-390,"y":-39,"width":390,"height":230},
 		{"id":"51e650a981068490","type":"text","text":"see contract definition","x":420,"y":1120,"width":400,"height":60,"color":"2"},
 		{"id":"e3b8669b30d1c80e","type":"text","text":"+ signed psbt\n+ additional signed punishment TX in case the taker tries to spend the input somewhere else before the maker signs, the coordinator can claim or burn the bond (same like the maker bond). In case of out of band mining the maker would not lose money and the taker has a cost associated to doing this act","x":-610,"y":800,"width":815,"height":140},
 		{"id":"90704c232582cd52","type":"text","text":"Coordinator","x":80,"y":950,"width":250,"height":60},
@@ -37,14 +36,16 @@
 		{"id":"6af43fed8e34e23d","type":"text","text":"This continues till the final node in the lightning channel offers secret to Robosats","x":3300,"y":181,"width":280,"height":120},
 		{"id":"fcc7765243fc3246","type":"text","text":"Maker reveals timelock hash and claims back his penalty","x":3060,"y":714,"width":300,"height":65},
 		{"id":"50d4e3ecf700274e","type":"text","text":"? sends (a+b) to Robosats and it claims the penalty","x":3060,"y":435,"width":300,"height":65},
-		{"id":"d6de59256cbb3712","x":2920,"y":500,"width":110,"height":50,"type":"text","text":"YES"},
+		{"id":"d6de59256cbb3712","type":"text","text":"YES","x":2920,"y":500,"width":110,"height":50},
 		{"id":"d9c194fdd3f4c963","type":"text","text":"NO","x":2920,"y":664,"width":110,"height":50},
 		{"id":"119047b4def84c19","type":"text","text":"Maker sends (a+b) to ?","x":2120,"y":569,"width":240,"height":50},
 		{"id":"4db362c6f7e5620f","type":"text","text":"TRIGGER = Maker doesn't respond/ anything else","x":2555,"y":554,"width":290,"height":80},
 		{"id":"5f822a5a69af894a","type":"text","text":"UNLOCK PHASE","x":1860,"y":554,"width":160,"height":50},
 		{"id":"c8b7d0bc62b28e03","type":"text","text":"Robosats generates z","x":2140,"y":-73,"width":240,"height":50},
 		{"id":"a53320bd938fc27c","type":"text","text":"Sends invoice to Maker","x":2460,"y":-73,"width":240,"height":50},
-		{"id":"918eb7ddcf4cfa5f","type":"text","text":"SETUP PHASE","x":1860,"y":-73,"width":120,"height":50}
+		{"id":"918eb7ddcf4cfa5f","type":"text","text":"SETUP PHASE","x":1860,"y":-73,"width":120,"height":50},
+		{"id":"880c77a2d23f2cec","type":"text","text":"+signed TX\n\n-> Bond to coordinator\n -> change to self\n -> SIGHASH_ALL | ANYONECANPAY\n\n+MuSig2 public nonce\n+taproot public key (for agg. internal key)","x":-380,"y":-24,"width":390,"height":230},
+		{"id":"356b7d6fdad4422f","x":795,"y":-760,"width":415,"height":500,"type":"text","text":"Coordinator does:\n- Validate the transaction (is the input unspent, does it really lock to the coordinator, is the change the amount of the trade, is the transaction fee > 201 sat/vbyte.\n- Send response back to trader -> status code\n- monitor mempool and blockchain\n- implement logic to create a child transaction spending the bond output with really high fees\n- (publish the offer to the orderbook)\n- Create endpoint to request available offers for takers"}
 	],
 	"edges":[
 		{"id":"77d1ff9130716b53","fromNode":"dba9c662192cf5bb","fromSide":"right","toNode":"93c73227c82f1a81","toSide":"left"},
