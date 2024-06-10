@@ -7,10 +7,11 @@ edition = "2021"
 anyhow = "1.0.86"
 base91 = "0.1.0"
 bdk = "0.29.0"
-clap = { version = "4.5.4", features = ["derive", "cargo"] }
 dotenv = "0.15.0"
 env_logger = "0.11.3"
 log = "0.4.21"
+musig2 = "0.0.11"
+rand_core = "0.6.4"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = "1.0.203"
 sha2 = "0.10.8"

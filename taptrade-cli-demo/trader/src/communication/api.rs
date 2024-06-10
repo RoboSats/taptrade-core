@@ -13,4 +13,11 @@ pub struct OrderRequest {
     pub order_type: String, // buy or sell
     pub bond_ratio: u8 // [2, 50]
 }
- 
+
+#[derive(Serialize)]
+pub struct BondSubmissionRequest {
+    pub serialized_bond_tx_hex: String,
+    pub robohash_base91: String,
+    pub payout_address: String,
+    pub frost_public_nonce_hex: String,
+}
