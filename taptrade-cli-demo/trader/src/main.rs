@@ -21,6 +21,8 @@ fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    // env_logger::builder().filter_level(log::LevelFilter::Debug).init(); // enable to show extended BDK debug messages
+
     let mode = CliSettings::parse_cli_args()?;
     dbg!("CLI input :", &mode);
     start_trade_pipeline(&mode)?;

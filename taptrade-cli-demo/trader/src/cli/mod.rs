@@ -3,7 +3,8 @@ use anyhow::{anyhow, Result};
 use sha2::{Sha256, Digest};
 use std::env;
 
-use crate::wallet::{generate_descriptor_wallet, WalletDescriptors};
+use crate::wallet::{get_wallet_xprv, WalletDescriptors};
+use bdk::bitcoin::bip32::ExtendedPrivKey;
 
 #[derive(Debug)]
 pub struct Coordinator;
@@ -22,7 +23,7 @@ pub struct TraderSettings {
     pub trade_type: OfferType,
     pub payout_address: String,
     pub bond_ratio: u8,
-    pub funded_wallet_descriptor: WalletDescriptors,
+    pub wallet_xprv: ExtendedPrivKey,
 }
 
 #[derive(Debug)]
@@ -85,7 +86,7 @@ impl CliSettings {
         let trade_type: OfferType = Self::get_trade_type(None);
         let payout_address = Self::get_user_input("Enter a payout address for refunded bonds or your trade payout: ");  // bdk can be used for validation
         let bond_ratio: u8 = Self::get_user_input("Enter bond ration in [2, 50]%: ").parse()?;
-        let funded_wallet_descriptor = Self::get_wallet_descriptors(Some(Self::get_user_input("Enter funded testnet wallet xprv or leave empty to generate: ")))?;
+        let wallet_xprv = Self::check_xprv_input(Some(Self::get_user_input("Enter funded testnet wallet xprv or leave empty to generate: ")))?;
         Ok(TraderSettings {
             electrum_endpoint,
             coordinator_endpoint,
@@ -93,17 +94,17 @@ impl CliSettings {
             trade_type,
             payout_address,
             bond_ratio,
-            funded_wallet_descriptor
+            wallet_xprv
         })
     }
 
-    fn get_wallet_descriptors(cli_input: Option<String>) -> Result<WalletDescriptors> {
+    fn check_xprv_input(cli_input: Option<String>) -> Result<ExtendedPrivKey> {
         if let Some(user_input) = cli_input {
             if !(user_input.is_empty()) {
-                return generate_descriptor_wallet(Some(user_input));
+                return get_wallet_xprv(Some(user_input));
             }
         };
-        generate_descriptor_wallet(None)
+        get_wallet_xprv(None)
     }
 
     fn load_from_env() -> Result<TraderSettings> {
@@ -115,7 +116,7 @@ impl CliSettings {
             trade_type: Self::get_trade_type(Some(env::var("TRADE_TYPE")?)),
             payout_address: env::var("PAYOUT_ADDRESS")?,
             bond_ratio: env::var("BOND_RATIO")?.parse()?,
-            funded_wallet_descriptor: Self::get_wallet_descriptors(Some(env::var("XPRV")?))?,
+            wallet_xprv: Self::check_xprv_input(Some(env::var("XPRV")?))?,
         })
     }
 

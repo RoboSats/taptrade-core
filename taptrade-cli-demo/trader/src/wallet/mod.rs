@@ -11,13 +11,12 @@ use crate::cli::TraderSettings;
 
 // https://github.com/bitcoindevkit/book-of-bdk
 
-#[derive(Debug)]
 pub struct WalletDescriptors {
-	pub descriptor: Descriptor<DescriptorPublicKey>,
-	pub change_descriptor: Option<Descriptor<DescriptorPublicKey>>
+	pub descriptor: Bip86<ExtendedPrivKey>,
+	pub change_descriptor: Option<Bip86<ExtendedPrivKey>>
 }
 
-pub fn generate_descriptor_wallet(xprv_input: Option<String>) -> Result<WalletDescriptors> {
+pub fn get_wallet_xprv(xprv_input: Option<String>) -> Result<ExtendedPrivKey> {
 	let xprv: ExtendedPrivKey;
 	let network: Network = Network::Testnet;
 
@@ -30,13 +29,7 @@ pub fn generate_descriptor_wallet(xprv_input: Option<String>) -> Result<WalletDe
 		dbg!("Generated xprv: ", xprv.to_string());
 	}
 
-    let (descriptor, key_map, _) = Bip86(xprv, KeychainKind::External).build(network).unwrap();
-    let (change_descriptor, change_key_map, _) = Bip86(xprv, KeychainKind::Internal).build(network)?;
-	let descriptors = WalletDescriptors {
-		descriptor,
-		change_descriptor: Some(change_descriptor)
-	};
-	Ok(descriptors)
+	Ok(xprv)
 }
 
 pub fn load_wallet(trader_config: &TraderSettings) -> Result<Wallet<MemoryDatabase>> {
@@ -44,8 +37,8 @@ pub fn load_wallet(trader_config: &TraderSettings) -> Result<Wallet<MemoryDataba
 	let blockchain = ElectrumBlockchain::from(client);
 
 	let wallet = Wallet::new(
-		trader_config.funded_wallet_descriptor.descriptor.clone(),
-		trader_config.funded_wallet_descriptor.change_descriptor.clone(),
+		Bip86(trader_config.wallet_xprv.clone(), KeychainKind::External),
+		Some(Bip86(trader_config.wallet_xprv.clone(), KeychainKind::Internal)),
         bitcoin::Network::Testnet,
         MemoryDatabase::default(),  // non-permanent storage
     )?;
