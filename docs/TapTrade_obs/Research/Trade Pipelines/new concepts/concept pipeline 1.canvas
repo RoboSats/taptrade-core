@@ -6,7 +6,6 @@
 		{"id":"dba9c662192cf5bb","type":"text","text":"**Maker**","x":-600,"y":47,"width":125,"height":58},
 		{"id":"4a633210842ee3c0","type":"text","text":"Taker","x":-665,"y":410,"width":250,"height":60},
 		{"id":"f461d9afa4298d14","type":"text","text":"Coordinator","x":135,"y":410,"width":250,"height":60},
-		{"id":"f1c3087260abe818","type":"text","text":"+ payout address\n+ MuSig2 public nonce\n+ taproot public key (for agg. internal key)\n+ Bond input reference","x":-275,"y":320,"width":250,"height":260},
 		{"id":"bdce49ceea829893","type":"text","text":"Taker","x":-652,"y":690,"width":192,"height":60},
 		{"id":"961e75c701b7f68f","type":"text","text":"Coordinator","x":80,"y":690,"width":250,"height":60},
 		{"id":"73a7dae830df4443","type":"text","text":"PSBT of contract\nTaker adds bond input sig","x":-320,"y":660,"width":250,"height":120},
@@ -14,7 +13,7 @@
 		{"id":"910e5a3ee7688d0b","type":"text","text":"Escrow and Bond locked in contract.\n**Chat can begin**","x":-300,"y":1380,"width":250,"height":120,"color":"6"},
 		{"id":"51e650a981068490","type":"text","text":"see contract definition","x":420,"y":1120,"width":400,"height":60,"color":"2"},
 		{"id":"e3b8669b30d1c80e","type":"text","text":"+ signed psbt\n+ additional signed punishment TX in case the taker tries to spend the input somewhere else before the maker signs, the coordinator can claim or burn the bond (same like the maker bond). In case of out of band mining the maker would not lose money and the taker has a cost associated to doing this act","x":-610,"y":800,"width":815,"height":140},
-		{"id":"90704c232582cd52","type":"text","text":"Coordinator","x":80,"y":950,"width":250,"height":60},
+		{"id":"90704c232582cd52","type":"text","text":"Coordinator\n-> will now notify the Maker that Offer has been taken\n-> Will still monitor mempool and chain for both bonds now (maker and taker)","x":80,"y":950,"width":250,"height":210},
 		{"id":"0d1d6b982cbde6e2","type":"file","file":"Research/Trade Pipelines/new concepts/concept locking script 1.canvas","x":420,"y":1220,"width":400,"height":400},
 		{"id":"2f645456949ecdb8","type":"text","text":"Addendum: We could just publish a child transaction instead of adding an input to increase the fee.","x":580,"y":186,"width":340,"height":114},
 		{"id":"9a5c83be6a5d2b73","type":"text","text":"[Making Transaction invalid after certain blockheight - Stackexchange](https://bitcoin.stackexchange.com/questions/123021/make-signed-transaction-invalid-after-specified-time/123029#123029)","x":580,"y":91,"width":340,"height":100},
@@ -56,7 +55,8 @@
 		{"id":"1d841d61bbe31e60","type":"text","text":"We demand the person redeeming the money provide the secret and a signature. This way, we can bind each contract to a specific recipient.\n\n“I, Alice, will pay Bob 100 satoshis if he can:\n\nProvide a secret message that when fed into the SHA256 hash function results in the following output: `9ed15…232e`\nProvide a valid signature, proving that he or she is the actual recipient of the payment;”\nIn the analogic world, this would be a very weak guarantee because hand-written signatures can be easily falsified. Fortunately, digital signatures provide much stronger security guarantees. They are like special stamps and codes that help to prove that a message is coming from whom we expect.\n\n\n\n","x":4641,"y":188,"width":665,"height":352},
 		{"id":"359c2fc3eba9d53d","type":"file","file":"assets/Pasted image 20240611120722.png","x":6440,"y":480,"width":1319,"height":560},
 		{"id":"7c70a62ff1ae759f","type":"text","text":"FInal Contract","x":6975,"y":400,"width":250,"height":60},
-		{"id":"a4a39f59a3d7268e","type":"text","text":"Add Homomorphic encryption?","x":5988,"y":167,"width":250,"height":60}
+		{"id":"a4a39f59a3d7268e","type":"text","text":"Add Homomorphic encryption?","x":5988,"y":167,"width":250,"height":60},
+		{"id":"f1c3087260abe818","type":"text","text":"+ payout address\n+ MuSig2 public nonce\n+ taproot public key (for agg. internal key)\n+ Bond input reference","x":-300,"y":320,"width":250,"height":260}
 	],
 	"edges":[
 		{"id":"77d1ff9130716b53","fromNode":"dba9c662192cf5bb","fromSide":"right","toNode":"93c73227c82f1a81","toSide":"left"},
