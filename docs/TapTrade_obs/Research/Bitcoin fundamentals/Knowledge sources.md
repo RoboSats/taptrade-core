@@ -10,6 +10,7 @@ Understanding the following BIPs is relevant for the project.
 * [BIP 65 - OP_CHECKLOCKTIMEVERIFY](https://github.com/bitcoin/bips/blob/master/bip-0065.mediawiki)
 * [BIP 174 - Partially Signed Bitcoin Transaction Format](https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki)
 * [BIP 370 - PSBT Version 2](https://github.com/bitcoin/bips/blob/master/bip-0370.mediawiki)
+* [BIP 327 - MuSig2](https://github.com/bitcoin/bips/blob/master/bip-0327.mediawiki)
 #### BIP Readtrough videos
 
 * [BIP 340 Readtrough - Jimmy Song](https://www.youtube.com/watch?v=rVsNFMzQUck)
