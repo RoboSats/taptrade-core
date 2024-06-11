@@ -6,11 +6,15 @@ use std::borrow::Borrow;
 
 use crate::cli::TraderSettings;
 use crate::communication::api::OfferCreationResponse;
+use crate::wallet::musig2::MusigNonce;
 use crate::wallet::{bond::Bond, load_wallet};
 use anyhow::Result;
-use bdk::bitcoin::block;
-use bdk::blockchain::{Blockchain, ElectrumBlockchain};
-use bdk::electrum_client::Client;
+use bdk::{
+	bitcoin::block,
+	blockchain::{Blockchain, ElectrumBlockchain},
+	electrum_client::Client,
+	wallet::AddressIndex::LastUnused,
+};
 
 pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let blockchain = ElectrumBlockchain::from(Client::new(&maker_config.electrum_endpoint)?);
@@ -25,12 +29,19 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 	let bond = Bond::assemble(&wallet, &offer_conditions, maker_config)?; // assemble the Bond transaction for offer creation
 																	  // blockchain.broadcast(&bond.extract_tx())?;  // publish bond to be mined for testing
+	let payout_pubkey = wallet.get_address(bdk::wallet::AddressIndex::LastUnused)?;
+
+	let musig_nonce: MusigNonce = MusigNonce::generate()?; // will be moved to a more suitable place
+
 	dbg!(&bond.extract_tx().txid());
+
 	Ok(())
 }
 
 pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 	let blockchain = ElectrumBlockchain::from(Client::new(&taker_config.electrum_endpoint)?);
+
+	// panic!("Taker to be implemented!");
 
 	Ok(())
 }

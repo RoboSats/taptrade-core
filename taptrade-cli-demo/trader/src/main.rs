@@ -10,12 +10,13 @@ use anyhow::{anyhow, Result};
 use cli::CliSettings;
 
 fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
-	if let CliSettings::Maker(maker_data) = cli_input {
-		Ok(trading::run_maker(maker_data)?)
-	} else if let CliSettings::Taker(taker_data) = cli_input {
-		// trading::run_taker(taker_data)?;
-	} else {
-		Err(anyhow!("Wrong mode selected!"))
+	match cli_input {
+		CliSettings::Maker(maker_config) => trading::run_maker(maker_config),
+		CliSettings::Taker(taker_config) => trading::run_taker(taker_config),
+		_ => Err(anyhow!(
+			"Wrong trading mode selected, not implemented: {:?}",
+			cli_input
+		)),
 	}
 }
 
