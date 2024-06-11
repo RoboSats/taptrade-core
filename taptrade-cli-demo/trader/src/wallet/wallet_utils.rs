@@ -1,4 +1,4 @@
-use rand_core::{RngCore, OsRng};
+use rand_core::{OsRng, RngCore};
 
 // uses operating system rng which is secure for cryptography
 pub fn get_seed() -> [u8; 32] {
