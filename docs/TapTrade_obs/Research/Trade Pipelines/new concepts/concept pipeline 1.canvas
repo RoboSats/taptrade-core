@@ -31,9 +31,7 @@
 		{"id":"85b66c760332f3fd","type":"file","file":"Pasted image 20240605185325.png","x":1210,"y":-48,"width":620,"height":548},
 		{"id":"c893eae93673779c","type":"text","text":"LOCK PHASE","x":1860,"y":201,"width":120,"height":50},
 		{"id":"3df70b3ca936442d","type":"text","text":"Maker generates a, b","x":2140,"y":216,"width":240,"height":50},
-		{"id":"13186938fe4262ea","type":"text","text":"Maker locks fund fund with Adaptor Signature with B","x":2500,"y":201,"width":260,"height":79},
-		{"id":"be75b68180f61ad9","type":"text","text":"Maker  offers net lightning channel secret \"b\"","x":2900,"y":201,"width":260,"height":79},
-		{"id":"6af43fed8e34e23d","type":"text","text":"This continues till the final node in the lightning channel offers secret to Robosats","x":3300,"y":181,"width":280,"height":120},
+		{"id":"13186938fe4262ea","type":"text","text":"Maker locks fund fund with Adaptor Signature with B","x":2500,"y":201,"width":260,"height":65},
 		{"id":"fcc7765243fc3246","type":"text","text":"Maker reveals timelock hash and claims back his penalty","x":3060,"y":714,"width":300,"height":65},
 		{"id":"50d4e3ecf700274e","type":"text","text":"? sends (a+b) to Robosats and it claims the penalty","x":3060,"y":435,"width":300,"height":65},
 		{"id":"d6de59256cbb3712","type":"text","text":"YES","x":2920,"y":500,"width":110,"height":50},
@@ -45,7 +43,20 @@
 		{"id":"a53320bd938fc27c","type":"text","text":"Sends invoice to Maker","x":2460,"y":-73,"width":240,"height":50},
 		{"id":"918eb7ddcf4cfa5f","type":"text","text":"SETUP PHASE","x":1860,"y":-73,"width":120,"height":50},
 		{"id":"880c77a2d23f2cec","type":"text","text":"+signed TX\n\n-> Bond to coordinator\n -> change to self\n -> SIGHASH_ALL | ANYONECANPAY\n\n+MuSig2 public nonce\n+taproot public key (for agg. internal key)","x":-380,"y":-24,"width":390,"height":230},
-		{"id":"356b7d6fdad4422f","x":795,"y":-760,"width":415,"height":500,"type":"text","text":"Coordinator does:\n- Validate the transaction (is the input unspent, does it really lock to the coordinator, is the change the amount of the trade, is the transaction fee > 201 sat/vbyte.\n- Send response back to trader -> status code\n- monitor mempool and blockchain\n- implement logic to create a child transaction spending the bond output with really high fees\n- (publish the offer to the orderbook)\n- Create endpoint to request available offers for takers"}
+		{"id":"356b7d6fdad4422f","type":"text","text":"Coordinator does:\n- Validate the transaction (is the input unspent, does it really lock to the coordinator, is the change the amount of the trade, is the transaction fee > 201 sat/vbyte.\n- Send response back to trader -> status code\n- monitor mempool and blockchain\n- implement logic to create a child transaction spending the bond output with really high fees\n- (publish the offer to the orderbook)\n- Create endpoint to request available offers for takers","x":795,"y":-760,"width":415,"height":500},
+		{"id":"706ef3652322d103","x":4220,"y":418,"width":305,"height":100,"type":"text","text":"OP_SHA256 <9ed15…232e> OP_EQUALVEIRFY <Redeemer’s Public Key> OP_CHECKSIG\n"},
+		{"id":"66e438712c3f0a6d","type":"text","text":"MODIFIED VERSION OF PTLC'S TO WORK WITHOUT LIGHTNING","x":2220,"y":-240,"width":360,"height":79},
+		{"id":"ef4f5882c2b2d88d","x":5100,"y":663,"width":340,"height":136,"color":"#ffffff","type":"text","text":"OP_DROP <Payment Expiry Block>OP_CHECKLOCKTIMEVERIFY OP_DROP\n\nOP_CHECKSIG"},
+		{"id":"18afaf0423782bb9","x":3671,"y":360,"width":497,"height":215,"type":"text","text":"ie, The script can only be unlocked if:\n1. Provide a secret message that when fed into the SHA256 hash function results in the following output: `9ed15…232e`\n2. Provide a valid signature, proving that he or she is the actual recipient of the payment;”"},
+		{"id":"1dc5493938b901e1","x":3420,"y":443,"width":154,"height":50,"type":"text","text":"HASHLOCK"},
+		{"id":"a13088582d111bdf","type":"text","text":"TIMELOCK","x":3440,"y":717,"width":154,"height":50},
+		{"id":"9fba777945323b82","x":4220,"y":673,"width":841,"height":139,"type":"file","file":"Pasted image 20240611105421.png"},
+		{"id":"25fd46361e37e55c","x":3700,"y":690,"width":360,"height":105,"type":"text","text":"If Robosats does not reveal the secret within 24 hours,  Trader can recover the funds"},
+		{"id":"675238072a27b5d6","x":5620,"y":560,"width":640,"height":420,"type":"text","text":"There must be a way of guaranteeing that the money won’t be locked up forever if anything goes wrong. We need to include a refund clause in the contract:\n\n_“If Robosats does not reveal the secret within 24 hours,  the Trader can recover the funds”_\n\nThis time-locked refund clause also helps achieve atomicity. There is no need to worry about a partial payment state. In the event of a failure, each participant  individually put the time-locked refund transaction on the blockchain to retrieve their funds.\n\nThe `OP_CHECKLOCKTIMEVERIFY`, or `OP_CLTV`, opcode works by allowing the creator of a transaction to specify a specific block height or timestamp in the future when the transaction can be added to the blockchain and become valid."},
+		{"id":"1d841d61bbe31e60","x":4641,"y":188,"width":665,"height":352,"type":"text","text":"We demand the person redeeming the money provide the secret and a signature. This way, we can bind each contract to a specific recipient.\n\n“I, Alice, will pay Bob 100 satoshis if he can:\n\nProvide a secret message that when fed into the SHA256 hash function results in the following output: `9ed15…232e`\nProvide a valid signature, proving that he or she is the actual recipient of the payment;”\nIn the analogic world, this would be a very weak guarantee because hand-written signatures can be easily falsified. Fortunately, digital signatures provide much stronger security guarantees. They are like special stamps and codes that help to prove that a message is coming from whom we expect.\n\n\n\n"},
+		{"id":"359c2fc3eba9d53d","x":6440,"y":480,"width":1319,"height":560,"type":"file","file":"Pasted image 20240611120722.png"},
+		{"id":"7c70a62ff1ae759f","x":6975,"y":400,"width":250,"height":60,"type":"text","text":"FInal Contract"},
+		{"id":"a4a39f59a3d7268e","x":5988,"y":167,"width":250,"height":60,"type":"text","text":"Add Homomorphic encryption?"}
 	],
 	"edges":[
 		{"id":"77d1ff9130716b53","fromNode":"dba9c662192cf5bb","fromSide":"right","toNode":"93c73227c82f1a81","toSide":"left"},
@@ -60,11 +71,13 @@
 		{"id":"eb5e7ef359d64c1d","fromNode":"c8b7d0bc62b28e03","fromSide":"right","toNode":"a53320bd938fc27c","toSide":"left"},
 		{"id":"f5f5f89f53d30cdb","fromNode":"a53320bd938fc27c","fromSide":"bottom","toNode":"3df70b3ca936442d","toSide":"top"},
 		{"id":"16004aafc5149992","fromNode":"3df70b3ca936442d","fromSide":"right","toNode":"13186938fe4262ea","toSide":"left"},
-		{"id":"fc4a53476554ee6a","fromNode":"13186938fe4262ea","fromSide":"right","toNode":"be75b68180f61ad9","toSide":"left"},
-		{"id":"ebbf0134ce7a0d33","fromNode":"be75b68180f61ad9","fromSide":"right","toNode":"6af43fed8e34e23d","toSide":"left"},
 		{"id":"56e698803b4f73cb","fromNode":"119047b4def84c19","fromSide":"right","toNode":"4db362c6f7e5620f","toSide":"left"},
 		{"id":"c3f0911c3d3ec5ba","fromNode":"4db362c6f7e5620f","fromSide":"right","toNode":"50d4e3ecf700274e","toSide":"left"},
 		{"id":"086c90642df1fa3a","fromNode":"fcc7765243fc3246","fromSide":"left","toNode":"4db362c6f7e5620f","toSide":"right"},
-		{"id":"012400747b7e0d17","fromNode":"6af43fed8e34e23d","fromSide":"bottom","toNode":"119047b4def84c19","toSide":"top"}
+		{"id":"7c47030a0b5b2c01","fromNode":"13186938fe4262ea","fromSide":"bottom","toNode":"119047b4def84c19","toSide":"top"},
+		{"id":"5a8af76c5df51a38","fromNode":"50d4e3ecf700274e","fromSide":"right","toNode":"18afaf0423782bb9","toSide":"left"},
+		{"id":"bf101083ef4373d4","fromNode":"18afaf0423782bb9","fromSide":"right","toNode":"706ef3652322d103","toSide":"left"},
+		{"id":"b38c076a2317742e","fromNode":"fcc7765243fc3246","fromSide":"right","toNode":"25fd46361e37e55c","toSide":"left"},
+		{"id":"af58f6b4b2fa387c","fromNode":"25fd46361e37e55c","fromSide":"right","toNode":"9fba777945323b82","toSide":"left"}
 	]
 }
