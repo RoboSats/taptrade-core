@@ -16,8 +16,9 @@ pub struct OrderRequest {
 
 #[derive(Serialize)]
 pub struct BondSubmissionRequest {
-	pub serialized_bond_tx_hex: String,
 	pub robohash_base91: String,
-	pub payout_address: String,
-	pub frost_public_nonce_hex: String,
+	pub signed_bond_base91: String,
+	pub payout_address: String, // does this make sense here?
+	pub musig_pub_nonce_base91: String,
+	pub musig_pubkey_base91: String,
 }
