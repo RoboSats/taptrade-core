@@ -1,24 +1,36 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
-pub struct OfferCreationResponse {
-	pub bond_address: String,
-	pub locking_amount: u64, // validate
-}
-
+// maker step 1
+// requesting to create an offer on the orderbook (POST request)
 #[derive(Serialize)]
 pub struct OrderRequest {
-	pub robohash_base91: String,
-	pub amount_satoshi: u64,
-	pub order_type: String, // buy or sell
-	pub bond_ratio: u8,     // [2, 50]
+	pub robohash_hex: String,   // identifier of the trader
+	pub amount_satoshi: u64,    // amount in satoshi to buy or sell
+	pub is_buy_order: bool,     // true if buy, false if sell
+	pub bond_ratio: u8,         // [2, 50]% of trading amount
+	pub offer_duration_ts: u64, // unix timestamp how long the offer should stay available
 }
 
+// coordinator answer to maker step 1
+// direct Json answer to step 1 (same request)
+#[derive(Debug, Deserialize)]
+pub struct OfferCreationResponse {
+	pub bond_address: String,    // address the bond has to be locked to
+	pub locking_amount_sat: u64, // min amount of the bond output in sat
+}
+
+// maker step 2
+// (submission of signed bond and other data neccessary to coordinate the trade)
 #[derive(Serialize)]
 pub struct BondSubmissionRequest {
-	pub robohash_base91: String,
-	pub signed_bond_base91: String,
-	pub payout_address: String, // does this make sense here?
-	pub musig_pub_nonce_base91: String,
-	pub musig_pubkey_base91: String,
+	pub robohash_hex: String,
+	pub signed_bond_hex: String, // signed bond transaction, hex encoded
+	pub payout_address: String,  // does this make sense here?
+	pub musig_pub_nonce_hex: String,
+	pub musig_pubkey_hex: String,
+}
+
+pub struct OrderActivatedResponse {
+	pub order_id_hex: String,
+	pub bond_locked_until_timestamp: u128, // unix timestamp. Do not touch bond till then unless offer gets taken.
 }

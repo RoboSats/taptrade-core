@@ -5,7 +5,7 @@ use tokio::net::TcpListener;
 
 #[derive(Deserialize, Serialize, Debug)]
 struct OrderRequest {
-	robohash_base91: String,
+	robohash_hex: String,
 	amount_satoshi: u64,
 	order_type: String,
 	bond_ratio: u8,
@@ -16,7 +16,7 @@ async fn receive_order(Json(order): Json<OrderRequest>) {
 	println!("Received order: {:?}", order);
 
 	// Access individual fields
-	let robohash = &order.robohash_base91;
+	let robohash = &order.robohash_hex;
 	let amount = order.amount_satoshi;
 	let order_type = &order.order_type;
 	let bond_ratio = order.bond_ratio;
@@ -31,7 +31,7 @@ async fn receive_order(Json(order): Json<OrderRequest>) {
 	// Example of further processing
 	if order_type == "buy" {
 		println!("Processing a buy order...");
-		// Add your buy order logic here
+	// Add your buy order logic here
 	} else if order_type == "sell" {
 		println!("Processing a sell order...");
 		// Add your sell order logic here

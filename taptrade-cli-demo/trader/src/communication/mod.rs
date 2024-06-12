@@ -9,22 +9,23 @@ use api::{OfferCreationResponse, OrderRequest};
 impl OfferCreationResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
 		let amount: u64;
-		let trade_type = match &trader_setup.trade_type {
+		let is_buy_order = match &trader_setup.trade_type {
 			OfferType::Buy(val) => {
 				amount = *val;
-				"buy"
+				true
 			}
 			OfferType::Sell(val) => {
 				amount = *val;
-				"sell"
+				false
 			}
 		};
 
 		OrderRequest {
-			robohash_base91: trader_setup.robosats_robohash_base91.clone(),
+			robohash_hex: trader_setup.robosats_robohash_hex.clone(),
 			amount_satoshi: amount,
-			order_type: trade_type.to_string(),
+			is_buy_order,
 			bond_ratio: trader_setup.bond_ratio,
+			offer_duration_ts: trader_setup.duration_unix_ts,
 		}
 	}
 

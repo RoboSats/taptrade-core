@@ -1,10 +1,13 @@
-use anyhow::{anyhow, Result};
-use sha2::{Digest, Sha256};
-use std::env;
-use std::io::{self, Write};
-
 use crate::wallet::get_wallet_xprv;
+use anyhow::{anyhow, Result};
 use bdk::bitcoin::bip32::ExtendedPrivKey;
+use hex;
+use sha2::{Digest, Sha256};
+use std::{
+	env,
+	io::{self, Write},
+	time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug)]
 pub struct Coordinator;
@@ -19,11 +22,12 @@ pub enum OfferType {
 pub struct TraderSettings {
 	pub electrum_endpoint: String,
 	pub coordinator_endpoint: String,
-	pub robosats_robohash_base91: String,
+	pub robosats_robohash_hex: String,
 	pub trade_type: OfferType,
 	pub payout_address: String,
 	pub bond_ratio: u8,
 	pub wallet_xprv: ExtendedPrivKey,
+	pub duration_unix_ts: u64, // until when the order should stay available
 }
 
 #[derive(Debug)]
@@ -37,14 +41,6 @@ fn hash256(input: &String) -> [u8; 32] {
 	let mut hasher = Sha256::new();
 	hasher.update(input.as_bytes());
 	hasher.finalize().into()
-}
-
-// Robosats uses base91 encoded sha256 hash of the private robot key
-fn bytes_to_base91(input: &[u8; 32]) -> String {
-	let encoded_robohash: String = base91::EncodeIterator::new(input.iter().copied())
-		.as_char_iter()
-		.collect();
-	encoded_robohash
 }
 
 impl OfferType {
@@ -87,11 +83,17 @@ impl CliSettings {
 		}
 	}
 
+	// parses the hours input string and returns the unix timestamp + the trade duration in seconds
+	fn hours_to_ts(hours: &String) -> Result<u64> {
+		let duration: u64 = hours.parse()?;
+		Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + duration * 3600)
+	}
+
 	fn get_trader_settings() -> Result<TraderSettings> {
 		let electrum_endpoint = Self::get_user_input("Enter electrum endpoint: ");
 		let coordinator_endpoint = Self::get_user_input("Enter coordinator endpoint: ");
-		let robosats_robohash_base91 = bytes_to_base91(&hash256(&Self::get_user_input(
-			"Enter your robosats robot key: ",
+		let robosats_robohash_hex = hex::encode(&hash256(&Self::get_user_input(
+			"Enter your robosats robot key: ", // just for testing purposes, to be improved to the real robohash spec
 		)));
 		let trade_type: OfferType = Self::get_trade_type(None);
 		let payout_address = Self::get_user_input(
@@ -101,14 +103,18 @@ impl CliSettings {
 		let wallet_xprv = Self::check_xprv_input(Some(Self::get_user_input(
 			"Enter funded testnet wallet xprv or leave empty to generate: ",
 		)))?;
+		let duration_unix_ts: u64 = Self::hours_to_ts(&Self::get_user_input(
+			"How many hours should the offer stay online: ",
+		))?;
 		Ok(TraderSettings {
 			electrum_endpoint,
 			coordinator_endpoint,
-			robosats_robohash_base91,
+			robosats_robohash_hex,
 			trade_type,
 			payout_address,
 			bond_ratio,
 			wallet_xprv,
+			duration_unix_ts,
 		})
 	}
 
@@ -126,11 +132,12 @@ impl CliSettings {
 		Ok(TraderSettings {
 			electrum_endpoint: env::var("ELECTRUM_ENDPOINT")?,
 			coordinator_endpoint: env::var("COORDINATOR_ENDPOINT")?,
-			robosats_robohash_base91: env::var("ROBOHASH_BASE91")?,
+			robosats_robohash_hex: env::var("ROBOHASH_HEX")?,
 			trade_type: Self::get_trade_type(Some(env::var("TRADE_TYPE")?)),
 			payout_address: env::var("PAYOUT_ADDRESS")?,
 			bond_ratio: env::var("BOND_RATIO")?.parse()?,
 			wallet_xprv: Self::check_xprv_input(Some(env::var("XPRV")?))?,
+			duration_unix_ts: Self::hours_to_ts(&env::var("OFFER_DURATION_HOURS")?)?,
 		})
 	}
 
