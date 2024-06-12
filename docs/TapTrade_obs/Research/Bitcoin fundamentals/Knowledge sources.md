@@ -98,3 +98,6 @@ https://dev.to/eunovo/a-guide-to-creating-taproot-scripts-with-bitcoinjs-lib-4op
 https://bitcointalk.org/index.php?topic=5455282.0
 https://extheo.hashnode.dev/point-time-locked-contracts-part-one
 https://suredbits.com/ptlc-proof-of-concept/
+
+### <u>Descriptors</u>
+[Descriptor Explanation](https://thunderbiscuit.github.io/Learning-Bitcoin-from-the-Command-Line/03_5_Understanding_the_Descriptor.html)
