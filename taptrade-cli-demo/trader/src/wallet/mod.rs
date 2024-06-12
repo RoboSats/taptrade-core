@@ -18,10 +18,10 @@ use bdk::{
 use std::str::FromStr;
 use wallet_utils::get_seed;
 
-pub struct WalletDescriptors {
-	pub descriptor: Bip86<ExtendedPrivKey>,
-	pub change_descriptor: Option<Bip86<ExtendedPrivKey>>,
-}
+// pub struct WalletDescriptors {
+// 	pub descriptor: Bip86<ExtendedPrivKey>,
+// 	pub change_descriptor: Option<Bip86<ExtendedPrivKey>>,
+// }
 
 pub fn get_wallet_xprv(xprv_input: Option<String>) -> Result<ExtendedPrivKey> {
 	let xprv: ExtendedPrivKey;
@@ -52,6 +52,6 @@ pub fn load_wallet(
 	)?;
 
 	wallet.sync(blockchain, SyncOptions::default())?;
-	println!("Descriptor balance: {} SAT", wallet.get_balance()?);
+	println!("Balance: {} SAT", wallet.get_balance()?);
 	Ok(wallet)
 }

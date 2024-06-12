@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 use std::env;
 use std::io::{self, Write};
 
-use crate::wallet::{get_wallet_xprv, WalletDescriptors};
+use crate::wallet::get_wallet_xprv;
 use bdk::bitcoin::bip32::ExtendedPrivKey;
 
 #[derive(Debug)]
@@ -121,8 +121,8 @@ impl CliSettings {
 		get_wallet_xprv(None)
 	}
 
-	fn load_from_env() -> Result<TraderSettings> {
-		dotenv::from_filename(".env")?;
+	fn load_from_env(filename: &str) -> Result<TraderSettings> {
+		dotenv::from_filename(filename)?;
 		Ok(TraderSettings {
 			electrum_endpoint: env::var("ELECTRUM_ENDPOINT")?,
 			coordinator_endpoint: env::var("COORDINATOR_ENDPOINT")?,
@@ -134,16 +134,20 @@ impl CliSettings {
 		})
 	}
 
+	fn parse_trader_settings(maybe_filename: &str) -> Result<TraderSettings> {
+		match Self::get_user_input("Load from .env (y/N): ").trim() {
+			"y" => Self::load_from_env(maybe_filename),
+			"N" => Self::get_trader_settings(),
+			_ => Err(anyhow!("Not a valid input!")),
+		}
+	}
+
 	pub fn parse_cli_args() -> Result<Self> {
 		let mode = Self::get_user_input("Enter mode, 'taker' or 'maker': ");
-		let trader_settings = match Self::get_user_input("Load from .env (y/N): ").trim() {
-			"y" => Self::load_from_env()?,
-			"N" => Self::get_trader_settings()?,
-			_ => return Err(anyhow!("Not a valid input!")),
-		};
+
 		match mode.to_lowercase().as_str() {
-			"maker" => Ok(Self::Maker(trader_settings)),
-			"taker" => Ok(Self::Taker(trader_settings)),
+			"maker" => Ok(Self::Maker(Self::parse_trader_settings("maker.env")?)),
+			"taker" => Ok(Self::Taker(Self::parse_trader_settings("taker.env")?)),
 			_ => Err(anyhow!("Either select maker or taker!")),
 		}
 	}

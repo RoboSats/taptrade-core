@@ -1,9 +1,24 @@
-use crate::wallet::wallet_utils::get_seed;
+use crate::wallet::bitcoin::key::{Parity, Secp256k1, XOnlyPublicKey};
+use crate::wallet::{wallet_utils::get_seed, KeychainKind};
 use anyhow::{anyhow, Error, Result};
+use bdk::{
+	bitcoin::{
+		bip32::ExtendedPrivKey,
+		secp256k1::{All, SecretKey},
+	},
+	keys::{DescriptorPublicKey, DescriptorSecretKey},
+	template::{Bip86, DescriptorTemplate},
+};
 use musig2::{PubNonce, SecNonce, SecNonceBuilder};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // https://docs.rs/musig2/latest/musig2/
+
+pub struct MuSigData {
+	pub nonce: MusigNonce,
+	pub public_key: (XOnlyPublicKey, Parity),
+	pub secret_key: SecretKey,
+}
 
 // secret nonce has to be used only one time!
 pub struct MusigNonce {
@@ -44,5 +59,18 @@ impl MusigNonce {
 		}
 		self.accessed_for_sharing = true;
 		Ok(self.secret_nonce.public_nonce())
+	}
+}
+
+impl MuSigData {
+	pub fn create(xprv: &ExtendedPrivKey, secp_ctx: &Secp256k1<All>) -> Result<MuSigData> {
+		let nonce = MusigNonce::generate()?;
+		let keypair = xprv.to_owned().to_keypair(secp_ctx); // double check keypair, which derivation should we use?
+
+		Ok(MuSigData {
+			nonce,
+			public_key: keypair.x_only_public_key(),
+			secret_key: keypair.secret_key(),
+		})
 	}
 }
