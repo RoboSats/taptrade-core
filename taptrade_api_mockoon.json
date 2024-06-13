@@ -65,6 +65,54 @@
         }
       ],
       "responseMode": null
+    },
+    {
+      "uuid": "ad35d2da-7b97-4a27-9693-ee42deef7d45",
+      "type": "http",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "request-offer-status",
+      "responses": [
+        {
+          "uuid": "03cbf2fb-b431-44bb-b19f-a4302118de52",
+          "body": "{\n  \"trade_psbt_hex_to_sign\": \"DEADBEEF\",\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Returned of the offer has been taken",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "9ada9097-97e3-40c3-b0cf-d0eec3587027",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 204,
+          "label": "Returned if the requested offer is not yet taken",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
     }
   ],
   "rootChildren": [
@@ -75,6 +123,10 @@
     {
       "type": "route",
       "uuid": "bb20e299-c097-4555-aa5c-7c2975e65c48"
+    },
+    {
+      "type": "route",
+      "uuid": "ad35d2da-7b97-4a27-9693-ee42deef7d45"
     }
   ],
   "proxyMode": false,
