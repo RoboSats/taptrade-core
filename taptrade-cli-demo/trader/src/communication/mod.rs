@@ -102,7 +102,7 @@ impl OfferTakenResponse {
 		let res = client
 			.post(format!(
 				"{}{}",
-				trader_setup.coordinator_endpoint, "/request-trade-status"
+				trader_setup.coordinator_endpoint, "/request-offer-status"
 			))
 			.json(&request)
 			.send()?;
