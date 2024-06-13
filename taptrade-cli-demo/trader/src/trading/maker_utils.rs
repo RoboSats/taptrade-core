@@ -1,14 +1,18 @@
 use crate::cli::TraderSettings;
-use crate::communication::api::{BondSubmissionRequest, OfferCreationResponse};
+use crate::communication::api::{
+	BondSubmissionRequest, OfferCreationResponse, OfferTakenRequest, OfferTakenResponse,
+};
 use crate::wallet::{
 	bond::Bond,
 	musig2::{MuSigData, MusigNonce},
 	TradingWallet,
 };
 use anyhow::Result;
+use bdk::bitcoin::amount::serde::as_btc::deserialize;
 use bdk::{
 	bitcoin::psbt::PartiallySignedTransaction, database::MemoryDatabase, wallet::AddressInfo,
 };
+use std::{thread, time::Duration};
 
 #[derive(Debug)]
 pub struct ActiveOffer {
@@ -51,5 +55,21 @@ impl ActiveOffer {
 			used_bond: bond,
 			expected_payout_address: payout_address,
 		})
+	}
+
+	// polling until offer is taken, in production a more efficient way would make sense
+	// returns the PSBT of the escrow trade transaction we have to validate, sign and return
+	pub fn wait_until_taken(
+		self,
+		trader_config: &TraderSettings,
+	) -> Result<PartiallySignedTransaction> {
+		loop {
+			thread::sleep(Duration::from_secs(10));
+			if let Some(offer_taken_response) = OfferTakenResponse::check(&self, trader_config)? {
+				let psbt_bytes = hex::decode(offer_taken_response.trade_psbt_hex_to_sign)?;
+				let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
+				return Ok(psbt);
+			}
+		}
 	}
 }

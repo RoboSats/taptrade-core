@@ -15,7 +15,7 @@ pub struct OrderRequest {
 // direct Json answer to step 1 (same request)
 #[derive(Debug, Deserialize)]
 pub struct OfferCreationResponse {
-	pub bond_address: String,    // address the bond has to be locked to
+	pub bond_address: String, // address the bond ha/workspaces/taptrade-core/taptrade-cli-demo/trader/src/communications to be locked to
 	pub locking_amount_sat: u64, // min amount of the bond output in sat
 }
 
@@ -35,4 +35,15 @@ pub struct BondSubmissionRequest {
 pub struct OrderActivatedResponse {
 	pub order_id_hex: String,
 	pub bond_locked_until_timestamp: u128, // unix timestamp. Do not touch bond till then unless offer gets taken.
+}
+
+#[derive(Debug, Serialize)]
+pub struct OfferTakenRequest {
+	pub robohash_hex: String,
+	pub order_id_hex: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OfferTakenResponse {
+	pub trade_psbt_hex_to_sign: String,
 }

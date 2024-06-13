@@ -1,4 +1,4 @@
-mod maker_utils;
+pub mod maker_utils;
 
 use self::maker_utils::ActiveOffer;
 use crate::cli::TraderSettings;
@@ -10,6 +10,8 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
 	dbg!(&offer);
+	let trade_psbt = offer.wait_until_taken(maker_config)?;
+
 	Ok(())
 }
 
