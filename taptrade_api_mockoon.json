@@ -36,12 +36,45 @@
         }
       ],
       "responseMode": null
+    },
+    {
+      "uuid": "bb20e299-c097-4555-aa5c-7c2975e65c48",
+      "type": "http",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "submit-maker-bond",
+      "responses": [
+        {
+          "uuid": "f39116ac-02ab-4e7c-91ed-666cac6a5a47",
+          "body": "{\n  \"order_id_hex\": \"37346634343237352D373930622D343631342D626139332D656366373235653036383763\",\n  \"bond_locked_until_timestamp\": 1725184724\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
     }
   ],
   "rootChildren": [
     {
       "type": "route",
       "uuid": "7cdc672a-d43a-41f2-a10b-630306bf1d03"
+    },
+    {
+      "type": "route",
+      "uuid": "bb20e299-c097-4555-aa5c-7c2975e65c48"
     }
   ],
   "proxyMode": false,
