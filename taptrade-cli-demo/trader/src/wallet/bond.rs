@@ -19,8 +19,8 @@ pub struct Outpoint {
 }
 
 pub struct Bond {
-	pub signed_bond_tx_hex: String,
-	pub used_outpoint: Outpoint,
+	// pub signed_bond_tx_hex: String,  not needed
+	// pub used_outpoint: Outpoint,
 }
 
 impl Bond {

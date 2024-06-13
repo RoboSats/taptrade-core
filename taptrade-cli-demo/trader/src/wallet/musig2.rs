@@ -14,6 +14,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 // https://docs.rs/musig2/latest/musig2/
 
+#[derive(Debug)]
 pub struct MuSigData {
 	pub nonce: MusigNonce,
 	pub public_key: (XOnlyPublicKey, Parity),
@@ -21,6 +22,7 @@ pub struct MuSigData {
 }
 
 // secret nonce has to be used only one time!
+#[derive(Debug)]
 pub struct MusigNonce {
 	secret_nonce: SecNonce,
 	accessed_for_signing: bool,

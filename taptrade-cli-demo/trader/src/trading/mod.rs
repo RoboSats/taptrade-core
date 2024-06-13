@@ -9,7 +9,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let wallet = TradingWallet::load_wallet(maker_config)?; // initialize the wallet with xprv
 
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
-	// dbg!(&bond.extract_tx().txid());
+	dbg!(&offer);
 	Ok(())
 }
 
