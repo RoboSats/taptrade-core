@@ -113,6 +113,64 @@
         }
       ],
       "responseMode": null
+    },
+    {
+      "uuid": "dc8a8111-6539-4529-8a95-ea35c9ac2c0f",
+      "type": "http",
+      "documentation": "Fetch all available offers for given conditions",
+      "method": "post",
+      "endpoint": "fetch-available-offers",
+      "responses": [
+        {
+          "uuid": "165d4f04-12d3-45e2-a437-9da5f0a04d2f",
+          "body": "  \"offers\": [\n    {\n      \"amount_sat\": 1000,\n      \"offer_id_hex\": \"abc123\"\n    },\n    {\n      \"amount_sat\": 2000,\n      \"offer_id_hex\": \"def456\"\n    }\n  ]",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
+    },
+    {
+      "uuid": "ee4bb798-c787-43ae-9a34-64568ba8c31b",
+      "type": "http",
+      "documentation": "",
+      "method": "post",
+      "endpoint": "take-offer",
+      "responses": [
+        {
+          "uuid": "e527cfa3-eaf6-4972-882b-b723084dfe49",
+          "body": "{\n  \"bond_address\": \"tb1pfdvgfzwp8vhmelpv8w9kezz7nsmxw68jz6yehgze6mzx0t6r9t2qv9ynmm\",\n  \"locking_amount\": 123456\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
     }
   ],
   "rootChildren": [
@@ -127,6 +185,14 @@
     {
       "type": "route",
       "uuid": "ad35d2da-7b97-4a27-9693-ee42deef7d45"
+    },
+    {
+      "type": "route",
+      "uuid": "dc8a8111-6539-4529-8a95-ea35c9ac2c0f"
+    },
+    {
+      "type": "route",
+      "uuid": "ee4bb798-c787-43ae-9a34-64568ba8c31b"
     }
   ],
   "proxyMode": false,
