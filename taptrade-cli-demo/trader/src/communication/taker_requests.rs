@@ -3,6 +3,7 @@ use anyhow::Context;
 use super::{api::*, *};
 
 impl PublicOffers {
+	// fetch a list of all publicly available offers on the coordinator fitting the requested range and type
 	pub fn fetch(taker_config: &TraderSettings) -> Result<PublicOffers> {
 		let amount = taker_config.trade_type.value();
 		let request = OffersRequest {
@@ -23,6 +24,7 @@ impl PublicOffers {
 		Ok(res)
 	}
 
+	// ask the user to select a offer to take on the CLI
 	pub fn ask_user_to_select(&self) -> Result<&PublicOffer> {
 		for (index, offer) in self.offers.as_ref().unwrap().iter().enumerate() {
 			println!(
@@ -37,5 +39,20 @@ impl PublicOffers {
 		let index: usize = input.trim().parse().context("Wrong index entered")?;
 
 		Ok(&self.offers.as_ref().unwrap()[index])
+	}
+}
+
+impl PublicOffer {
+	pub fn take(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/take-offer"
+			))
+			.json(self)
+			.send()?
+			.json::<BondRequirementResponse>()?;
+		Ok(res)
 	}
 }

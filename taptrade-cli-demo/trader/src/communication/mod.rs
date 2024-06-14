@@ -3,12 +3,12 @@ pub mod taker_requests;
 
 use crate::{
 	cli::{OfferType, TraderSettings},
-	trading::maker_utils::ActiveOffer,
+	trading::utils::ActiveOffer,
 	wallet::{bond::Bond, musig2::MuSigData},
 };
 use anyhow::{anyhow, Result};
 use api::{
-	BondSubmissionRequest, OfferCreationResponse, OfferTakenRequest, OfferTakenResponse,
+	BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
 	OrderActivatedResponse, OrderRequest,
 };
 use bdk::bitcoin::consensus::encode::serialize_hex;
@@ -18,7 +18,7 @@ use bdk::{
 };
 use serde::{Deserialize, Serialize};
 
-impl OfferCreationResponse {
+impl BondRequirementResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
 		let amount: u64;
 		let is_buy_order = match &trader_setup.trade_type {
@@ -41,7 +41,7 @@ impl OfferCreationResponse {
 		}
 	}
 
-	pub fn fetch(trader_setup: &TraderSettings) -> Result<OfferCreationResponse> {
+	pub fn fetch(trader_setup: &TraderSettings) -> Result<BondRequirementResponse> {
 		let client = reqwest::blocking::Client::new();
 		let res = client
 			.post(format!(
@@ -50,7 +50,7 @@ impl OfferCreationResponse {
 			))
 			.json(&Self::_format_request(trader_setup))
 			.send()?
-			.json::<OfferCreationResponse>()?;
+			.json::<BondRequirementResponse>()?;
 		Ok(res)
 	}
 }
