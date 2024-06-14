@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use super::*;
 
 // maker step 1
 // requesting to create an offer on the orderbook (POST request)
@@ -46,4 +46,24 @@ pub struct OfferTakenRequest {
 #[derive(Debug, Deserialize)]
 pub struct OfferTakenResponse {
 	pub trade_psbt_hex_to_sign: String,
+}
+
+// Taker structures
+
+#[derive(Debug, Serialize)]
+pub struct OffersRequest {
+	pub buy_offers: bool, // true if looking for buy offers, false if looking for sell offers
+	pub amount_min_sat: u64,
+	pub amount_max_sat: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PublicOffer {
+	pub amount_sat: u64,
+	pub offer_id_hex: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PublicOffers {
+	pub offers: Option<Vec<PublicOffer>>, // don't include offers var in return json if no offers are available
 }

@@ -50,6 +50,12 @@ impl OfferType {
 			OfferType::Sell(value) => *value,
 		}
 	}
+	pub fn is_buy_order(&self) -> bool {
+		match self {
+			OfferType::Buy(_) => true,
+			OfferType::Sell(_) => false,
+		}
+	}
 }
 
 impl CliSettings {

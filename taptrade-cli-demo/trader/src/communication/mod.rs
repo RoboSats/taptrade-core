@@ -1,4 +1,5 @@
 pub mod api;
+pub mod taker_requests;
 
 use crate::{
 	cli::{OfferType, TraderSettings},
