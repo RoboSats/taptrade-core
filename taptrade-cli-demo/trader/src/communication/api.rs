@@ -21,7 +21,7 @@ pub struct BondRequirementResponse {
 
 // maker step 2
 // (submission of signed bond and other data neccessary to coordinate the trade)
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
@@ -66,4 +66,10 @@ pub struct PublicOffer {
 #[derive(Debug, Deserialize)]
 pub struct PublicOffers {
 	pub offers: Option<Vec<PublicOffer>>, // don't include offers var in return json if no offers are available
+}
+
+#[derive(Debug, Serialize)]
+pub struct RequestOfferPsbt {
+	pub offer: PublicOffer,
+	pub trade_data: BondSubmissionRequest,
 }

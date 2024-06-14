@@ -10,7 +10,7 @@ use bdk::{
 use serde::de::value;
 use std::str::FromStr;
 
-use crate::communication::api::OfferCreationResponse;
+use crate::communication::api::BondRequirementResponse;
 use crate::wallet::TraderSettings;
 
 pub struct Outpoint {
@@ -26,7 +26,7 @@ pub struct Bond {
 impl Bond {
 	pub fn assemble(
 		wallet: &Wallet<MemoryDatabase>,
-		bond_target: &OfferCreationResponse,
+		bond_target: &BondRequirementResponse,
 		trader_input: &TraderSettings,
 	) -> Result<PartiallySignedTransaction> {
 		// parse bond locking address as Address struct and verify network is testnet

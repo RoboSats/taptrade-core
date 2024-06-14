@@ -56,24 +56,34 @@ impl BondRequirementResponse {
 }
 
 impl BondSubmissionRequest {
-	pub fn send(
+	pub fn prepare_bond_request(
+		bond: &PartiallySignedTransaction,
+		payout_address: &AddressInfo,
+		musig_data: &mut MuSigData,
+		trader_config: &TraderSettings,
+	) -> Result<BondSubmissionRequest> {
+		let signed_bond_hex = serialize_hex(&bond.to_owned().extract_tx());
+		let musig_pub_nonce_hex = hex::encode(musig_data.nonce.get_pub_for_sharing()?.serialize());
+		let musig_pubkey_hex = hex::encode(musig_data.public_key.0.serialize());
+
+		let request = BondSubmissionRequest {
+			robohash_hex: trader_config.robosats_robohash_hex.clone(),
+			signed_bond_hex,
+			payout_address: payout_address.address.to_string(),
+			musig_pub_nonce_hex,
+			musig_pubkey_hex,
+		};
+		Ok(request)
+	}
+
+	pub fn send_maker(
 		robohash_hex: &String,
 		bond: &PartiallySignedTransaction,
 		musig_data: &mut MuSigData,
 		payout_address: &AddressInfo,
 		trader_setup: &TraderSettings,
 	) -> Result<OrderActivatedResponse> {
-		let signed_bond_hex = serialize_hex(&bond.to_owned().extract_tx());
-		let musig_pub_nonce_hex = hex::encode(musig_data.nonce.get_pub_for_sharing()?.serialize());
-		let musig_pubkey_hex = hex::encode(musig_data.public_key.0.serialize());
-		let request = BondSubmissionRequest {
-			robohash_hex: robohash_hex.clone(),
-			signed_bond_hex,
-			payout_address: payout_address.address.to_string(),
-			musig_pub_nonce_hex,
-			musig_pubkey_hex,
-		};
-
+		let request = Self::prepare_bond_request(bond, payout_address, musig_data, trader_setup)?;
 		let client = reqwest::blocking::Client::new();
 		let res = client
 			.post(format!(

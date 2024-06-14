@@ -9,6 +9,12 @@ impl ActiveOffer {
 	) -> Result<ActiveOffer> {
 		let bond_conditions: BondRequirementResponse = offer.take(taker_config)?;
 		let (bond, mut musig_data, payout_address) =
-			Self::onchain_assembly(trading_wallet, &bond_conditions, taker_config)?;
+			trading_wallet.trade_onchain_assembly(&bond_conditions, taker_config)?;
+		// let trading_psbt =
+	}
+
+	pub fn wait_on_maker(&self) -> Result<()> {
+		// tbd
+		Ok(())
 	}
 }

@@ -56,3 +56,26 @@ impl PublicOffer {
 		Ok(res)
 	}
 }
+
+impl OfferTakenRequest {
+	pub fn taker_request(
+		bond: &Bond,
+		mut musig_data: &MuSigData,
+		taker_config: &TraderSettings,
+	) -> Result<PartiallySignedTransaction> {
+		let request = RequestOfferPsbt {
+			offer:
+		};
+
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/submit-taker-bond"
+			))
+			.json(self)
+			.send()?
+			.json::<OfferTakenResponse>()?;
+		Ok(res)
+	}
+}
