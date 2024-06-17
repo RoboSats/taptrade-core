@@ -71,4 +71,11 @@ impl TradingWallet {
 
 		Ok((bond, musig_data, payout_address))
 	}
+
+	// validate that the taker psbt references the correct inputs and amounts
+	// taker input should be the same as in the previous bond transaction.
+	// input amount should be the bond amount when buying,
+	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> bool {
+		false
+	}
 }

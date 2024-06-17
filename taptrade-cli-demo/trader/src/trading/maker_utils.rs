@@ -16,7 +16,7 @@ impl ActiveOffer {
 
 		let (bond, mut musig_data, payout_address) =
 			trading_wallet.trade_onchain_assembly(&offer_conditions, maker_config)?;
-		let submission_result = BondSubmissionRequest::send(
+		let submission_result = BondSubmissionRequest::send_maker(
 			&maker_config.robosats_robohash_hex,
 			&bond,
 			&mut musig_data,

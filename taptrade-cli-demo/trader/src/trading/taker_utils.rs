@@ -1,6 +1,6 @@
 use bdk::electrum_client::Request;
 
-use crate::communication::api::{OfferPsbtRequest, RequestOfferPsbt};
+use crate::communication::api::OfferPsbtRequest;
 
 use super::utils::*;
 use super::*;
@@ -10,7 +10,9 @@ impl ActiveOffer {
 		trading_wallet: &TradingWallet,
 		taker_config: &TraderSettings,
 		offer: &PublicOffer,
-	) -> Result<ActiveOffer> {
+	) -> Result<()> {
+		// return Ok(Active offer)
+
 		// fetching the bond requirements for the requested Offer (amount, locking address)
 		let bond_conditions: BondRequirementResponse = offer.request_bond(taker_config)?;
 
@@ -28,6 +30,12 @@ impl ActiveOffer {
 		)?;
 		let escrow_contract_psbt =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;
+
+		// now we have to verify, sign and submit the escrow psbt again
+		if !trading_wallet.validate_taker_psbt(&escrow_contract_psbt) {
+			panic!("taker psbt invalid!");
+		}
+		Ok(())
 	}
 
 	pub fn wait_on_maker(&self) -> Result<()> {
