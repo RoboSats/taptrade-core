@@ -78,7 +78,7 @@
           "body": "{\n  \"trade_psbt_hex_to_sign\": \"DEADBEEF\",\n}",
           "latency": 0,
           "statusCode": 200,
-          "label": "Returned of the offer has been taken",
+          "label": "Returned if the offer has been taken",
           "headers": [],
           "bodyType": "INLINE",
           "filePath": "",
@@ -94,7 +94,7 @@
         },
         {
           "uuid": "9ada9097-97e3-40c3-b0cf-d0eec3587027",
-          "body": "{}",
+          "body": "",
           "latency": 0,
           "statusCode": 204,
           "label": "Returned if the requested offer is not yet taken",
@@ -126,7 +126,7 @@
           "body": "  \"offers\": [\n    {\n      \"amount_sat\": 1000,\n      \"offer_id_hex\": \"abc123\"\n    },\n    {\n      \"amount_sat\": 2000,\n      \"offer_id_hex\": \"def456\"\n    }\n  ]",
           "latency": 0,
           "statusCode": 200,
-          "label": "",
+          "label": "Returns a list of available offers, requested with OffersRequest",
           "headers": [],
           "bodyType": "INLINE",
           "filePath": "",
@@ -148,14 +148,43 @@
       "type": "http",
       "documentation": "",
       "method": "post",
-      "endpoint": "take-offer",
+      "endpoint": "request-taker-bond",
       "responses": [
         {
           "uuid": "e527cfa3-eaf6-4972-882b-b723084dfe49",
           "body": "{\n  \"bond_address\": \"tb1pfdvgfzwp8vhmelpv8w9kezz7nsmxw68jz6yehgze6mzx0t6r9t2qv9ynmm\",\n  \"locking_amount\": 123456\n}",
           "latency": 0,
           "statusCode": 200,
-          "label": "",
+          "label": "Gets requested with PublicOffer Json",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
+    },
+    {
+      "uuid": "cb932396-c73e-4a4c-9f1a-b4de5250cb16",
+      "type": "http",
+      "documentation": "gets requested with OfferPsbtRequest",
+      "method": "post",
+      "endpoint": "submit-taker-bond",
+      "responses": [
+        {
+          "uuid": "b852f55c-5c97-47d2-a149-cbf6a0fad3e1",
+          "body": "{\n  \"trade_psbt_hex_to_sign\": \"INVALID_EXAMPLE_37346634343237352D373930622D343631342D626139332D65636637323565303638376337346634343237352D373930622D343631342D626139332D65636637323565303638376337346634343237352D373930622D343631342D626139332D65636637323565303638376337346634343237352D373930622D343631342D626139332D65636637323565303638376337346634343237352D373930622D343631342D626139332D656366373235653036383763\",\n}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "returns OfferTakenResponse if bond is valid",
           "headers": [],
           "bodyType": "INLINE",
           "filePath": "",
@@ -193,6 +222,10 @@
     {
       "type": "route",
       "uuid": "ee4bb798-c787-43ae-9a34-64568ba8c31b"
+    },
+    {
+      "type": "route",
+      "uuid": "cb932396-c73e-4a4c-9f1a-b4de5250cb16"
     }
   ],
   "proxyMode": false,
