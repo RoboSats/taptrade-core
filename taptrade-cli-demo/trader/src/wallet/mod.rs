@@ -63,12 +63,11 @@ impl TradingWallet {
 		offer_conditions: &BondRequirementResponse,
 		trader_config: &TraderSettings,
 	) -> Result<(PartiallySignedTransaction, MuSigData, AddressInfo)> {
-		let trading_wallet = self.wallet;
+		let trading_wallet = &self.wallet;
 		let bond = Bond::assemble(&self.wallet, &offer_conditions, trader_config)?;
 		let payout_address: AddressInfo =
 			trading_wallet.get_address(bdk::wallet::AddressIndex::LastUnused)?;
-		let mut musig_data =
-			MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
+		let musig_data = MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
 
 		Ok((bond, musig_data, payout_address))
 	}

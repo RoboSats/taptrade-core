@@ -42,40 +42,44 @@ impl PublicOffers {
 	}
 }
 
-impl PublicOffer { tbd
-	// pub fn take(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
-	// 	let client = reqwest::blocking::Client::new();
-	// 	let res = client
-	// 		.post(format!(
-	// 			"{}{}",
-	// 			taker_config.coordinator_endpoint, "/take-offer"
-	// 		))
-	// 		.json(self)
-	// 		.send()?
-	// 		.json::<BondRequirementResponse>()?;
-	// 	Ok(res)
-	// }
+impl PublicOffer {
+	pub fn request_bond(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/request-taker-bond"
+			))
+			.json(self)
+			.send()?
+			.json::<BondRequirementResponse>()?;
+		Ok(res)
+	}
 }
 
-impl OfferTakenRequest {   // tbd
-	// pub fn taker_request(
-	// 	bond: &Bond,
-	// 	mut musig_data: &MuSigData,
-	// 	taker_config: &TraderSettings,
-	// ) -> Result<PartiallySignedTransaction> {
-	// 	let request = RequestOfferPsbt {
-	// 		offer:
-	// 	};
+impl OfferPsbtRequest {
+	pub fn taker_request(
+		offer: &PublicOffer,
+		trade_data: BondSubmissionRequest,
+		taker_config: &TraderSettings,
+	) -> Result<PartiallySignedTransaction> {
+		let request = OfferPsbtRequest {
+			offer: offer.clone(),
+			trade_data,
+		};
 
-	// 	let client = reqwest::blocking::Client::new();
-	// 	let res = client
-	// 		.post(format!(
-	// 			"{}{}",
-	// 			taker_config.coordinator_endpoint, "/submit-taker-bond"
-	// 		))
-	// 		.json(self)
-	// 		.send()?
-	// 		.json::<OfferTakenResponse>()?;
-	// 	Ok(res)
-	// }
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/submit-taker-bond"
+			))
+			.json(&request)
+			.send()?
+			.json::<OfferTakenResponse>()?;
+
+		let psbt_bytes = hex::decode(res.trade_psbt_hex_to_sign)?;
+		let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
+		Ok(psbt)
+	}
 }

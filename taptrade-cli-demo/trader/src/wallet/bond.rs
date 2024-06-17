@@ -57,7 +57,3 @@ impl Bond {
 		Ok(psbt)
 	}
 }
-
-// impl BranchAndBoundCoinSelection
-// pub fn new(size_of_change: u64) -> Self
-// Create new instance with target size for change output

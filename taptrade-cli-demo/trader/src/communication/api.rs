@@ -50,6 +50,7 @@ pub struct OfferTakenResponse {
 
 // Taker structures //
 
+// request all fitting offers from the coordinator
 #[derive(Debug, Serialize)]
 pub struct OffersRequest {
 	pub buy_offers: bool, // true if looking for buy offers, false if looking for sell offers
@@ -57,19 +58,22 @@ pub struct OffersRequest {
 	pub amount_max_sat: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct PublicOffer {
-	pub amount_sat: u64,
-	pub offer_id_hex: String,
-}
-
+// response of the coordinator, containing all fitting offers to the OffersRequest request
 #[derive(Debug, Deserialize)]
 pub struct PublicOffers {
 	pub offers: Option<Vec<PublicOffer>>, // don't include offers var in return json if no offers are available
 }
 
+// Offer information of each offer returned by the previous response
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct PublicOffer {
+	pub amount_sat: u64,
+	pub offer_id_hex: String,
+}
+
+// request to receive the escrow psbt to sign for the specified offer to take it
 #[derive(Debug, Serialize)]
-pub struct RequestOfferPsbt {
+pub struct OfferPsbtRequest {
 	pub offer: PublicOffer,
 	pub trade_data: BondSubmissionRequest,
 }
