@@ -28,7 +28,11 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
 	dbg!(&offer);
-	let trade_psbt = offer.wait_until_taken(maker_config)?;
+	let mut escrow_contract_psbt = offer.wait_until_taken(maker_config)?;
+
+	wallet
+		.validate_maker_psbt(&escrow_contract_psbt)?
+		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
 
 	Ok(())
 }

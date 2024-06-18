@@ -77,7 +77,7 @@ impl TradingWallet {
 	// input amount should be the bond amount when buying,
 	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
 		dbg!("IMPLEMENT TAKER PSBT VALIDATION!");
-		// tbd once the trade psbt is implemented
+		// tbd once the trade psbt is implemented on coordinator side
 		Ok(self)
 	}
 
@@ -86,6 +86,12 @@ impl TradingWallet {
 		if !finalized {
 			return Err(anyhow!("Signing of taker escrow psbt failed!"));
 		}
+		Ok(self)
+	}
+
+	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		dbg!("IMPLEMENT MAKER PSBT VALIDATION!");
+		// tbd once the trade psbt is implemented on coordinator side
 		Ok(self)
 	}
 }
