@@ -35,12 +35,12 @@ impl ActiveOffer {
 	// polling until offer is taken, in production a more efficient way would make sense
 	// returns the PSBT of the escrow trade transaction we have to validate, sign and return
 	pub fn wait_until_taken(
-		self,
+		&self,
 		trader_config: &TraderSettings,
 	) -> Result<PartiallySignedTransaction> {
 		loop {
 			thread::sleep(Duration::from_secs(10));
-			if let Some(offer_taken_response) = OfferTakenResponse::check(&self, trader_config)? {
+			if let Some(offer_taken_response) = OfferTakenResponse::check(self, trader_config)? {
 				let psbt_bytes = hex::decode(offer_taken_response.trade_psbt_hex_to_sign)?;
 				let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
 				return Ok(psbt);

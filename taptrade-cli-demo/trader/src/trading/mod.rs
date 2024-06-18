@@ -7,7 +7,7 @@ use crate::{
 	cli::TraderSettings,
 	communication::api::{
 		BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-		PublicOffer, PublicOffers,
+		PsbtSubmissionRequest, PublicOffer, PublicOffers,
 	},
 	wallet::{
 		bond::Bond,
@@ -38,7 +38,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	PsbtSubmissionRequest::submit_escrow_psbt(
 		&escrow_contract_psbt,
 		offer.offer_id_hex.clone(),
-		taker_config,
+		maker_config,
 	)?;
 	// wait for confirmation
 
