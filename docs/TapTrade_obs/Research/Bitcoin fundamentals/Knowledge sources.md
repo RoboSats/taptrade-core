@@ -93,7 +93,7 @@ https://dev.to/eunovo/a-guide-to-creating-taproot-scripts-with-bitcoinjs-lib-4op
 
   
 ### <u>PTLC's</u>
-
+https://voltage.cloud/blog/lightning-network-faq/how-do-htlc-work-lightning-network/
 [Replacing HTLC's](https://suredbits.com/payment-points-part-1/#references)
 https://bitcointalk.org/index.php?topic=5455282.0
 https://extheo.hashnode.dev/point-time-locked-contracts-part-one

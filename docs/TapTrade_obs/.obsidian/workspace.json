@@ -4,20 +4,20 @@
     "type": "split",
     "children": [
       {
-        "id": "3311294fa81f4fbe",
+        "id": "9151bc6da6fbbb91",
         "type": "tabs",
         "children": [
           {
-            "id": "98e8706e39a96828",
+            "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
               "type": "canvas",
               "state": {
                 "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
                 "viewState": {
-                  "x": 137.064506277392,
-                  "y": 733.2796866482448,
-                  "zoom": 0.27410685221354214
+                  "x": 1097.9522804628996,
+                  "y": -459.7668865449728,
+                  "zoom": 0.19999999999999996
                 }
               }
             }
@@ -149,24 +149,26 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "98e8706e39a96828",
+  "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
     "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
-    "Research/Bitcoin fundamentals/Signature and Flags.canvas",
-    "Research/Bitcoin fundamentals/Knowledge sources.md",
-    "Research/Implementation/CLI demonstrator architecture/demonstrator architecture.canvas",
     "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
-    "Research/Implementation/Libraries.md",
-    "Research/Implementation/BDK.md",
-    "Research/Implementation/UI ideas.canvas",
-    "Research/Trade Pipelines/Existing research.md",
-    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
-    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
-    "assets/Pasted image 20240611120722.png",
-    "assets/Pasted image 20240611105421.png",
+    "Research/Bitcoin fundamentals/Knowledge sources.md",
     "assets/ptlc2.png",
     "assets/ptlc.png",
+    "assets/Pasted image 20240611120722.png",
+    "assets/Pasted image 20240611105421.png",
+    "Research/Bitcoin fundamentals/Taproot output structure.canvas",
+    "Pasted image 20240611120722.png",
+    "Pasted image 20240611105421.png",
+    "Pasted image 20240605185325.png",
     "Research/Trade Pipelines/current trade flow.canvas",
+    "Research/Implementation/Libraries.md",
+    "Research/Bitcoin fundamentals/Spending Taproot UTXOs.md",
+    "Research/Bitcoin fundamentals/Signature and Flags.canvas",
+    "Research/Implementation/CLI demonstrator architecture/demonstrator architecture.canvas",
+    "Research/Implementation/UI ideas.canvas",
+    "Research/Trade Pipelines/Existing research.md",
     "Research/Implementation/CLI demonstrator architecture",
     "Research/Trade Pipelines/new concepts/Untitled.md"
   ]
