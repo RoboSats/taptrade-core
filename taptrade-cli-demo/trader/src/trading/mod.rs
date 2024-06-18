@@ -34,6 +34,14 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		.validate_maker_psbt(&escrow_contract_psbt)?
 		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
 
+	// submit signed escrow psbt back to coordinator
+	PsbtSubmissionRequest::submit_escrow_psbt(
+		&escrow_contract_psbt,
+		offer.offer_id_hex.clone(),
+		taker_config,
+	)?;
+	// wait for confirmation
+
 	Ok(())
 }
 

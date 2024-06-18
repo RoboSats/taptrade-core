@@ -35,7 +35,7 @@ impl ActiveOffer {
 			.sign_escrow_psbt(&mut escrow_contract_psbt)?;
 
 		// submit signed escrow psbt back to coordinator
-		PsbtSubmissionRequest::submit_taker_psbt(
+		PsbtSubmissionRequest::submit_escrow_psbt(
 			&escrow_contract_psbt,
 			offer.offer_id_hex.clone(),
 			taker_config,
