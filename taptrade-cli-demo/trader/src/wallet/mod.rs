@@ -3,7 +3,7 @@ pub mod musig2;
 pub mod wallet_utils;
 
 use crate::{cli::TraderSettings, communication::api::BondRequirementResponse};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey, psbt::PartiallySignedTransaction, Network},
 	blockchain::ElectrumBlockchain,
@@ -13,7 +13,7 @@ use bdk::{
 	miniscript::Descriptor,
 	template::{Bip86, DescriptorTemplate},
 	wallet::AddressInfo,
-	KeychainKind, SyncOptions, Wallet,
+	KeychainKind, SignOptions, SyncOptions, Wallet,
 };
 use bond::Bond;
 use musig2::MuSigData;
@@ -75,7 +75,17 @@ impl TradingWallet {
 	// validate that the taker psbt references the correct inputs and amounts
 	// taker input should be the same as in the previous bond transaction.
 	// input amount should be the bond amount when buying,
-	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> bool {
-		false
+	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		dbg!("IMPLEMENT TAKER PSBT VALIDATION!");
+		// tbd once the trade psbt is implemented
+		Ok(self)
+	}
+
+	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
+		let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;
+		if !finalized {
+			return Err(anyhow!("Signing of taker escrow psbt failed!"));
+		}
+		Ok(self)
 	}
 }

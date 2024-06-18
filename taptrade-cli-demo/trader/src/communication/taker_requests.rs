@@ -83,3 +83,32 @@ impl OfferPsbtRequest {
 		Ok(psbt)
 	}
 }
+
+impl PsbtSubmissionRequest {
+	pub fn submit_taker_psbt(
+		psbt: &PartiallySignedTransaction,
+		offer_id_hex: String,
+		taker_config: &TraderSettings,
+	) -> Result<()> {
+		let request = PsbtSubmissionRequest {
+			signed_psbt_hex: psbt.serialize_hex(),
+			offer_id_hex,
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/submit-taker-psbt"
+			))
+			.json(&request)
+			.send()?;
+		if res.status() != 200 {
+			return Err(anyhow!(
+				"Submitting taker psbt failed. Status: {}",
+				res.status()
+			));
+		}
+		Ok(())
+	}
+}

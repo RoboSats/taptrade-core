@@ -43,9 +43,8 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 		available_offers = PublicOffers::fetch(taker_config)?;
 	}
 	let selected_offer: &PublicOffer = available_offers.ask_user_to_select()?;
-	let accepted_offer = ActiveOffer::take(&wallet, taker_config, selected_offer)?;
-
-	// accepted_offer.wait_on_maker();
+	let accepted_offer =
+		ActiveOffer::take(&wallet, taker_config, selected_offer)?.wait_on_maker()?;
 
 	Ok(())
 }

@@ -1,6 +1,6 @@
 use bdk::electrum_client::Request;
 
-use crate::communication::api::OfferPsbtRequest;
+use crate::communication::api::{OfferPsbtRequest, PsbtSubmissionRequest};
 
 use super::utils::*;
 use super::*;
@@ -10,9 +10,7 @@ impl ActiveOffer {
 		trading_wallet: &TradingWallet,
 		taker_config: &TraderSettings,
 		offer: &PublicOffer,
-	) -> Result<()> {
-		// return Ok(Active offer)
-
+	) -> Result<ActiveOffer> {
 		// fetching the bond requirements for the requested Offer (amount, locking address)
 		let bond_conditions: BondRequirementResponse = offer.request_bond(taker_config)?;
 
@@ -28,18 +26,32 @@ impl ActiveOffer {
 			&mut musig_data,
 			taker_config,
 		)?;
-		let escrow_contract_psbt =
+		let mut escrow_contract_psbt =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;
 
 		// now we have to verify, sign and submit the escrow psbt again
-		if !trading_wallet.validate_taker_psbt(&escrow_contract_psbt) {
-			panic!("taker psbt invalid!");
-		}
-		Ok(())
+		trading_wallet
+			.validate_taker_psbt(&escrow_contract_psbt)?
+			.sign_escrow_psbt(&mut escrow_contract_psbt)?;
+
+		// submit signed escrow psbt back to coordinator
+		PsbtSubmissionRequest::submit_taker_psbt(
+			&escrow_contract_psbt,
+			offer.offer_id_hex.clone(),
+			taker_config,
+		)?;
+
+		Ok(ActiveOffer {
+			order_id_hex: offer.offer_id_hex.clone(),
+			used_musig_config: musig_data,
+			used_bond: bond,
+			expected_payout_address: payout_address,
+			escrow_psbt: escrow_contract_psbt,
+		})
 	}
 
-	pub fn wait_on_maker(&self) -> Result<()> {
+	pub fn wait_on_maker(self) -> Result<Self> {
 		// tbd
-		Ok(())
+		Ok(self)
 	}
 }

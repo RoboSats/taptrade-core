@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use api::{
 	BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-	OrderActivatedResponse, OrderRequest,
+	OrderActivatedResponse, OrderRequest, PsbtSubmissionRequest,
 };
 use bdk::bitcoin::consensus::encode::serialize_hex;
 use bdk::{

@@ -77,3 +77,11 @@ pub struct OfferPsbtRequest {
 	pub offer: PublicOffer,
 	pub trade_data: BondSubmissionRequest,
 }
+
+// submit signed escrow psbt back to coordinator in a Json like this
+#[derive(Debug, Serialize)]
+pub struct PsbtSubmissionRequest {
+	pub signed_psbt_hex: String,
+	pub offer_id_hex: String,
+	pub robohash_hex: String,
+}
