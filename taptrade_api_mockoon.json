@@ -206,7 +206,7 @@
       "type": "http",
       "documentation": "Taker submits the psbt as json to the coordinator. ",
       "method": "post",
-      "endpoint": "submit-taker-psbt",
+      "endpoint": "submit-escrow-psbt",
       "responses": [
         {
           "uuid": "e9f64b19-94d0-4356-8892-d05466abbc5d",
