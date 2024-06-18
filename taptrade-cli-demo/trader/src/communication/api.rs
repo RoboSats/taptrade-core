@@ -85,3 +85,11 @@ pub struct PsbtSubmissionRequest {
 	pub offer_id_hex: String,
 	pub robohash_hex: String,
 }
+
+// request polled to check if the maker has submitted his escrow transaction
+// and the escrow transaction is confirmed once this returns 200 the chat can open
+#[derive(Debug, Serialize)]
+pub struct IsOfferReadyRequest {
+	pub robohash_hex: String,
+	pub offer_id_hex: String,
+}

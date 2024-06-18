@@ -43,8 +43,12 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 		available_offers = PublicOffers::fetch(taker_config)?;
 	}
 	let selected_offer: &PublicOffer = available_offers.ask_user_to_select()?;
+
+	// take selected offer and wait for maker to sign his input to the ecrow transaction
 	let accepted_offer =
-		ActiveOffer::take(&wallet, taker_config, selected_offer)?.wait_on_maker()?;
+		ActiveOffer::take(&wallet, taker_config, selected_offer)?.wait_on_maker(taker_config)?;
+
+	accepted_offer.wait_on_fiat_confirmation()?;
 
 	Ok(())
 }

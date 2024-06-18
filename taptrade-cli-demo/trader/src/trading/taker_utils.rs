@@ -1,6 +1,6 @@
 use bdk::electrum_client::Request;
 
-use crate::communication::api::{OfferPsbtRequest, PsbtSubmissionRequest};
+use crate::communication::api::{IsOfferReadyRequest, OfferPsbtRequest, PsbtSubmissionRequest};
 
 use super::utils::*;
 use super::*;
@@ -42,16 +42,29 @@ impl ActiveOffer {
 		)?;
 
 		Ok(ActiveOffer {
-			order_id_hex: offer.offer_id_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
 			used_musig_config: musig_data,
 			used_bond: bond,
 			expected_payout_address: payout_address,
-			escrow_psbt: escrow_contract_psbt,
+			escrow_psbt: Some(escrow_contract_psbt),
 		})
 	}
 
-	pub fn wait_on_maker(self) -> Result<Self> {
-		// tbd
+	pub fn wait_on_maker(self, taker_config: &TraderSettings) -> Result<Self> {
+		IsOfferReadyRequest::poll(taker_config, &self)?;
+		Ok(self)
+	}
+
+	pub fn wait_on_fiat_confirmation(&self) -> Result<&Self> {
+		// let user confirm in CLI that the fiat payment has been sent/receivec
+		loop {
+			println!("Please confirm that the fiat payment has been sent/received. (y/N)");
+			let mut input = String::new();
+			std::io::stdin().read_line(&mut input)?;
+			if input.trim().to_lowercase() == "y" {
+				break;
+			}
+		}
 		Ok(self)
 	}
 }

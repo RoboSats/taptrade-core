@@ -24,11 +24,11 @@ impl ActiveOffer {
 			maker_config,
 		)?;
 		Ok(ActiveOffer {
-			order_id_hex: submission_result.order_id_hex,
-			bond_locked_until_timestamp: submission_result.bond_locked_until_timestamp,
+			offer_id_hex: submission_result.order_id_hex,
 			used_musig_config: musig_data,
 			used_bond: bond,
 			expected_payout_address: payout_address,
+			escrow_psbt: None,
 		})
 	}
 

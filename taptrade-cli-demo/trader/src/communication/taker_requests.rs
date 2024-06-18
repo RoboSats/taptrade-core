@@ -112,3 +112,32 @@ impl PsbtSubmissionRequest {
 		Ok(())
 	}
 }
+
+impl IsOfferReadyRequest {
+	pub fn poll(taker_config: &TraderSettings, offer: &ActiveOffer) -> Result<()> {
+		let request = IsOfferReadyRequest {
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		loop {
+			let res = client
+				.post(format!(
+					"{}{}",
+					taker_config.coordinator_endpoint, "/poll-offer-status-taker"
+				))
+				.json(&request)
+				.send()?;
+			if res.status() == 200 {
+				return Ok(());
+			} else if res.status() != 201 {
+				return Err(anyhow!(
+					"Submitting taker psbt failed. Status: {}",
+					res.status()
+				));
+			}
+			// Sleep for 10 sec and poll again
+			sleep(Duration::from_secs(10));
+		}
+	}
+}
