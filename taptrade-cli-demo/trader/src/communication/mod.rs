@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use api::{
 	BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-	OrderActivatedResponse, OrderRequest,
+	OrderActivatedResponse, OrderRequest, PsbtSubmissionRequest,
 };
 use bdk::bitcoin::consensus::encode::serialize_hex;
 use bdk::{
@@ -17,6 +17,7 @@ use bdk::{
 	wallet::AddressInfo,
 };
 use serde::{Deserialize, Serialize};
+use std::{thread::sleep, time::Duration};
 
 impl BondRequirementResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
@@ -107,7 +108,7 @@ impl OfferTakenResponse {
 		let request = OfferTakenRequest {
 			// maybe can be made a bit more efficient (less clone)
 			robohash_hex: trader_setup.robosats_robohash_hex.clone(),
-			order_id_hex: offer.order_id_hex.clone(),
+			order_id_hex: offer.offer_id_hex.clone(),
 		};
 		let client = reqwest::blocking::Client::new();
 		let res = client
@@ -126,4 +127,32 @@ impl OfferTakenResponse {
 		}
 	}
 }
-	
+
+impl PsbtSubmissionRequest {
+	pub fn submit_escrow_psbt(
+		psbt: &PartiallySignedTransaction,
+		offer_id_hex: String,
+		taker_config: &TraderSettings,
+	) -> Result<()> {
+		let request = PsbtSubmissionRequest {
+			signed_psbt_hex: psbt.serialize_hex(),
+			offer_id_hex,
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/submit-escrow-psbt"
+			))
+			.json(&request)
+			.send()?;
+		if res.status() != 200 {
+			return Err(anyhow!(
+				"Submitting escrow psbt failed. Status: {}",
+				res.status()
+			));
+		}
+		Ok(())
+	}
+}

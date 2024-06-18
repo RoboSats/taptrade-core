@@ -7,7 +7,7 @@ use crate::{
 	cli::TraderSettings,
 	communication::api::{
 		BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-		PublicOffer, PublicOffers,
+		PsbtSubmissionRequest, PublicOffer, PublicOffers,
 	},
 	wallet::{
 		bond::Bond,
@@ -28,7 +28,19 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
 	dbg!(&offer);
-	let trade_psbt = offer.wait_until_taken(maker_config)?;
+	let mut escrow_contract_psbt = offer.wait_until_taken(maker_config)?;
+
+	wallet
+		.validate_maker_psbt(&escrow_contract_psbt)?
+		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
+
+	// submit signed escrow psbt back to coordinator
+	PsbtSubmissionRequest::submit_escrow_psbt(
+		&escrow_contract_psbt,
+		offer.offer_id_hex.clone(),
+		maker_config,
+	)?;
+	// wait for confirmation
 
 	Ok(())
 }
@@ -43,9 +55,12 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 		available_offers = PublicOffers::fetch(taker_config)?;
 	}
 	let selected_offer: &PublicOffer = available_offers.ask_user_to_select()?;
-	let accepted_offer = ActiveOffer::take(&wallet, taker_config, selected_offer)?;
 
-	accepted_offer.wait_on_maker();
+	// take selected offer and wait for maker to sign his input to the ecrow transaction
+	let accepted_offer =
+		ActiveOffer::take(&wallet, taker_config, selected_offer)?.wait_on_maker(taker_config)?;
+
+	accepted_offer.wait_on_fiat_confirmation()?;
 
 	Ok(())
 }

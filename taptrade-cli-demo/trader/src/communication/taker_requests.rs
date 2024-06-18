@@ -42,40 +42,73 @@ impl PublicOffers {
 	}
 }
 
-impl PublicOffer { tbd
-	// pub fn take(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
-	// 	let client = reqwest::blocking::Client::new();
-	// 	let res = client
-	// 		.post(format!(
-	// 			"{}{}",
-	// 			taker_config.coordinator_endpoint, "/take-offer"
-	// 		))
-	// 		.json(self)
-	// 		.send()?
-	// 		.json::<BondRequirementResponse>()?;
-	// 	Ok(res)
-	// }
+impl PublicOffer {
+	pub fn request_bond(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/request-taker-bond"
+			))
+			.json(self)
+			.send()?
+			.json::<BondRequirementResponse>()?;
+		Ok(res)
+	}
 }
 
-impl OfferTakenRequest {   // tbd
-	// pub fn taker_request(
-	// 	bond: &Bond,
-	// 	mut musig_data: &MuSigData,
-	// 	taker_config: &TraderSettings,
-	// ) -> Result<PartiallySignedTransaction> {
-	// 	let request = RequestOfferPsbt {
-	// 		offer:
-	// 	};
+impl OfferPsbtRequest {
+	pub fn taker_request(
+		offer: &PublicOffer,
+		trade_data: BondSubmissionRequest,
+		taker_config: &TraderSettings,
+	) -> Result<PartiallySignedTransaction> {
+		let request = OfferPsbtRequest {
+			offer: offer.clone(),
+			trade_data,
+		};
 
-	// 	let client = reqwest::blocking::Client::new();
-	// 	let res = client
-	// 		.post(format!(
-	// 			"{}{}",
-	// 			taker_config.coordinator_endpoint, "/submit-taker-bond"
-	// 		))
-	// 		.json(self)
-	// 		.send()?
-	// 		.json::<OfferTakenResponse>()?;
-	// 	Ok(res)
-	// }
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				taker_config.coordinator_endpoint, "/submit-taker-bond"
+			))
+			.json(&request)
+			.send()?
+			.json::<OfferTakenResponse>()?;
+
+		let psbt_bytes = hex::decode(res.trade_psbt_hex_to_sign)?;
+		let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
+		Ok(psbt)
+	}
+}
+
+impl IsOfferReadyRequest {
+	pub fn poll(taker_config: &TraderSettings, offer: &ActiveOffer) -> Result<()> {
+		let request = IsOfferReadyRequest {
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		loop {
+			let res = client
+				.post(format!(
+					"{}{}",
+					taker_config.coordinator_endpoint, "/poll-offer-status-taker"
+				))
+				.json(&request)
+				.send()?;
+			if res.status() == 200 {
+				return Ok(());
+			} else if res.status() != 201 {
+				return Err(anyhow!(
+					"Submitting taker psbt failed. Status: {}",
+					res.status()
+				));
+			}
+			// Sleep for 10 sec and poll again
+			sleep(Duration::from_secs(10));
+		}
+	}
 }

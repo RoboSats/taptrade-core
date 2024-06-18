@@ -3,7 +3,7 @@ pub mod musig2;
 pub mod wallet_utils;
 
 use crate::{cli::TraderSettings, communication::api::BondRequirementResponse};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey, psbt::PartiallySignedTransaction, Network},
 	blockchain::ElectrumBlockchain,
@@ -13,7 +13,7 @@ use bdk::{
 	miniscript::Descriptor,
 	template::{Bip86, DescriptorTemplate},
 	wallet::AddressInfo,
-	KeychainKind, SyncOptions, Wallet,
+	KeychainKind, SignOptions, SyncOptions, Wallet,
 };
 use bond::Bond;
 use musig2::MuSigData;
@@ -63,13 +63,35 @@ impl TradingWallet {
 		offer_conditions: &BondRequirementResponse,
 		trader_config: &TraderSettings,
 	) -> Result<(PartiallySignedTransaction, MuSigData, AddressInfo)> {
-		let trading_wallet = self.wallet;
+		let trading_wallet = &self.wallet;
 		let bond = Bond::assemble(&self.wallet, &offer_conditions, trader_config)?;
 		let payout_address: AddressInfo =
 			trading_wallet.get_address(bdk::wallet::AddressIndex::LastUnused)?;
-		let mut musig_data =
-			MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
+		let musig_data = MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
 
 		Ok((bond, musig_data, payout_address))
+	}
+
+	// validate that the taker psbt references the correct inputs and amounts
+	// taker input should be the same as in the previous bond transaction.
+	// input amount should be the bond amount when buying,
+	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		dbg!("IMPLEMENT TAKER PSBT VALIDATION!");
+		// tbd once the trade psbt is implemented on coordinator side
+		Ok(self)
+	}
+
+	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
+		let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;
+		if !finalized {
+			return Err(anyhow!("Signing of taker escrow psbt failed!"));
+		}
+		Ok(self)
+	}
+
+	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		dbg!("IMPLEMENT MAKER PSBT VALIDATION!");
+		// tbd once the trade psbt is implemented on coordinator side
+		Ok(self)
 	}
 }
