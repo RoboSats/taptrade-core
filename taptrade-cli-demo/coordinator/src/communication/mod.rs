@@ -36,7 +36,7 @@ async fn receive_order(Json(order): Json<OrderRequest>)-> Json<BondRequirementRe
 
 async fn submit_maker_bond(
     Json(payload): Json<BondSubmissionRequest>,
-) -> Response {
+) -> Json<OrderActivatedResponse> {
     // Process the payload
     // For now, we'll just return a dummy success response
     let response = OrderActivatedResponse {
@@ -45,10 +45,7 @@ async fn submit_maker_bond(
     };
 
     // Create the JSON response
-    let json = Json(response);
-
-    // Create the full response with status code
-    (StatusCode::OK, json).into_response()
+    Json(response)
 }
 
 #[tokio::main]

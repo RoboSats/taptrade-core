@@ -21,7 +21,7 @@ pub struct BondRequirementResponse {
 
 // maker step 2
 // (submission of signed bond and other data neccessary to coordinate the trade)
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct 	BondSubmissionRequest {
 	pub robohash_hex: String,
 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
@@ -31,7 +31,7 @@ pub struct 	BondSubmissionRequest {
 }
 
 // Response after step2 if offer creation was successful and the offer is now online in the orderbook
-#[derive(Debug, Deserialize)]
+#[derive(Serialize)]
 pub struct OrderActivatedResponse {
 	pub order_id_hex: String,
 	pub bond_locked_until_timestamp: u128, // unix timestamp. Do not touch bond till then unless offer gets taken.
