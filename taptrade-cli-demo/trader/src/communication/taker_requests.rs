@@ -103,7 +103,7 @@ impl IsOfferReadyRequest {
 				return Ok(());
 			} else if res.status() != 201 {
 				return Err(anyhow!(
-					"Submitting taker psbt failed. Status: {}",
+					"Requesting offer status when waiting on maker to sign psbt failed: {}",
 					res.status()
 				));
 			}

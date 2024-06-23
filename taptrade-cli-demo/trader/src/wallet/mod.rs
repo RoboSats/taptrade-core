@@ -43,11 +43,8 @@ impl TradingWallet {
 	pub fn load_wallet(trader_config: &TraderSettings) -> Result<TradingWallet> {
 		let backend = ElectrumBlockchain::from(Client::new(&trader_config.electrum_endpoint)?);
 		let wallet = Wallet::new(
-			Bip86(trader_config.wallet_xprv.clone(), KeychainKind::External),
-			Some(Bip86(
-				trader_config.wallet_xprv.clone(),
-				KeychainKind::Internal,
-			)),
+			Bip86(trader_config.wallet_xprv, KeychainKind::External),
+			Some(Bip86(trader_config.wallet_xprv, KeychainKind::Internal)),
 			bitcoin::Network::Testnet,
 			MemoryDatabase::default(), // non-permanent storage
 		)?;
@@ -64,7 +61,7 @@ impl TradingWallet {
 		trader_config: &TraderSettings,
 	) -> Result<(PartiallySignedTransaction, MuSigData, AddressInfo)> {
 		let trading_wallet = &self.wallet;
-		let bond = Bond::assemble(&self.wallet, &offer_conditions, trader_config)?;
+		let bond = Bond::assemble(&self.wallet, offer_conditions, trader_config)?;
 		let payout_address: AddressInfo =
 			trading_wallet.get_address(bdk::wallet::AddressIndex::LastUnused)?;
 		let musig_data = MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;

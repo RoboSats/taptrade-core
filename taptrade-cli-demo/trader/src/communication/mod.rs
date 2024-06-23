@@ -78,7 +78,7 @@ impl BondSubmissionRequest {
 	}
 
 	pub fn send_maker(
-		robohash_hex: &String,
+		robohash_hex: &str,
 		bond: &PartiallySignedTransaction,
 		musig_data: &mut MuSigData,
 		payout_address: &AddressInfo,
@@ -106,7 +106,6 @@ impl OfferTakenResponse {
 		trader_setup: &TraderSettings,
 	) -> Result<Option<OfferTakenResponse>> {
 		let request = OfferTakenRequest {
-			// maybe can be made a bit more efficient (less clone)
 			robohash_hex: trader_setup.robosats_robohash_hex.clone(),
 			order_id_hex: offer.offer_id_hex.clone(),
 		};
