@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use api::{
 	BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-	OrderActivatedResponse, OrderRequest, PsbtSubmissionRequest,
+	OrderActivatedResponse, OrderRequest, PsbtSubmissionRequest, TradeObligationsSatisfied,
 };
 use bdk::bitcoin::consensus::encode::serialize_hex;
 use bdk::{
@@ -149,6 +149,34 @@ impl PsbtSubmissionRequest {
 		if res.status() != 200 {
 			return Err(anyhow!(
 				"Submitting escrow psbt failed. Status: {}",
+				res.status()
+			));
+		}
+		Ok(())
+	}
+}
+
+impl TradeObligationsSatisfied {
+	// if the trader is satisfied he can submit this to signal the coordinator readiness to close the trade
+	// if the other party also submits this the coordinator can initiate the closing transaction, otherwise
+	// escrow has to be initiated
+	pub fn submit(offer_id_hex: &String, trader_config: &TraderSettings) -> Result<()> {
+		let request = TradeObligationsSatisfied {
+			robohash_hex: trader_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer_id_hex.clone(),
+		};
+
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				trader_config.coordinator_endpoint, "/submit-obligation-confirmation"
+			))
+			.json(&request)
+			.send()?;
+		if res.status() != 200 {
+			return Err(anyhow!(
+				"Submitting trade obligations confirmation failed. Status: {}",
 				res.status()
 			));
 		}

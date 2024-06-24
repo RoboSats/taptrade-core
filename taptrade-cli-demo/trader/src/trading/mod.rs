@@ -8,6 +8,7 @@ use crate::{
 	communication::api::{
 		BondRequirementResponse, BondSubmissionRequest, IsOfferReadyRequest, OfferTakenRequest,
 		OfferTakenResponse, PsbtSubmissionRequest, PublicOffer, PublicOffers,
+		TradeObligationsSatisfied,
 	},
 	wallet::{
 		bond::Bond,
@@ -43,7 +44,14 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 	// wait for confirmation
 	offer.wait_on_trade_ready_confirmation(maker_config)?;
-
+	if offer.fiat_confirmation_cli_input(maker_config)? {
+		TradeObligationsSatisfied::submit(&offer.offer_id_hex, maker_config)?;
+		println!("Waiting for other party to confirm the trade.");
+	// poll for other party
+	} else {
+		println!("Trade failed.");
+		panic!("Escrow to be implemented!");
+	}
 	Ok(())
 }
 
@@ -59,11 +67,16 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 	let selected_offer: &PublicOffer = available_offers.ask_user_to_select()?;
 
 	// take selected offer and wait for maker to sign his input to the ecrow transaction
-	let accepted_offer = ActiveOffer::take(&wallet, taker_config, selected_offer)?
-		.wait_on_trade_ready_confirmation(taker_config)?
-		.wait_on_fiat_confirmation_cli_input()?;
+	let accepted_offer = ActiveOffer::take(&wallet, taker_config, selected_offer)?;
+	accepted_offer.wait_on_trade_ready_confirmation(taker_config)?;
 
-	// .wait_on_maker_confirmation(); // here we wait for the maker to confirm the reciept of the fiat. We could go into escrow here.
-
+	if accepted_offer.fiat_confirmation_cli_input(taker_config)? {
+		TradeObligationsSatisfied::submit(&accepted_offer.offer_id_hex, taker_config)?;
+		println!("Waiting for other party to confirm the trade.");
+	// poll for other party
+	} else {
+		println!("Trade failed.");
+		panic!("Escrow to be implemented!");
+	}
 	Ok(())
 }
