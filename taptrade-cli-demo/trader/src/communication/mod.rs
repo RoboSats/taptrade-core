@@ -8,8 +8,9 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use api::{
-	BondRequirementResponse, BondSubmissionRequest, OfferTakenRequest, OfferTakenResponse,
-	OrderActivatedResponse, OrderRequest, PsbtSubmissionRequest, TradeObligationsSatisfied,
+	BondRequirementResponse, BondSubmissionRequest, IsOfferReadyRequest, OfferTakenRequest,
+	OfferTakenResponse, OrderActivatedResponse, OrderRequest, PayoutPsbtResponse,
+	PsbtSubmissionRequest, TradeObligationsSatisfied,
 };
 use bdk::bitcoin::consensus::encode::serialize_hex;
 use bdk::{
@@ -17,7 +18,7 @@ use bdk::{
 	wallet::AddressInfo,
 };
 use serde::{Deserialize, Serialize};
-use std::{thread::sleep, time::Duration};
+use std::{str::FromStr, thread::sleep, time::Duration};
 
 impl BondRequirementResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
@@ -181,5 +182,79 @@ impl TradeObligationsSatisfied {
 			));
 		}
 		Ok(())
+	}
+}
+
+impl IsOfferReadyRequest {
+	pub fn poll(taker_config: &TraderSettings, offer: &ActiveOffer) -> Result<()> {
+		let request = IsOfferReadyRequest {
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		loop {
+			let res = client
+				.post(format!(
+					"{}{}",
+					taker_config.coordinator_endpoint, "/poll-offer-status"
+				))
+				.json(&request)
+				.send()?;
+			if res.status() == 200 {
+				return Ok(());
+			} else if res.status() != 204 {
+				return Err(anyhow!(
+					"Requesting offer status when waiting on other party failed: {}",
+					res.status()
+				));
+			}
+			// Sleep for 10 sec and poll again
+			sleep(Duration::from_secs(10));
+		}
+	}
+
+	pub fn poll_payout(
+		trader_config: &TraderSettings,
+		offer: &ActiveOffer,
+	) -> Result<Option<PartiallySignedTransaction>> {
+		let request = IsOfferReadyRequest {
+			robohash_hex: trader_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
+		};
+		let client = reqwest::blocking::Client::new();
+		let mut res: reqwest::blocking::Response;
+
+		loop {
+			// Sleep for 10 sec and poll
+			sleep(Duration::from_secs(10));
+
+			res = client
+				.post(format!(
+					"{}{}",
+					trader_config.coordinator_endpoint, "/poll-final-payout"
+				))
+				.json(&request)
+				.send()?;
+			if res.status() == 200 {
+				// good case, psbt is returned
+				break;
+			} else if res.status() == 204 {
+				// still waiting, retry
+				continue;
+			} else if res.status() == 201 {
+				// other party initiated escrow
+				return Ok(None);
+			} else {
+				// unintended response
+				return Err(anyhow!(
+					"Requesting final payout when waiting on other party failed: {}",
+					res.status()
+				));
+			}
+		}
+		let final_psbt = PartiallySignedTransaction::from_str(
+			&res.json::<PayoutPsbtResponse>()?.payout_psbt_hex,
+		)?;
+		Ok(Some(final_psbt))
 	}
 }

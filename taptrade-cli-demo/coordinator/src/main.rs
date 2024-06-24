@@ -1,14 +1,17 @@
-mod coordinator;
-mod cli;
 mod communication;
+mod coordinator;
 
-use cli::parse_cli_args;
-use communication::webserver;
+use anyhow::{anyhow, Result};
+use communication::api_server;
+use dotenv::dotenv;
+use serde::{Deserialize, Serialize};
+use std::env;
 
-fn main() {
-    webserver();
-    let mode = parse_cli_args();
-    dbg!(mode);
+// populate .env with values before starting
+#[tokio::main]
+async fn main() -> Result<()> {
+	dotenv().ok();
+
+	api_server().await?;
+	Ok(())
 }
-
-// test with cargo run -- trader --maker --endpoint "taptrade-coordinator.com:5432" --electrum "electrum-server.com:50002"

@@ -45,9 +45,10 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	// wait for confirmation
 	offer.wait_on_trade_ready_confirmation(maker_config)?;
 	if offer.fiat_confirmation_cli_input(maker_config)? {
+		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&offer.offer_id_hex, maker_config)?;
 		println!("Waiting for other party to confirm the trade.");
-	// poll for other party
+		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	} else {
 		println!("Trade failed.");
 		panic!("Escrow to be implemented!");
@@ -71,9 +72,12 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 	accepted_offer.wait_on_trade_ready_confirmation(taker_config)?;
 
 	if accepted_offer.fiat_confirmation_cli_input(taker_config)? {
+		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&accepted_offer.offer_id_hex, taker_config)?;
 		println!("Waiting for other party to confirm the trade.");
-	// poll for other party
+		// pull for other parties confirmation, then receive the transaction to create MuSig signature for (keyspend) to payout address
+		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(taker_config, &accepted_offer)?;
+	// here we need to handle if the other party is not cooperating
 	} else {
 		println!("Trade failed.");
 		panic!("Escrow to be implemented!");

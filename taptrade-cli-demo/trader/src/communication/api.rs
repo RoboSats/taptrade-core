@@ -100,3 +100,8 @@ pub struct TradeObligationsSatisfied {
 	pub robohash_hex: String,
 	pub offer_id_hex: String,
 }
+
+#[derive(Debug, Deserialize)]
+pub struct PayoutPsbtResponse {
+	pub payout_psbt_hex: String,
+}
