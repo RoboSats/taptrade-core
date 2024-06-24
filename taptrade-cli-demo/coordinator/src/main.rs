@@ -2,6 +2,8 @@ mod communication;
 mod coordinator;
 
 use anyhow::{anyhow, Error, Result};
+use bdk::database::MemoryDatabase;
+use bdk::Wallet;
 use communication::api_server;
 use dotenv::dotenv;
 use serde::{Deserialize, Serialize};
@@ -12,6 +14,7 @@ use std::sync::Arc;
 #[derive(Clone, Debug)]
 pub struct Coordinator {
 	pub db_pool: Arc<Pool<Sqlite>>,
+	pub wallet: Arc<Wallet<MemoryDatabase>>, // using sqlite for Wallet?
 }
 
 // populate .env with values before starting
@@ -27,6 +30,7 @@ async fn main() -> Result<()> {
 
 	let coordinator = Coordinator {
 		db_pool: shared_db_pool,
+		wallet: // impl wallet
 	};
 
 	api_server(coordinator).await?;

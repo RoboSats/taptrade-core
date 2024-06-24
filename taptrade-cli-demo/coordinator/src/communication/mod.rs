@@ -25,6 +25,9 @@ async fn receive_order(
 	// 	order.field2
 	// )
 
+	// insert offer into sql database
+	// generate locking address for bond
+
 	println!("Coordinator received new offer: {:?}", order);
 	Ok(Json(BondRequirementResponse {
 		bond_address: bond_address,
