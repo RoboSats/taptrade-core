@@ -7,11 +7,10 @@ edition = "2021"
 anyhow = "1.0.86"
 axum = "0.7.5"
 bdk = "0.29.0"
-clap = { version = "4.5.4", features = ["derive", "cargo"] }
 dotenv = "0.15.0"
-frost-secp256k1 = "1.0.0"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = "1.0.203"
+sqlx = { version = "0.7.4", features = ["runtime-tokio", "sqlite"] }
 tokio = "1.38.0"
 
 [profile.release]
