@@ -4,10 +4,9 @@ mod communication;
 mod trading;
 mod wallet;
 
-use core::panic;
-
 use anyhow::{anyhow, Result};
 use cli::CliSettings;
+use core::panic;
 
 fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 	match cli_input {

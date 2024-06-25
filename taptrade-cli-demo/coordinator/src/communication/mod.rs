@@ -1,18 +1,17 @@
 mod api;
 
-use reqwest::StatusCode;
-use axum::{routing::post, Json, Router, response::{IntoResponse, Response}, };
+use self::api::*;
+use super::*;
+use axum::{
+	http::StatusCode,
+	response::{IntoResponse, Response},
+	routing::post,
+	Extension, Json, Router,
+};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
-// use super::*;
-// use api::{BondRequirementResponse, BondSubmissionRequest, OrderActivatedResponse, OrderRequest};
-// use axum::{
-// 	http::StatusCode, response::IntoResponse, response::Response, routing::post, Extension, Json,
-// 	Router,
-// };
-// use sqlx::sqlite::SqliteLockingMode;
-use crate::verify_bond::verify_psbt;
+// use crate::coordinator::verify_psbt;
 
 // Handler function to process the received data
 async fn receive_order(

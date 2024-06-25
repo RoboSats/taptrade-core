@@ -6,7 +6,6 @@ use bdk::database::MemoryDatabase;
 use bdk::Wallet;
 use communication::api_server;
 use dotenv::dotenv;
-use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 use std::env;
 use std::sync::Arc;
@@ -28,11 +27,11 @@ async fn main() -> Result<()> {
 		.unwrap();
 	let shared_db_pool: Arc<sqlx::Pool<sqlx::Sqlite>> = Arc::new(db_pool);
 
-	let coordinator = Coordinator {
-		db_pool: shared_db_pool,
-		wallet: // impl wallet
-	};
+	// let coordinator = Coordinator {
+	// 	db_pool: shared_db_pool,
+	// 	wallet: // impl wallet
+	// };
 
-	api_server(coordinator).await?;
+	// api_server(coordinator).await?;
 	Ok(())
 }
