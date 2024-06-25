@@ -1,83 +1,97 @@
-pub mod api;
+mod api;
 
-use verify_bond::verify_psbt;
+use reqwest::StatusCode;
 use axum::{routing::post, Json, Router, response::{IntoResponse, Response}, };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
-use api::{
-	BondRequirementResponse, BondSubmissionRequest,	OrderActivatedResponse, OrderRequest,
-}; 
-
+// use super::*;
+// use api::{BondRequirementResponse, BondSubmissionRequest, OrderActivatedResponse, OrderRequest};
+// use axum::{
+// 	http::StatusCode, response::IntoResponse, response::Response, routing::post, Extension, Json,
+// 	Router,
+// };
+// use sqlx::sqlite::SqliteLockingMode;
+use crate::verify_bond::verify_psbt;
 
 // Handler function to process the received data
-async fn receive_order(Json(order): Json<OrderRequest>)-> Json<BondRequirementResponse> {
-	// Print the received data to the console
-	println!("Received order: {:?}", order);
+async fn receive_order(
+	Extension(state): Extension<Arc<Coordinator>>,
+	Json(order): Json<OrderRequest>,
+) -> Result<Json<BondRequirementResponse>, AppError> {
+	// Connecting to SQLite database
+	let db_pool = state.db_pool.clone();
+	let mut conn = db_pool.acquire().await.unwrap();
 
-	// Access individual fields
-	// let robohash = &order.robohash_hex;
-	let amount = order.amount_satoshi;
-	// let order_type = &order.is_buy_order;
-	let bond_ratio = order.bond_ratio;
-	// let offer_duration= order.offer_duration_ts;
+	// sqlx::query!(
+	// 	"INSERT INTO orders (field1, field2) VALUES (?, ?)",
+	// 	order.field1,
+	// 	order.field2
+	// )
 
-	// Create a response struct
-    let response = BondRequirementResponse {
-        bond_address: "Order received successfully".to_string(),
-        // Add any other fields you want to include in your response
-		locking_amount_sat: (amount * bond_ratio as u64 / 100),
-    };
+	// insert offer into sql database
+	// generate locking address for bond
 
-    // Return the response as JSON
-    Json(response)
-
+	println!("Coordinator received new offer: {:?}", order);
+	Ok(Json(BondRequirementResponse {
+		bond_address: bond_address,
+		locking_amount_sat: order.amount_satoshi * order.bond_ratio as u64 / 100,
+	}))
 }
 
-async fn submit_maker_bond(
-    Json(payload): Json<BondSubmissionRequest>,
-) -> Json<OrderActivatedResponse> {
-    // Process the payload
-    // For now, we'll just return a dummy success response
-    let response = OrderActivatedResponse {
-        bond_locked_until_timestamp: 0 as u128,
-        order_id_hex: "Bond submitted successfully".to_string(),
-    };
+// async fn submit_maker_bond(
+// 	Json(payload): Json<BondSubmissionRequest>,
+// ) -> Result<Json<OrderActivatedResponse>, AppError> {
+// 	// Process the payload
+// 	// For now, we'll just return a dummy success response
+// 	let response = OrderActivatedResponse {
+// 		bond_locked_until_timestamp: 0 as u128,
+// 		order_id_hex: "Bond submitted successfully".to_string(),
+// 	};
 
-    // Create the JSON response
-    Json(response)
-}
+// 	// Create the JSON response
+// 	Json(response)
+// }
 
-#[tokio::main]
-pub async fn webserver() {
-	// Build our application with a single route
+pub async fn api_server(coordinator: Coordinator) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
-		.route("/submit-maker-bond", post(submit_maker_bond));
+		// .route("/submit-maker-bond", post(submit_maker_bond));
+		.layer(Extension(coordinator));
+	// add other routes here
 
-	// Run the server on localhost:3000
-	let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-	println!("Listening on {}", addr);
-	// axum::Server::bind(&addr)
-	//     .serve(app.into_make_service())
-	//     .await
-	//     .unwrap();
+	// Run the server on localhost:9999
+	let addr = SocketAddr::from(([127, 0, 0, 1], 9999));
 	let tcp = TcpListener::bind(&addr).await.unwrap();
-	axum::serve(tcp, app).await.unwrap();
+	axum::serve(tcp, app).await?;
+	println!("Listening on {}", addr);
+
+	Ok(())
 }
 
-// // use axum
+// ANYHOW ERROR HANDLING
+// --------------
+// Make our own error that wraps `anyhow::Error`.
+struct AppError(anyhow::Error);
 
-// #[get("/")]
-// fn index() -> &'static str {
-//     "Hello, world!"
-// }
+// Tell axum how to convert `AppError` into a response.
+impl IntoResponse for AppError {
+	fn into_response(self) -> Response {
+		(
+			StatusCode::INTERNAL_SERVER_ERROR,
+			format!("Something went wrong: {}", self.0),
+		)
+			.into_response()
+	}
+}
 
-// #[launch]
-// pub fn webserver() -> Rocket<build> {
-//     rocket::build().mount("/", routes![index])
-// }
-
-// // serde to parse json
-// // https://www.youtube.com/watch?v=md-ecvXBGzI  BDK + Webserver video
-// // https://github.com/tokio-rs/axum
+// This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
+// `Result<_, AppError>`. That way you don't need to do that manually.
+impl<E> From<E> for AppError
+where
+	E: Into<anyhow::Error>,
+{
+	fn from(err: E) -> Self {
+		Self(err.into())
+	}
+}

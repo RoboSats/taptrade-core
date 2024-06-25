@@ -1,7 +1,6 @@
 use crate::wallet::get_wallet_xprv;
 use anyhow::{anyhow, Result};
 use bdk::bitcoin::bip32::ExtendedPrivKey;
-use hex;
 use sha2::{Digest, Sha256};
 use std::{
 	env,
@@ -90,7 +89,7 @@ impl CliSettings {
 	}
 
 	// parses the hours input string and returns the unix timestamp + the trade duration in seconds
-	fn hours_to_ts(hours: &String) -> Result<u64> {
+	fn hours_to_ts(hours: &str) -> Result<u64> {
 		let duration: u64 = hours.parse()?;
 		Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + duration * 3600)
 	}
@@ -98,7 +97,7 @@ impl CliSettings {
 	fn get_trader_settings() -> Result<TraderSettings> {
 		let electrum_endpoint = Self::get_user_input("Enter electrum endpoint: ");
 		let coordinator_endpoint = Self::get_user_input("Enter coordinator endpoint: ");
-		let robosats_robohash_hex = hex::encode(&hash256(&Self::get_user_input(
+		let robosats_robohash_hex = hex::encode(hash256(&Self::get_user_input(
 			"Enter your robosats robot key: ", // just for testing purposes, to be improved to the real robohash spec
 		)));
 		let trade_type: OfferType = Self::get_trade_type(None);

@@ -22,7 +22,7 @@ pub struct BondRequirementResponse {
 // maker step 2
 // (submission of signed bond and other data neccessary to coordinate the trade)
 #[derive(Serialize, Debug)]
-pub struct 	BondSubmissionRequest {
+pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
 	pub payout_address: String,  // does this make sense here?
@@ -92,4 +92,16 @@ pub struct PsbtSubmissionRequest {
 pub struct IsOfferReadyRequest {
 	pub robohash_hex: String,
 	pub offer_id_hex: String,
+}
+
+// request posted by both parties when the trade obligations
+#[derive(Debug, Serialize)]
+pub struct TradeObligationsSatisfied {
+	pub robohash_hex: String,
+	pub offer_id_hex: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PayoutPsbtResponse {
+	pub payout_psbt_hex: String,
 }

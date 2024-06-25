@@ -49,22 +49,4 @@ impl ActiveOffer {
 			escrow_psbt: Some(escrow_contract_psbt),
 		})
 	}
-
-	pub fn wait_on_maker(self, taker_config: &TraderSettings) -> Result<Self> {
-		IsOfferReadyRequest::poll(taker_config, &self)?;
-		Ok(self)
-	}
-
-	pub fn wait_on_fiat_confirmation(&self) -> Result<&Self> {
-		// let user confirm in CLI that the fiat payment has been sent/receivec
-		loop {
-			println!("Please confirm that the fiat payment has been sent/received. (y/N)");
-			let mut input = String::new();
-			std::io::stdin().read_line(&mut input)?;
-			if input.trim().to_lowercase() == "y" {
-				break;
-			}
-		}
-		Ok(self)
-	}
 }

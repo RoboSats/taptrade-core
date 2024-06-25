@@ -4,12 +4,18 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.86"
 axum = "0.7.5"
 bdk = "0.29.0"
-clap = { version = "4.5.4", features = ["derive", "cargo"] }
-frost-secp256k1 = "1.0.0"
+dotenv = "0.15.0"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = "1.0.203"
+sqlx = { version = "0.7.4", features = ["runtime-tokio", "sqlite"] }
 tokio = "1.38.0"
+
+[profile.release]
+lto = true
+opt-level = 3
+strip = true
 anyhow = "1.0.86"
 hex = "0.4"
