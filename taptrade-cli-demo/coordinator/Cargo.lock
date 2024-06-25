@@ -305,6 +305,7 @@ dependencies = [
  "axum",
  "bdk",
  "dotenv",
+ "hex",
  "reqwest",
  "serde",
  "sqlx",

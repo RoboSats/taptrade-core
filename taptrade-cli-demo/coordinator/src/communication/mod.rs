@@ -1,4 +1,4 @@
-mod api;
+pub mod api;
 
 use self::api::*;
 use super::*;
@@ -15,19 +15,9 @@ use tokio::net::TcpListener;
 
 // Handler function to process the received data
 async fn receive_order(
-	Extension(state): Extension<Arc<Coordinator>>,
+	Extension(state): Extension<Arc<SqliteDB>>,
 	Json(order): Json<OrderRequest>,
 ) -> Result<Json<BondRequirementResponse>, AppError> {
-	// Connecting to SQLite database
-	let db_pool = state.db_pool.clone();
-	let mut conn = db_pool.acquire().await.unwrap();
-
-	// sqlx::query!(
-	// 	"INSERT INTO orders (field1, field2) VALUES (?, ?)",
-	// 	order.field1,
-	// 	order.field2
-	// )
-
 	// insert offer into sql database
 	// generate locking address for bond
 
@@ -52,11 +42,11 @@ async fn receive_order(
 // 	Json(response)
 // }
 
-pub async fn api_server(coordinator: Coordinator) -> Result<()> {
+pub async fn api_server(database: SqliteDB) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
-		// .route("/submit-maker-bond", post(submit_maker_bond));
-		.layer(Extension(coordinator));
+		.layer(Extension(database));
+	// .route("/submit-maker-bond", post(submit_maker_bond));
 	// add other routes here
 
 	// Run the server on localhost:9999

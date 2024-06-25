@@ -1,6 +1,5 @@
 use super::*;
 
-
 // Receiving this struct as input to the server
 #[derive(Deserialize, Serialize, Debug)]
 pub struct OrderRequest {
@@ -14,15 +13,14 @@ pub struct OrderRequest {
 // Define a struct representing your response data
 #[derive(Serialize)]
 pub struct BondRequirementResponse {
-    pub bond_address: String, 
-	pub locking_amount_sat: u64,// min amount of the bond output in sat
-	
+	pub bond_address: String,
+	pub locking_amount_sat: u64, // min amount of the bond output in sat
 }
 
 // maker step 2
 // (submission of signed bond and other data neccessary to coordinate the trade)
 #[derive(Deserialize, Serialize, Debug)]
-pub struct 	BondSubmissionRequest {
+pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
 	pub payout_address: String,  // does this make sense here?

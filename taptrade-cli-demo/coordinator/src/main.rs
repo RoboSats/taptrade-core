@@ -1,37 +1,24 @@
 mod communication;
 mod coordinator;
+mod sqlite_db;
+mod wallet;
 
-use anyhow::{anyhow, Error, Result};
-use bdk::database::MemoryDatabase;
-use bdk::Wallet;
-use communication::api_server;
+use anyhow::{anyhow, Result};
+use bdk::{database::MemoryDatabase, Wallet};
+use communication::{api::*, api_server};
 use dotenv::dotenv;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
-use std::env;
-use std::sync::Arc;
-
-#[derive(Clone, Debug)]
-pub struct Coordinator {
-	pub db_pool: Arc<Pool<Sqlite>>,
-	pub wallet: Arc<Wallet<MemoryDatabase>>, // using sqlite for Wallet?
-}
+use sqlite_db::SqliteDB;
+use std::{env, sync::Arc};
+use wallet::CoordinatorWallet;
 
 // populate .env with values before starting
 #[tokio::main]
 async fn main() -> Result<()> {
 	dotenv().ok();
 	// Initialize the database pool
-	let db_pool = SqlitePoolOptions::new()
-		.connect("sqlite:./db/trades.db")
-		.await
-		.unwrap();
-	let shared_db_pool: Arc<sqlx::Pool<sqlx::Sqlite>> = Arc::new(db_pool);
+	let coordinator_db = SqliteDB::init().await?;
+	let wallet = CoordinatorWallet::init().await?;
 
-	// let coordinator = Coordinator {
-	// 	db_pool: shared_db_pool,
-	// 	wallet: // impl wallet
-	// };
-
-	// api_server(coordinator).await?;
+	api_server(coordinator_db).await?;
 	Ok(())
 }
