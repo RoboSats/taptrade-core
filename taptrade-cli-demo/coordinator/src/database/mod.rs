@@ -4,11 +4,12 @@ use super::*;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
 
 #[derive(Clone, Debug)]
-pub struct SqliteDB {
+pub struct CoordinatorDB {
 	pub db_pool: Arc<Pool<Sqlite>>,
 }
 
-impl SqliteDB {
+// is our implementation secure against sql injections?
+impl CoordinatorDB {
 	// will either create a new db or load existing one. Will create according tables in new db
 	pub async fn init() -> Result<Self> {
 		let db_pool = SqlitePoolOptions::new()
