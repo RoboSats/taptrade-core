@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
 	dotenv().ok();
 	// Initialize the database pool
 	let coordinator_db = CoordinatorDB::init().await?;
-	// let wallet = CoordinatorWallet::init().await?;
+	let wallet = CoordinatorWallet::init().await?;
 
 	api_server(coordinator_db).await?;
 	Ok(())

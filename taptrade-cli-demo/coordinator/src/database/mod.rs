@@ -8,7 +8,7 @@ pub struct CoordinatorDB {
 	pub db_pool: Arc<Pool<Sqlite>>,
 }
 
-// is our implementation secure against sql injections?
+// is our implementation resistant against sql injections?
 impl CoordinatorDB {
 	// will either create a new db or load existing one. Will create according tables in new db
 	pub async fn init() -> Result<Self> {

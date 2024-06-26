@@ -15,11 +15,11 @@ use tokio::net::TcpListener;
 
 // Handler function to process the received data
 async fn receive_order(
-	Extension(state): Extension<Arc<SqliteDB>>,
+	Extension(state): Extension<Arc<CoordinatorDB>>,
 	Json(order): Json<OrderRequest>,
 ) -> Result<Json<BondRequirementResponse>, AppError> {
-	// insert offer into sql database
 	// generate locking address for bond
+	// insert offer into sql database
 
 	println!("Coordinator received new offer: {:?}", order);
 	Ok(Json(BondRequirementResponse {
@@ -42,7 +42,7 @@ async fn receive_order(
 // 	Json(response)
 // }
 
-pub async fn api_server(database: SqliteDB) -> Result<()> {
+pub async fn api_server(database: CoordinatorDB) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
 		.layer(Extension(database));
