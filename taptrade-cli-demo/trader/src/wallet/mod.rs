@@ -63,7 +63,7 @@ impl TradingWallet {
 		let trading_wallet = &self.wallet;
 		let bond = Bond::assemble(&self.wallet, offer_conditions, trader_config)?;
 		let payout_address: AddressInfo =
-			trading_wallet.get_address(bdk::wallet::AddressIndex::LastUnused)?;
+			trading_wallet.get_address(bdk::wallet::AddressIndex::New)?;
 		let musig_data = MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
 
 		Ok((bond, musig_data, payout_address))
