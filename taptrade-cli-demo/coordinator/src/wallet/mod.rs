@@ -3,20 +3,20 @@ use anyhow::Context;
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey},
 	blockchain::ElectrumBlockchain,
-	database::any::SledDbConfiguration,
 	electrum_client::Client,
-	sled,
+	sled::{self, Tree},
 	template::Bip86,
 	KeychainKind, SyncOptions, Wallet,
 };
 use std::str::FromStr;
 
+#[derive(Clone, Debug)]
 pub struct CoordinatorWallet {
-	pub wallet: Wallet<SledDbConfiguration>,
+	pub wallet: Arc<Mutex<Wallet<Tree>>>,
 }
 
 impl CoordinatorWallet {
-	pub async fn init() -> Result<Self> {
+	pub fn init() -> Result<Self> {
 		let wallet_xprv = ExtendedPrivKey::from_str(
 			&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 		)?;
@@ -32,8 +32,18 @@ impl CoordinatorWallet {
 			sled_db,
 		)?;
 
-		wallet.sync(&backend, SyncOptions::default()).await?;
-		dbg!("BDK Wallet loaded, Balance: {} SAT", wallet.get_balance()?);
-		Ok(CoordinatorWallet { wallet })
+		wallet
+			.sync(&backend, SyncOptions::default())
+			.context("Connection to electrum server failed.")?; // we could also use Esplora to make this async
+		dbg!(wallet.get_balance()?);
+		Ok(CoordinatorWallet {
+			wallet: Arc::new(Mutex::new(wallet)),
+		})
+	}
+
+	pub async fn get_new_address(&self) -> Result<String> {
+		let wallet = self.wallet.lock().await;
+		let address = wallet.get_address(bdk::wallet::AddressIndex::New)?;
+		Ok(address.address.to_string())
 	}
 }

@@ -12,16 +12,18 @@ pub struct CoordinatorDB {
 impl CoordinatorDB {
 	// will either create a new db or load existing one. Will create according tables in new db
 	pub async fn init() -> Result<Self> {
+		dbg!(env::var("DATABASE_PATH")?);
+		let db_path =
+			env::var("DATABASE_PATH").context("Parsing DATABASE_PATH from .env failed")?;
+
+		// Add the `?mode=rwc` parameter to create the database if it doesn't exist
+		let connection_string = format!("sqlite:{}?mode=rwc", db_path);
+
 		let db_pool = SqlitePoolOptions::new()
-			.connect(
-				&("sqlite:".to_string()
-					+ &env::var("DATABASE_PATH")
-						.context("Parsing DATABASE_PATH from .env failed")?),
-			)
+			.connect(&connection_string)
 			.await
 			.map_err(|e| anyhow!("Failed to connect to SQLite database: {}", e))?;
 
-		let shared_db_pool = Arc::new(db_pool);
 		// Create the trades table if it doesn't exist
 		sqlx::query(
 			// robohash is binary hash
@@ -32,12 +34,13 @@ impl CoordinatorDB {
 					bond_ratio INTEGER NOT NULL,
 					offer_duration_ts INTEGER NOT NULL,
 					bond_address TEXT NOT NULL,
-					bond_amount_sat INTEGER NOT NULL,
+					bond_amount_sat INTEGER NOT NULL
 				)",
 		)
-		.execute(&*shared_db_pool)
+		.execute(&db_pool)
 		.await?;
-
+		dbg!("Database initialized");
+		let shared_db_pool = Arc::new(db_pool);
 		Ok(Self {
 			db_pool: shared_db_pool,
 		})
