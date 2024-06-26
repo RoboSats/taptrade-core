@@ -1,7 +1,7 @@
 use super::*;
 use anyhow::Context;
 use bdk::{
-	bitcoin::{self, bip32::ExtendedPrivKey},
+	bitcoin::{self, bip32::ExtendedPrivKey, consensus::encode::deserialize, Transaction},
 	blockchain::ElectrumBlockchain,
 	electrum_client::Client,
 	sled::{self, Tree},
@@ -45,5 +45,12 @@ impl CoordinatorWallet {
 		let wallet = self.wallet.lock().await;
 		let address = wallet.get_address(bdk::wallet::AddressIndex::New)?;
 		Ok(address.address.to_string())
+	}
+
+	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
+	pub async fn validate_bond_tx_hex(&self, bond: &String) -> Result<bool> {
+		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
+
+		Ok(true)
 	}
 }

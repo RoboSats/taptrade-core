@@ -1,5 +1,5 @@
 mod communication;
-// mod coordinator;
+mod coordinator;
 mod database;
 mod wallet;
 
@@ -7,6 +7,7 @@ use anyhow::{anyhow, Result};
 use communication::{api::*, api_server};
 use database::CoordinatorDB;
 use dotenv::dotenv;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
 use wallet::CoordinatorWallet;

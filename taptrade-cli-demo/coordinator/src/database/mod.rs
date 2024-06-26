@@ -1,7 +1,7 @@
 use anyhow::Context;
 
 use super::*;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorDB {
@@ -69,5 +69,19 @@ impl CoordinatorDB {
 		.await?;
 
 		Ok(())
+	}
+
+	pub async fn fetch_maker_request(&self, robohash: &String) -> Result<BondRequirementResponse> {
+		let maker_request = sqlx::query(
+			"SELECT bond_address, bond_amount_sat FROM maker_requests WHERE robohash = ?",
+		)
+		.bind(hex::decode(robohash)?)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		Ok(BondRequirementResponse {
+			bond_address: maker_request.try_get("bond_address")?,
+			locking_amount_sat: maker_request.try_get::<i64, _>("bond_amount_sat")? as u64,
+		})
 	}
 }

@@ -16,7 +16,7 @@ pub fn verify_and_respond(
 	wallet: &Wallet<MemoryDatabase>,
 ) -> Result<OrderActivatedResponse> {
 	// Deserialize the signed bond hex
-	let tx: Transaction = deserialize(hex::decode(bond_submission.signed_bond_hex)?.as_slice())?;
+	let tx: Transaction = deserialize(&hex::decode(&bond_submission.signed_bond_hex)?)?;
 
 	// Verify the transaction (this example assumes you've implemented your own verification logic)
 	let is_valid = verify_psbt(&tx, &wallet, &bond_submission)?;

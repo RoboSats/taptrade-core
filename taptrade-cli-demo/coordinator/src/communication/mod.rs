@@ -1,6 +1,8 @@
 pub mod api;
+mod utils;
 
 use self::api::*;
+use self::utils::*;
 use super::*;
 use axum::{
 	http::StatusCode,
@@ -19,6 +21,9 @@ async fn receive_order(
 	Extension(wallet): Extension<CoordinatorWallet>,
 	Json(order): Json<OrderRequest>,
 ) -> Result<Json<BondRequirementResponse>, AppError> {
+	if order.sanity_check().is_err() {
+		return Err(AppError(anyhow!("Invalid order request")));
+	}
 	let bond_requirements = BondRequirementResponse {
 		bond_address: wallet.get_new_address().await?,
 		locking_amount_sat: order.amount_satoshi * order.bond_ratio as u64 / 100,
@@ -31,20 +36,37 @@ async fn receive_order(
 	Ok(Json(bond_requirements))
 }
 
+// BondSubmissionRequest {
+// 	pub robohash_hex: String,
+// 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
+// 	pub payout_address: String,
+// 	pub musig_pub_nonce_hex: String,
+// 	pub musig_pubkey_hex: String,
 async fn submit_maker_bond(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Json<OrderActivatedResponse>, AppError> {
-	// Process the payload
+	let bond_requirements = database.fetch_maker_request(&payload.robohash_hex).await?;
+
+	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
+	wallet
+		.validate_bond_tx_hex(&payload.signed_bond_hex)
+		.await?;
+
+	// insert bond into sql database
+
+	// begin monitoring bond
+
+	// move trade to orderbook
+
 	// For now, we'll just return a dummy success response
 	let response = OrderActivatedResponse {
 		bond_locked_until_timestamp: 0 as u128,
 		order_id_hex: "Bond submitted successfully".to_string(),
 	};
-
 	// Create the JSON response
-	Json(response)
+	Ok(Json(response))
 }
 
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {
