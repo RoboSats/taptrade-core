@@ -34,3 +34,9 @@ pub struct OrderActivatedResponse {
 	pub offer_id_hex: String,
 	pub bond_locked_until_timestamp: u64, // unix timestamp. Do not touch bond till then unless offer gets taken.
 }
+
+pub struct OffersRequest {
+	pub buy_offers: bool, // true if looking for buy offers, false if looking for sell offers
+	pub amount_min_sat: u64,
+	pub amount_max_sat: u64,
+}
