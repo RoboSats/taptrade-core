@@ -8,6 +8,17 @@ pub struct CoordinatorDB {
 	pub db_pool: Arc<Pool<Sqlite>>,
 }
 
+// db structure of offers awaiting bond submission in table maker_requests
+pub struct AwaitingBondOffer {
+	pub robohash_hex: String,
+	pub is_buy_order: bool,
+	pub amount_satoshi: u64,
+	pub bond_ratio: u8,
+	pub offer_duration_ts: u64,
+	pub bond_address: String,
+	pub bond_amount_sat: u64,
+}
+
 // is our implementation resistant against sql injections?
 impl CoordinatorDB {
 	// will either create a new db or load existing one. Will create according tables in new db
@@ -50,7 +61,10 @@ impl CoordinatorDB {
 				offer_duration_ts INTEGER NOT NULL,
 				bond_address TEXT NOT NULL,
 				bond_amount_sat INTEGER NOT NULL,
-				bond_tx_hex TEXT NOT NULL
+				bond_tx_hex TEXT NOT NULL,
+				payout_address TEXT NOT NULL,
+				musig_pub_nonce_hex TEXT NOT NULL,
+				musig_pubkey_hex TEXT NOT NULL
 			)",
 		)
 		.execute(&db_pool)
@@ -101,28 +115,63 @@ impl CoordinatorDB {
 		})
 	}
 
+	pub async fn fetch_and_delete_offer_from_bond_table(
+		&self,
+		robohash_hex: &str,
+	) -> Result<AwaitingBondOffer> {
+		let fetched_values = sqlx::query_as::<_, (String, bool, i64, u8, i64, String, i64)> (
+			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat FROM maker_requests WHERE <unique_identifier_column> = ?",
+		)
+		.bind(hex::decode(robohash_hex)?)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		// Delete the database entry.
+		sqlx::query("DELETE FROM maker_requests WHERE <unique_identifier_column> = ?")
+			.bind(hex::decode(robohash_hex)?)
+			.execute(&*self.db_pool)
+			.await?;
+
+		Ok(AwaitingBondOffer {
+			robohash_hex: hex::encode(fetched_values.0),
+			is_buy_order: fetched_values.1,
+			amount_satoshi: fetched_values.2 as u64,
+			bond_ratio: fetched_values.3,
+			offer_duration_ts: fetched_values.4 as u64,
+			bond_address: fetched_values.5,
+			bond_amount_sat: fetched_values.6 as u64,
+		})
+	}
+
 	pub async fn move_offer_to_active(
 		&self,
 		data: &BondSubmissionRequest,
 		offer_id: &String,
-	) -> Result<()> {
-		// let bool_to_sql_int = |flag: bool| if flag { Some(1) } else { None };
+	) -> Result<u64> {
+		let remaining_offer_information = self
+			.fetch_and_delete_offer_from_bond_table(&data.robohash_hex)
+			.await?;
 
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
-					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
-		.bind(hex::decode(&order.robohash_hex)?)
-		// .bind(bool_to_sql_int(order.is_buy_order))
-		// .bind(order.amount_satoshi as i64)
-		// .bind(order.bond_ratio)
-		// .bind(order.offer_duration_ts as i64)
-		// .bind(bond_requirements.bond_address.clone())
-		// .bind(bond_requirements.locking_amount_sat as i64)
+		.bind(offer_id)
+		.bind(hex::decode(&data.robohash_hex)?)
+		.bind(remaining_offer_information.is_buy_order)
+		.bind(remaining_offer_information.amount_satoshi as i64)
+		.bind(remaining_offer_information.bond_ratio)
+		.bind(remaining_offer_information.offer_duration_ts as i64)
+		.bind(remaining_offer_information.bond_address.clone())
+		.bind(remaining_offer_information.bond_amount_sat as i64)
+		.bind(data.signed_bond_hex.clone())
+		.bind(data.payout_address.clone())
+		.bind(data.musig_pub_nonce_hex.clone())
+		.bind(data.musig_pubkey_hex.clone())
 		.execute(&*self.db_pool)
 		.await?;
 
-		Ok(())
+		Ok(remaining_offer_information.offer_duration_ts)
 	}
 }

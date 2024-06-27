@@ -52,12 +52,6 @@ async fn receive_order(
 	Ok(Json(bond_requirements))
 }
 
-// BondSubmissionRequest {
-// 	pub robohash_hex: String,
-// 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
-// 	pub payout_address: String,
-// 	pub musig_pub_nonce_hex: String,
-// 	pub musig_pubkey_hex: String,
 async fn submit_maker_bond(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -72,21 +66,18 @@ async fn submit_maker_bond(
 		.await?;
 
 	// insert bond into sql database
-	database
+	let bond_locked_until_timestamp = database
 		.move_offer_to_active(&payload, &offer_id_hex)
 		.await?;
 
-	// begin monitoring bond
+	// begin monitoring bond -> async loop monitoring bonds in sql table "active_maker_offers" -> see ../coordinator/monitoring.rs
+	// show trade to orderbook -> orderbook endpoint will scan sql table "active_maker_offers"
 
-	// move trade to orderbook
-
-	// For now, we'll just return a dummy success response
-	let response = OrderActivatedResponse {
-		bond_locked_until_timestamp: 0 as u128,
-		order_id_hex: "Bond submitted successfully".to_string(),
-	};
 	// Create the JSON response
-	Ok(Json(response))
+	Ok(Json(OrderActivatedResponse {
+		bond_locked_until_timestamp,
+		offer_id_hex,
+	}))
 }
 
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {

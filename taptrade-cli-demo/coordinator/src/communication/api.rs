@@ -31,6 +31,6 @@ pub struct BondSubmissionRequest {
 // Response after step2 if offer creation was successful and the offer is now online in the orderbook
 #[derive(Serialize)]
 pub struct OrderActivatedResponse {
-	pub order_id_hex: String,
-	pub bond_locked_until_timestamp: u128, // unix timestamp. Do not touch bond till then unless offer gets taken.
+	pub offer_id_hex: String,
+	pub bond_locked_until_timestamp: u64, // unix timestamp. Do not touch bond till then unless offer gets taken.
 }
