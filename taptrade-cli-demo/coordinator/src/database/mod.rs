@@ -39,6 +39,22 @@ impl CoordinatorDB {
 		)
 		.execute(&db_pool)
 		.await?;
+		sqlx::query(
+			// robohash is binary hash
+			"CREATE TABLE IF NOT EXISTS active_maker_offers (
+				trade_id BLOB PRIMARY KEY,
+				robohash BLOB,
+				is_buy_order INTEGER,
+				amount_sat INTEGER NOT NULL,
+				bond_ratio INTEGER NOT NULL,
+				offer_duration_ts INTEGER NOT NULL,
+				bond_address TEXT NOT NULL,
+				bond_amount_sat INTEGER NOT NULL
+				bond_tx_hex TEXT NOT NULL
+			)",
+		)
+		.execute(&db_pool)
+		.await?;
 		dbg!("Database initialized");
 		let shared_db_pool = Arc::new(db_pool);
 		Ok(Self {
@@ -84,4 +100,6 @@ impl CoordinatorDB {
 			locking_amount_sat: maker_request.try_get::<i64, _>("bond_amount_sat")? as u64,
 		})
 	}
+
+	pub async fn move_offer_to_active(&self) -> Result<()> {}
 }

@@ -51,10 +51,13 @@ async fn submit_maker_bond(
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
 	wallet
-		.validate_bond_tx_hex(&payload.signed_bond_hex)
+		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
 		.await?;
 
 	// insert bond into sql database
+	database
+		.move_offer_to_active(&payload, &bond_requirements)
+		.await?;
 
 	// begin monitoring bond
 

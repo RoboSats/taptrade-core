@@ -6,6 +6,7 @@ use bdk::{
 	electrum_client::Client,
 	sled::{self, Tree},
 	template::Bip86,
+	wallet::verify::*,
 	KeychainKind, SyncOptions, Wallet,
 };
 use std::str::FromStr;
@@ -13,6 +14,7 @@ use std::str::FromStr;
 #[derive(Clone, Debug)]
 pub struct CoordinatorWallet {
 	pub wallet: Arc<Mutex<Wallet<Tree>>>,
+	// database: Arc<Mutex<Tree>>,
 }
 
 impl CoordinatorWallet {
@@ -38,6 +40,7 @@ impl CoordinatorWallet {
 		dbg!(wallet.get_balance()?);
 		Ok(CoordinatorWallet {
 			wallet: Arc::new(Mutex::new(wallet)),
+			// database: Arc::new(Mutex::new(sled_db)),
 		})
 	}
 
@@ -48,9 +51,19 @@ impl CoordinatorWallet {
 	}
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
-	pub async fn validate_bond_tx_hex(&self, bond: &String) -> Result<bool> {
+	pub async fn validate_bond_tx_hex(
+		&self,
+		bond: &String,
+		requirements: &BondRequirementResponse,
+	) -> Result<bool> {
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
+		let wallet = self.wallet.lock().await;
 
+		// we need to test this with signed and invalid/unsigned transactions
+		// let result = verify_tx(&tx, wallet.database(), blockchain);
+
+		// let valid = tx.verify_tx();
+		panic!("Not implemented");
 		Ok(true)
 	}
 }
