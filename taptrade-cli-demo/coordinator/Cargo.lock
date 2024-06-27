@@ -317,6 +317,7 @@ dependencies = [
  "bdk",
  "dotenv",
  "hex",
+ "rand",
  "reqwest",
  "serde",
  "sqlx",

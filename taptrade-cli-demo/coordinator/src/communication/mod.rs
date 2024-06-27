@@ -10,11 +10,27 @@ use axum::{
 	routing::post,
 	Extension, Json, Router,
 };
+use rand::{distributions::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 // use crate::coordinator::verify_psbt;
 
+fn generate_random_order_id(len: usize) -> String {
+	// Generate `len` random bytes
+	let bytes: Vec<u8> = rand::thread_rng()
+		.sample_iter(&rand::distributions::Standard)
+		.take(len)
+		.collect();
+
+	// Convert bytes to hex string
+	let hex_string = hex::encode(bytes);
+	hex_string
+}
+
+//
+// Axum handler functions
+//
 // Handler function to process the received data
 async fn receive_order(
 	Extension(database): Extension<CoordinatorDB>,
@@ -48,6 +64,7 @@ async fn submit_maker_bond(
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Json<OrderActivatedResponse>, AppError> {
 	let bond_requirements = database.fetch_maker_request(&payload.robohash_hex).await?;
+	let offer_id_hex = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
 	wallet
@@ -56,7 +73,7 @@ async fn submit_maker_bond(
 
 	// insert bond into sql database
 	database
-		.move_offer_to_active(&payload, &bond_requirements)
+		.move_offer_to_active(&payload, &offer_id_hex)
 		.await?;
 
 	// begin monitoring bond
