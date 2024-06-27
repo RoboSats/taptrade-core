@@ -63,7 +63,7 @@ impl CoordinatorWallet {
 		// let result = verify_tx(&tx, wallet.database(), blockchain);
 
 		// let valid = tx.verify_tx();
-		panic!("Not implemented");
+		panic!("Bond verification not implemented!");
 		Ok(true)
 	}
 }

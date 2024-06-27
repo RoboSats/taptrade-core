@@ -10,23 +10,11 @@ use axum::{
 	routing::post,
 	Extension, Json, Router,
 };
-use rand::{distributions::Alphanumeric, Rng};
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
 // use crate::coordinator::verify_psbt;
-
-fn generate_random_order_id(len: usize) -> String {
-	// Generate `len` random bytes
-	let bytes: Vec<u8> = rand::thread_rng()
-		.sample_iter(&rand::distributions::Standard)
-		.take(len)
-		.collect();
-
-	// Convert bytes to hex string
-	let hex_string = hex::encode(bytes);
-	hex_string
-}
 
 //
 // Axum handler functions
@@ -65,13 +53,13 @@ async fn submit_maker_bond(
 		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
 		.await?;
 
-	// insert bond into sql database
+	// insert bond into sql database and move offer to different table
 	let bond_locked_until_timestamp = database
 		.move_offer_to_active(&payload, &offer_id_hex)
 		.await?;
 
 	// begin monitoring bond -> async loop monitoring bonds in sql table "active_maker_offers" -> see ../coordinator/monitoring.rs
-	// show trade to orderbook -> orderbook endpoint will scan sql table "active_maker_offers"
+	// show trade to orderbook -> orderbook endpoint will scan sql table "active_maker_offers" and return fitting results
 
 	// Create the JSON response
 	Ok(Json(OrderActivatedResponse {
