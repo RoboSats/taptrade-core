@@ -10,7 +10,8 @@ in
         pkg-config 
         zlib 
         openssl 
-        cargo 
+        cargo
+        clippy
         rustc 
         rustfmt
         gcc

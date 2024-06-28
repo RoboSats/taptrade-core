@@ -174,4 +174,30 @@ impl CoordinatorDB {
 
 		Ok(remaining_offer_information.offer_duration_ts)
 	}
+
+	pub async fn fetch_suitable_offers(
+		&self,
+		requested_offer: &OffersRequest,
+	) -> Result<Option<Vec<PublicOffer>>> {
+		let fetched_offers = sqlx::query_as::<_, (String, i64)> (
+            "SELECT offer_id, amount_sat FROM maker_requests WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
+        )
+        .bind(requested_offer.buy_offers)
+        .bind(requested_offer.amount_min_sat as i64)
+        .bind(requested_offer.amount_max_sat as i64)
+        .fetch_all(&*self.db_pool)
+        .await?;
+
+		let available_offers: Vec<PublicOffer> = fetched_offers
+			.into_iter()
+			.map(|(offer_id_hex, amount_sat)| PublicOffer {
+				offer_id_hex,
+				amount_sat: amount_sat as u64,
+			})
+			.collect();
+		if available_offers.is_empty() {
+			return Ok(None);
+		}
+		Ok(Some(available_offers))
+	}
 }

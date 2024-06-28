@@ -40,3 +40,15 @@ pub struct OffersRequest {
 	pub amount_min_sat: u64,
 	pub amount_max_sat: u64,
 }
+
+// Offer information of each offer returned by the previous response
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PublicOffer {
+	pub amount_sat: u64,
+	pub offer_id_hex: String,
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+pub struct PublicOffers {
+	pub offers: Option<Vec<PublicOffer>>, // don't include offers var in return json if no offers are available
+}

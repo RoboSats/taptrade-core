@@ -70,12 +70,19 @@ async fn submit_maker_bond(
 
 async fn fetch_available_offers(
 	Extension(database): Extension<CoordinatorDB>,
-	Extension(wallet): Extension<CoordinatorWallet>,
+	Extension(_): Extension<CoordinatorWallet>,
 	Json(payload): Json<OffersRequest>,
-) -> Result<Json<Vec<PublicOffer>>, AppError> {
+) -> Result<Json<OrderActivatedResponse>, AppError> {
+	// let suitable_offers: Option<Vec<PublicOffer>> =
+	database.fetch_suitable_offers(&payload).await?;
 
-	// let offers = database.fetch_available_offers(&payload).await?;
-	// Ok(Json(offers))
+	Ok(Json(OrderActivatedResponse {
+		offer_id_hex: "test".to_string(),
+		bond_locked_until_timestamp: 21312313,
+	}))
+	// Ok(Json(PublicOffers {
+	// 	offers: suitable_offers,
+	// }))
 }
 
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {

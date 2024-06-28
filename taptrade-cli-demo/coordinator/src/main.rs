@@ -1,5 +1,5 @@
 mod communication;
-mod coordinator;
+// mod coordinator;
 mod database;
 mod wallet;
 
