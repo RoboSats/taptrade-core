@@ -2,6 +2,7 @@ use anyhow::Context;
 
 use super::*;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
+use std::env;
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorDB {
@@ -201,3 +202,66 @@ impl CoordinatorDB {
 		Ok(Some(available_offers))
 	}
 }
+#[cfg(test)]
+mod tests {
+	use anyhow::Ok;
+
+use super::*;
+	async fn create_coordinator()-> Result<database::CoordinatorDB, anyhow::Error> {
+		// Set up the in-memory database
+		env::set_var("DATABASE_PATH", ":memory:");
+
+		// Initialize the database
+		let database= CoordinatorDB::init().await?;
+		Ok(database)
+		
+	}
+	#[tokio::test]
+	async fn test_init() -> Result<()> {
+		let database = create_coordinator().await?;
+		// Verify the table creation
+		let table_exists = sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='maker_requests'")
+			.fetch_optional(&*database.db_pool)
+			.await?
+			.is_some();
+		assert!(table_exists, "The maker_requests table should exist.");
+		Ok(())
+	}
+	#[tokio::test]
+	async fn test_insert_new_maker_request() -> Result<()> {
+		let database = create_coordinator().await?;
+
+		// Create a sample order request and bond requirement response
+		let order_request = OrderRequest {
+			robohash_hex: "a3f1f1f0e2f3f4f5".to_string(),
+			is_buy_order: true,
+			amount_satoshi: 1000,
+			bond_ratio: 50,
+			offer_duration_ts: 1234567890,
+		};
+
+		let bond_requirement_response = BondRequirementResponse {
+			bond_address: "1BitcoinAddress".to_string(),
+			locking_amount_sat: 500,
+		};
+
+		// Insert the new maker request
+		database.insert_new_maker_request(&order_request, &bond_requirement_response).await?;
+
+		// Verify the insertion
+		let row = sqlx::query("SELECT * FROM maker_requests WHERE robohash = ?")
+			.bind(hex::decode(&order_request.robohash_hex)?)
+			.fetch_one(&*database.db_pool)
+			.await?;
+
+		assert!(row.get::<bool, _>("is_buy_order"));
+		assert_eq!(row.get::<i64, _>("amount_sat"), 1000);
+		assert_eq!(row.get::<i64, _>("bond_ratio"), 50);
+		assert_eq!(row.get::<i64, _>("offer_duration_ts"), 1234567890);
+		assert_eq!(row.get::<String, _>("bond_address"), "1BitcoinAddress");
+		assert_eq!(row.get::<i64, _>("bond_amount_sat"), 500);
+
+		Ok(())
+	}
+}
+

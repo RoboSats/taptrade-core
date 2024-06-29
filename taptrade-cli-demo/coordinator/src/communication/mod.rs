@@ -89,7 +89,7 @@ pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> R
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
 		.route("/submit-maker-bond", post(submit_maker_bond))
-		.route("/fetch-available-offers", post(fetch_available_offers))
+		// .route("/fetch-available-offers", post(fetch_available_offers))
 		.layer(Extension(database))
 		.layer(Extension(wallet));
 	// add other routes here

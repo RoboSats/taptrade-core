@@ -25,10 +25,10 @@ pub fn verify_and_respond(
 	}
 
 	// Create the response (you may need additional logic to generate order_id_hex and timestamp)
-	let response = OrderActivatedResponse {
-		order_id_hex: generate_order_id(&tx)?, // Assuming you have a function to generate this
-		bond_locked_until_timestamp: calculate_bond_lock_time()?, // Assuming you have a function for this
-	};
+	// let response = OrderActivatedResponse {
+	// 	order_id_hex: generate_order_id(&tx)?, // Assuming you have a function to generate this
+	// 	bond_locked_until_timestamp: calculate_bond_lock_time()?, // Assuming you have a function for this
+	// };
 
 	Ok(response)
 }
