@@ -70,26 +70,18 @@ async fn submit_maker_bond(
 
 async fn fetch_available_offers(
 	Extension(database): Extension<CoordinatorDB>,
-	Extension(_): Extension<CoordinatorWallet>,
 	Json(payload): Json<OffersRequest>,
-) -> Result<Json<OrderActivatedResponse>, AppError> {
-	// let suitable_offers: Option<Vec<PublicOffer>> =
-	database.fetch_suitable_offers(&payload).await?;
+) -> Result<Json<PublicOffers>, AppError> {
+	let offers: Option<Vec<PublicOffer>> = database.fetch_suitable_offers(&payload).await?;
 
-	Ok(Json(OrderActivatedResponse {
-		offer_id_hex: "test".to_string(),
-		bond_locked_until_timestamp: 21312313,
-	}))
-	// Ok(Json(PublicOffers {
-	// 	offers: suitable_offers,
-	// }))
+	Ok(Json(PublicOffers { offers }))
 }
 
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
 		.route("/submit-maker-bond", post(submit_maker_bond))
-		// .route("/fetch-available-offers", post(fetch_available_offers))
+		.route("/fetch-available-offers", post(fetch_available_offers))
 		.layer(Extension(database))
 		.layer(Extension(wallet));
 	// add other routes here

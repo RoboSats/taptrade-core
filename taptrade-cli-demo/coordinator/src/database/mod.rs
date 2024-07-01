@@ -202,31 +202,34 @@ impl CoordinatorDB {
 		Ok(Some(available_offers))
 	}
 }
+
 #[cfg(test)]
 mod tests {
 	use anyhow::Ok;
 
-use super::*;
-	async fn create_coordinator()-> Result<database::CoordinatorDB, anyhow::Error> {
+	use super::*;
+	async fn create_coordinator() -> Result<database::CoordinatorDB, anyhow::Error> {
 		// Set up the in-memory database
 		env::set_var("DATABASE_PATH", ":memory:");
 
 		// Initialize the database
-		let database= CoordinatorDB::init().await?;
+		let database = CoordinatorDB::init().await?;
 		Ok(database)
-		
 	}
 	#[tokio::test]
 	async fn test_init() -> Result<()> {
 		let database = create_coordinator().await?;
 		// Verify the table creation
-		let table_exists = sqlx::query("SELECT name FROM sqlite_master WHERE type='table' AND name='maker_requests'")
-			.fetch_optional(&*database.db_pool)
-			.await?
-			.is_some();
+		let table_exists = sqlx::query(
+			"SELECT name FROM sqlite_master WHERE type='table' AND name='maker_requests'",
+		)
+		.fetch_optional(&*database.db_pool)
+		.await?
+		.is_some();
 		assert!(table_exists, "The maker_requests table should exist.");
 		Ok(())
 	}
+
 	#[tokio::test]
 	async fn test_insert_new_maker_request() -> Result<()> {
 		let database = create_coordinator().await?;
@@ -246,7 +249,9 @@ use super::*;
 		};
 
 		// Insert the new maker request
-		database.insert_new_maker_request(&order_request, &bond_requirement_response).await?;
+		database
+			.insert_new_maker_request(&order_request, &bond_requirement_response)
+			.await?;
 
 		// Verify the insertion
 		let row = sqlx::query("SELECT * FROM maker_requests WHERE robohash = ?")
@@ -264,4 +269,3 @@ use super::*;
 		Ok(())
 	}
 }
-

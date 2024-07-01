@@ -35,6 +35,7 @@ pub struct OrderActivatedResponse {
 	pub bond_locked_until_timestamp: u64, // unix timestamp. Do not touch bond till then unless offer gets taken.
 }
 
+#[derive(Deserialize, Serialize, Debug)]
 pub struct OffersRequest {
 	pub buy_offers: bool, // true if looking for buy offers, false if looking for sell offers
 	pub amount_min_sat: u64,
