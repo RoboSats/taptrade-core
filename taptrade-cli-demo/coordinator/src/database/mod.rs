@@ -346,6 +346,33 @@ impl CoordinatorDB {
 
 		Ok(())
 	}
+
+	pub async fn fetch_taken_offer_maker(
+		&self,
+		offer_id_hex: &String,
+		robohash_hex_maker: &String,
+	) -> Result<Option<String>> {
+		let offer = sqlx::query(
+			"SELECT escrow_psbt_hex_maker, robohash_maker FROM taken_offers WHERE offer_id = ?",
+		)
+		.bind(offer_id_hex)
+		.fetch_optional(&*self.db_pool)
+		.await?;
+		let offer = match offer {
+			Some(offer) => offer,
+			None => return Ok(None),
+		};
+		match offer.try_get::<Vec<u8>, _>("robohash_maker") {
+			Ok(robohash) => {
+				if hex::encode(robohash) == *robohash_hex_maker {
+					Ok(offer.try_get("escrow_psbt_hex_maker")?)
+				} else {
+					Ok(None)
+				}
+			}
+			Err(_) => Ok(None),
+		}
+	}
 }
 
 #[cfg(test)]

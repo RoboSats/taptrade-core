@@ -67,3 +67,9 @@ pub struct OfferPsbtRequest {
 	pub offer: PublicOffer,
 	pub trade_data: BondSubmissionRequest,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OfferTakenRequest {
+	pub robohash_hex: String,
+	pub order_id_hex: String,
+}

@@ -120,14 +120,29 @@ async fn submit_taker_bond(
 	.into_response())
 }
 
+async fn request_offer_status_maker(
+	Extension(database): Extension<CoordinatorDB>,
+	Json(payload): Json<OfferTakenRequest>,
+) -> Result<Response, AppError> {
+	let offer = database
+		.fetch_taken_offer_maker(&payload.order_id_hex, &payload.robohash_hex)
+		.await?;
+	match offer {
+		Some(offer) => Ok(Json(OfferTakenResponse {
+			trade_psbt_hex_to_sign: offer,
+		})
+		.into_response()),
+		None => Ok(StatusCode::NO_CONTENT.into_response()),
+	}
+}
+
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
 		.route("/submit-maker-bond", post(submit_maker_bond))
 		.route("/fetch-available-offers", post(fetch_available_offers))
 		.route("/submit-taker-bond", post(submit_taker_bond))
-		// submit-taker-bond
-		// request-offer-status
+		.route("/request-offer-status", post(request_offer_status_maker))
 		.layer(Extension(database))
 		.layer(Extension(wallet));
 	// add other routes here
