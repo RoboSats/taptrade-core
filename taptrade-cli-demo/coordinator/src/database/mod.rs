@@ -10,14 +10,29 @@ pub struct CoordinatorDB {
 }
 
 // db structure of offers awaiting bond submission in table maker_requests
-pub struct AwaitingBondOffer {
-	pub robohash_hex: String,
-	pub is_buy_order: bool,
-	pub amount_satoshi: u64,
-	pub bond_ratio: u8,
-	pub offer_duration_ts: u64,
-	pub bond_address: String,
-	pub bond_amount_sat: u64,
+struct AwaitingBondOffer {
+	robohash_hex: String,
+	is_buy_order: bool,
+	amount_satoshi: u64,
+	bond_ratio: u8,
+	offer_duration_ts: u64,
+	bond_address: String,
+	bond_amount_sat: u64,
+}
+
+struct AwaitinigTakerOffer {
+	offer_id: String,
+	robohash_maker: Vec<u8>,
+	is_buy_order: bool,
+	amount_sat: i64,
+	bond_ratio: i32,
+	offer_duration_ts: i64,
+	bond_address_maker: String,
+	bond_amount_sat: i64,
+	bond_tx_hex_maker: String,
+	payout_address_maker: String,
+	musig_pub_nonce_hex_maker: String,
+	musig_pubkey_hex_maker: String,
 }
 
 // is our implementation resistant against sql injections?
@@ -66,6 +81,33 @@ impl CoordinatorDB {
 				payout_address TEXT NOT NULL,
 				musig_pub_nonce_hex TEXT NOT NULL,
 				musig_pubkey_hex TEXT NOT NULL
+			)",
+		)
+		.execute(&db_pool)
+		.await?;
+
+		sqlx::query(
+			"CREATE TABLE IF NOT EXISTS taken_offers (
+				offer_id TEXT PRIMARY KEY,
+				robohash_maker BLOB,
+				robohash_taker BLOB,
+				is_buy_order INTEGER,
+				amount_sat INTEGER NOT NULL,
+				bond_ratio INTEGER NOT NULL,
+				offer_duration_ts INTEGER NOT NULL,
+				bond_address_maker TEXT NOT NULL,
+				bond_address_taker TEXT NOT NULL,
+				bond_amount_sat INTEGER NOT NULL,
+				bond_tx_hex_maker TEXT NOT NULL,
+				bond_tx_hex_taker TEXT NOT NULL,
+				payout_address_maker TEXT NOT NULL,
+				payout_address_taker TEXT NOT NULL,
+				musig_pub_nonce_hex_maker TEXT NOT NULL,
+				musig_pubkey_hex_maker TEXT NOT NULL,
+				musig_pub_nonce_hex_taker TEXT NOT NULL,
+				musig_pubkey_hex_taker TEXT NOT NULL,
+				escrow_psbt_hex_maker TEXT,
+				escrow_psbt_hex_taker TEXT
 			)",
 		)
 		.execute(&db_pool)
@@ -120,7 +162,7 @@ impl CoordinatorDB {
 		&self,
 		robohash_hex: &str,
 	) -> Result<AwaitingBondOffer> {
-		let fetched_values = sqlx::query_as::<_, (String, bool, i64, u8, i64, String, i64)> (
+		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, u8, i64, String, i64)> (
 			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat FROM maker_requests WHERE <unique_identifier_column> = ?",
 		)
 		.bind(hex::decode(robohash_hex)?)
@@ -148,6 +190,7 @@ impl CoordinatorDB {
 		&self,
 		data: &BondSubmissionRequest,
 		offer_id: &String,
+		taker_bond_address: String,
 	) -> Result<u64> {
 		let remaining_offer_information = self
 			.fetch_and_delete_offer_from_bond_table(&data.robohash_hex)
@@ -156,7 +199,7 @@ impl CoordinatorDB {
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
 					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(offer_id)
 		.bind(hex::decode(&data.robohash_hex)?)
@@ -170,6 +213,7 @@ impl CoordinatorDB {
 		.bind(data.payout_address.clone())
 		.bind(data.musig_pub_nonce_hex.clone())
 		.bind(data.musig_pubkey_hex.clone())
+		.bind(taker_bond_address)
 		.execute(&*self.db_pool)
 		.await?;
 
@@ -180,8 +224,8 @@ impl CoordinatorDB {
 		&self,
 		requested_offer: &OffersRequest,
 	) -> Result<Option<Vec<PublicOffer>>> {
-		let fetched_offers = sqlx::query_as::<_, (String, i64)> (
-            "SELECT offer_id, amount_sat FROM maker_requests WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
+		let fetched_offers = sqlx::query_as::<_, (String, i64, i64, String)> (
+            "SELECT offer_id, amount_sat, bond_amount_sat, taker_bond_address FROM active_maker_offers WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
         )
         .bind(requested_offer.buy_offers)
         .bind(requested_offer.amount_min_sat as i64)
@@ -191,15 +235,113 @@ impl CoordinatorDB {
 
 		let available_offers: Vec<PublicOffer> = fetched_offers
 			.into_iter()
-			.map(|(offer_id_hex, amount_sat)| PublicOffer {
-				offer_id_hex,
-				amount_sat: amount_sat as u64,
-			})
+			.map(
+				|(offer_id_hex, amount_sat, bond_amount_sat, bond_address_taker)| PublicOffer {
+					offer_id_hex,
+					amount_sat: amount_sat as u64,
+					required_bond_amount_sat: bond_amount_sat as u64,
+					bond_locking_address: bond_address_taker,
+				},
+			)
 			.collect();
 		if available_offers.is_empty() {
 			return Ok(None);
 		}
 		Ok(Some(available_offers))
+	}
+
+	pub async fn fetch_taker_bond_requirements(
+		&self,
+		offer_id_hex: &String,
+	) -> Result<BondRequirementResponse> {
+		let taker_bond_requirements = sqlx::query(
+			"SELECT taker_bond_address, bond_amount_sat FROM active_maker_offers WHERE offer_id = ?",
+		)
+		.bind(offer_id_hex)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		Ok(BondRequirementResponse {
+			bond_address: taker_bond_requirements.try_get("taker_bond_address")?,
+			locking_amount_sat: taker_bond_requirements.try_get::<i64, _>("bond_amount_sat")?
+				as u64,
+		})
+	}
+
+	pub async fn fetch_and_delete_offer_from_public_offers_table(
+		&self,
+		offer_id_hex: &str,
+	) -> Result<AwaitinigTakerOffer> {
+		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, i32, i64, String, i64, String, String, String, String)> (
+			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address,
+			musig_pub_nonce_hex, musig_pubkey_hex FROM active_maker_offers WHERE <unique_identifier_column> = ?",
+		)
+		.bind(offer_id_hex)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		// Delete the database entry.
+		sqlx::query("DELETE FROM active_maker_offers WHERE <unique_identifier_column> = ?")
+			.bind(offer_id_hex)
+			.execute(&*self.db_pool)
+			.await?;
+
+		Ok(AwaitinigTakerOffer {
+			offer_id: offer_id_hex.to_string(),
+			robohash_maker: fetched_values.0,
+			is_buy_order: fetched_values.1,
+			amount_sat: fetched_values.2,
+			bond_ratio: fetched_values.3,
+			offer_duration_ts: fetched_values.4,
+			bond_address_maker: fetched_values.5,
+			bond_amount_sat: fetched_values.6,
+			bond_tx_hex_maker: fetched_values.7,
+			payout_address_maker: fetched_values.8,
+			musig_pub_nonce_hex_maker: fetched_values.9,
+			musig_pubkey_hex_maker: fetched_values.10,
+		})
+	}
+
+	pub async fn add_taker_info_and_move_table(
+		&self,
+		trade_and_taker_info: &OfferPsbtRequest,
+	) -> Result<()> {
+		let public_offer = self
+			.fetch_and_delete_offer_from_public_offers_table(
+				&trade_and_taker_info.offer.offer_id_hex,
+			)
+			.await?;
+
+		sqlx::query(
+				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
+						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
+						bond_tx_hex_taker, payout_address_maker, payout_address_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			)
+			.bind(public_offer.offer_id)
+			.bind(public_offer.robohash_maker)
+			.bind(hex::decode(&trade_and_taker_info.trade_data.robohash_hex)?)
+			.bind(public_offer.is_buy_order)
+			.bind(public_offer.amount_sat)
+			.bind(public_offer.bond_ratio)
+			.bind(public_offer.offer_duration_ts)
+			.bind(public_offer.bond_address_maker)
+			.bind(trade_and_taker_info.offer.bond_locking_address.clone())
+			.bind(public_offer.bond_amount_sat)
+			.bind(public_offer.bond_tx_hex_maker)
+			.bind(trade_and_taker_info.trade_data.signed_bond_hex.clone())
+			.bind(public_offer.payout_address_maker)
+			.bind(trade_and_taker_info.trade_data.payout_address.clone())
+			.bind(public_offer.musig_pub_nonce_hex_maker)
+			.bind(public_offer.musig_pubkey_hex_maker)
+			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
+			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
+			.bind(escrow psbt maker)
+			.bind(escrow psbt taker)
+			.execute(&*self.db_pool)
+			.await?;
+		Ok(())
 	}
 }
 

@@ -11,12 +11,14 @@ impl ActiveOffer {
 		taker_config: &TraderSettings,
 		offer: &PublicOffer,
 	) -> Result<ActiveOffer> {
-		// fetching the bond requirements for the requested Offer (amount, locking address)
-		let bond_conditions: BondRequirementResponse = offer.request_bond(taker_config)?;
+		let bond_requirements = BondRequirementResponse {
+			bond_address: offer.bond_locking_address.clone(),
+			locking_amount_sat: offer.required_bond_amount_sat,
+		};
 
 		// assembly of the Bond transaction and generation of MuSig data and payout address
 		let (bond, mut musig_data, payout_address) =
-			trading_wallet.trade_onchain_assembly(&bond_conditions, taker_config)?;
+			trading_wallet.trade_onchain_assembly(&bond_requirements, taker_config)?;
 
 		// now we submit the signed bond transaction to the coordinator and receive the escrow PSBT we have to sign
 		// in exchange

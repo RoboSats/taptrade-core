@@ -44,18 +44,22 @@ async fn submit_maker_bond(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
 	Json(payload): Json<BondSubmissionRequest>,
-) -> Result<Json<OrderActivatedResponse>, AppError> {
+) -> Result<Response, AppError> {
 	let bond_requirements = database.fetch_maker_request(&payload.robohash_hex).await?;
-	let offer_id_hex = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
-	wallet
+	if !wallet
 		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
-		.await?;
-
+		.await?
+	{
+		return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+	}
+	let offer_id_hex = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
+												 // create address for taker bond
+	let new_taker_bond_address = wallet.get_new_address().await?;
 	// insert bond into sql database and move offer to different table
 	let bond_locked_until_timestamp = database
-		.move_offer_to_active(&payload, &offer_id_hex)
+		.move_offer_to_active(&payload, &offer_id_hex, new_taker_bond_address)
 		.await?;
 
 	// begin monitoring bond -> async loop monitoring bonds in sql table "active_maker_offers" -> see ../coordinator/monitoring.rs
@@ -65,7 +69,8 @@ async fn submit_maker_bond(
 	Ok(Json(OrderActivatedResponse {
 		bond_locked_until_timestamp,
 		offer_id_hex,
-	}))
+	})
+	.into_response())
 }
 
 async fn fetch_available_offers(
@@ -77,11 +82,38 @@ async fn fetch_available_offers(
 	Ok(Json(PublicOffers { offers }))
 }
 
+async fn submit_taker_bond(
+	Extension(database): Extension<CoordinatorDB>,
+	Extension(wallet): Extension<CoordinatorWallet>,
+	Json(payload): Json<OfferPsbtRequest>,
+) -> Result<Response, AppError> {
+	let bond_requirements = database
+		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
+		.await;
+	match bond_requirements {
+		Ok(bond_requirements) => {
+			if !wallet
+				.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
+				.await?
+			{
+				dbg!("Taker Bond validation failed");
+				return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+			}
+		}
+		Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
+	}
+	database.add_taker_info_and_move_table(&payload).await?;
+	Ok(Json(OfferTakenResponse { trade_psbt_hex }).into_response())
+}
+
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
 		.route("/submit-maker-bond", post(submit_maker_bond))
 		.route("/fetch-available-offers", post(fetch_available_offers))
+		.route("/submit-taker-bond", post(submit_taker_bond))
+		// submit-taker-bond
+		// request-offer-status
 		.layer(Extension(database))
 		.layer(Extension(wallet));
 	// add other routes here

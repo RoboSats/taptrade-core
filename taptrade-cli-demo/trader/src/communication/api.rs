@@ -69,6 +69,8 @@ pub struct PublicOffers {
 pub struct PublicOffer {
 	pub amount_sat: u64,
 	pub offer_id_hex: String,
+	pub required_bond_amount_sat: u64,
+	pub bond_locking_address: String,
 }
 
 // request to receive the escrow psbt to sign for the specified offer to take it

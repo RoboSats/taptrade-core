@@ -42,21 +42,6 @@ impl PublicOffers {
 	}
 }
 
-impl PublicOffer {
-	pub fn request_bond(&self, taker_config: &TraderSettings) -> Result<BondRequirementResponse> {
-		let client = reqwest::blocking::Client::new();
-		let res = client
-			.post(format!(
-				"{}{}",
-				taker_config.coordinator_endpoint, "/request-taker-bond"
-			))
-			.json(self)
-			.send()?
-			.json::<BondRequirementResponse>()?;
-		Ok(res)
-	}
-}
-
 impl OfferPsbtRequest {
 	pub fn taker_request(
 		offer: &PublicOffer,

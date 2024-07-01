@@ -47,9 +47,23 @@ pub struct OffersRequest {
 pub struct PublicOffer {
 	pub amount_sat: u64,
 	pub offer_id_hex: String,
+	pub required_bond_amount_sat: u64,
+	pub bond_locking_address: String,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PublicOffers {
 	pub offers: Option<Vec<PublicOffer>>, // don't include offers var in return json if no offers are available
+}
+
+#[derive(Serialize, Debug, Deserialize)]
+pub struct OfferTakenResponse {
+	pub trade_psbt_hex_to_sign: String,
+}
+
+// request to receive the escrow psbt to sign for the specified offer to take it
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OfferPsbtRequest {
+	pub offer: PublicOffer,
+	pub trade_data: BondSubmissionRequest,
 }
