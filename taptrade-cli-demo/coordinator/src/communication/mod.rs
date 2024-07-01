@@ -102,8 +102,22 @@ async fn submit_taker_bond(
 		}
 		Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
 	}
-	database.add_taker_info_and_move_table(&payload).await?;
-	Ok(Json(OfferTakenResponse { trade_psbt_hex }).into_response())
+
+	let trade_contract_psbt_taker = "".to_string(); // implement psbt
+	let trade_contract_psbt_maker = "".to_string(); // implement psbt
+	panic!("Trade contract PSBT not implemented!");
+
+	database
+		.add_taker_info_and_move_table(
+			&payload,
+			&trade_contract_psbt_maker,
+			&trade_contract_psbt_taker,
+		)
+		.await?;
+	Ok(Json(OfferTakenResponse {
+		trade_psbt_hex_to_sign: trade_contract_psbt_taker,
+	})
+	.into_response())
 }
 
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {

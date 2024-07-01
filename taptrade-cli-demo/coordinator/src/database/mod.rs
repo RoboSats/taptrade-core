@@ -305,6 +305,8 @@ impl CoordinatorDB {
 	pub async fn add_taker_info_and_move_table(
 		&self,
 		trade_and_taker_info: &OfferPsbtRequest,
+		trade_contract_psbt_maker: &String,
+		trade_contract_psbt_taker: &String,
 	) -> Result<()> {
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
@@ -337,10 +339,11 @@ impl CoordinatorDB {
 			.bind(public_offer.musig_pubkey_hex_maker)
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
-			.bind(escrow psbt maker)
-			.bind(escrow psbt taker)
+			.bind(trade_contract_psbt_maker.clone())
+			.bind(trade_contract_psbt_taker.clone())
 			.execute(&*self.db_pool)
 			.await?;
+
 		Ok(())
 	}
 }
