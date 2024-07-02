@@ -35,7 +35,8 @@ impl BondTx for Transaction {
 	}
 
 	fn bond_output_sum(&self, bond_address: &str) -> Result<u64> {
-		let bond_script = ScriptBuf;
+		panic!("implement");
+		// let bond_script = ScriptBuf;
 
 		for output in self.output.iter() {}
 		Ok(0)

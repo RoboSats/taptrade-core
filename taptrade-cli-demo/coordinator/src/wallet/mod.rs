@@ -85,6 +85,7 @@ impl CoordinatorWallet {
 		}
 
 		// check if bond output to us is big enough
+		// trait bond_output_sum
 
 		// let valid = tx.verify_tx();
 		Ok(true)
