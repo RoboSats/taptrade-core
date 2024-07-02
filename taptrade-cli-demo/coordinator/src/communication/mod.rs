@@ -19,7 +19,7 @@ use tokio::net::TcpListener;
 //
 // Axum handler functions
 //
-// Handler function to process the received data
+/// Handler function to process the received data
 async fn receive_order(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -40,6 +40,7 @@ async fn receive_order(
 	Ok(Json(bond_requirements))
 }
 
+/// receives the maker bond, verifies it and moves to offer to the active table (orderbook)
 async fn submit_maker_bond(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -73,6 +74,7 @@ async fn submit_maker_bond(
 	.into_response())
 }
 
+/// returns available offers from the active table (orderbook)
 async fn fetch_available_offers(
 	Extension(database): Extension<CoordinatorDB>,
 	Json(payload): Json<OffersRequest>,
@@ -82,6 +84,8 @@ async fn fetch_available_offers(
 	Ok(Json(PublicOffers { offers }))
 }
 
+/// receives the taker bond for a given offer, verifies it, creates escrow transaction psbt
+/// and moves the offer to the taken table. Will return the trade contract psbt for the taker to sign.
 async fn submit_taker_bond(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -120,6 +124,7 @@ async fn submit_taker_bond(
 	.into_response())
 }
 
+/// gets polled by the maker and returns the escrow psbt in case the offer has been taken
 async fn request_offer_status_maker(
 	Extension(database): Extension<CoordinatorDB>,
 	Json(payload): Json<OfferTakenRequest>,
@@ -136,6 +141,39 @@ async fn request_offer_status_maker(
 	}
 }
 
+/// receives the signed escrow psbt and verifies it
+async fn submit_escrow_psbt(
+	Extension(database): Extension<CoordinatorDB>,
+	Extension(wallet): Extension<CoordinatorWallet>,
+	Json(payload): Json<PsbtSubmissionRequest>,
+) -> Result<Response, AppError> {
+	panic!("implement")
+}
+
+async fn poll_escrow_confirmation(
+	Extension(database): Extension<CoordinatorDB>,
+	Extension(wallet): Extension<CoordinatorWallet>,
+	Json(payload): Json<OfferTakenRequest>,
+) -> Result<Response, AppError> {
+	panic!("implement")
+}
+
+async fn submit_obligation_confirmation(
+	Extension(database): Extension<CoordinatorDB>,
+	Extension(wallet): Extension<CoordinatorWallet>,
+	Json(payload): Json<OfferTakenRequest>,
+) -> Result<Response, AppError> {
+	panic!("implement")
+}
+
+async fn poll_final_payout(
+	Extension(database): Extension<CoordinatorDB>,
+	Extension(wallet): Extension<CoordinatorWallet>,
+	Json(payload): Json<OfferTakenRequest>,
+) -> Result<Response, AppError> {
+	panic!("implement")
+}
+
 pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> Result<()> {
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))
@@ -143,6 +181,13 @@ pub async fn api_server(database: CoordinatorDB, wallet: CoordinatorWallet) -> R
 		.route("/fetch-available-offers", post(fetch_available_offers))
 		.route("/submit-taker-bond", post(submit_taker_bond))
 		.route("/request-offer-status", post(request_offer_status_maker))
+		.route("/submit-escrow-psbt", post(submit_escrow_psbt))
+		.route("/poll-escrow-confirmation", post(poll_escrow_confirmation))
+		.route(
+			"/submit-obligation-confirmation",
+			post(submit_obligation_confirmation),
+		)
+		.route("/poll-final-payout", post(poll_final_payout))
 		.layer(Extension(database))
 		.layer(Extension(wallet));
 	// add other routes here

@@ -192,7 +192,7 @@ impl IsOfferReadyRequest {
 			let res = client
 				.post(format!(
 					"{}{}",
-					taker_config.coordinator_endpoint, "/poll-offer-status"
+					taker_config.coordinator_endpoint, "/poll-escrow-confirmation"
 				))
 				.json(&request)
 				.send()?;
