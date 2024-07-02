@@ -10,6 +10,7 @@ pub struct CoordinatorDB {
 }
 
 // db structure of offers awaiting bond submission in table maker_requests
+#[derive(PartialEq, Debug)]
 struct AwaitingBondOffer {
 	robohash_hex: String,
 	is_buy_order: bool,
@@ -163,14 +164,14 @@ impl CoordinatorDB {
 		robohash_hex: &str,
 	) -> Result<AwaitingBondOffer> {
 		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, u8, i64, String, i64)> (
-			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat FROM maker_requests WHERE <unique_identifier_column> = ?",
+			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat FROM maker_requests WHERE robohash = ?",
 		)
 		.bind(hex::decode(robohash_hex)?)
 		.fetch_one(&*self.db_pool)
 		.await?;
 
 		// Delete the database entry.
-		sqlx::query("DELETE FROM maker_requests WHERE <unique_identifier_column> = ?")
+		sqlx::query("DELETE FROM maker_requests WHERE robohash = ?")
 			.bind(hex::decode(robohash_hex)?)
 			.execute(&*self.db_pool)
 			.await?;
@@ -440,4 +441,60 @@ mod tests {
 
 		Ok(())
 	}
+	#[tokio::test]
+	async fn test_fetch_and_delete_offer_from_bond_table() -> Result<()> {
+    // Set up the in-memory database
+		let database = create_coordinator().await?;
+
+		// Create a sample order request and insert it into the database
+		let robohash_hex = "a3f1f1f0e2f3f4f5";
+		let order_request = (
+			hex::decode(robohash_hex).unwrap(),
+			true, // is_buy_order
+			1000, // amount_satoshi
+			50, // bond_ratio
+			1234567890, // offer_duration_ts
+			"1BitcoinAddress".to_string(), // bond_address
+			500, // bond_amount_sat
+		);
+
+		sqlx::query(
+			"INSERT INTO maker_requests (robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat)
+			VALUES (?, ?, ?, ?, ?, ?, ?)",
+		)
+		.bind(order_request.0.clone())
+		.bind(order_request.1)
+		.bind(order_request.2)
+		.bind(order_request.3)
+		.bind(order_request.4)
+		.bind(order_request.5.clone())
+		.bind(order_request.6)
+		.execute(&*database.db_pool)
+		.await?;
+
+		// Fetch and delete the order request
+		let fetched_offer = database.fetch_and_delete_offer_from_bond_table(robohash_hex).await?;
+
+		// Verify the fetched offer
+		let expected_offer = AwaitingBondOffer {
+			robohash_hex: robohash_hex.to_string(),
+			is_buy_order: order_request.1,
+			amount_satoshi: order_request.2 as u64,
+			bond_ratio: order_request.3,
+			offer_duration_ts: order_request.4 as u64,
+			bond_address: order_request.5,
+			bond_amount_sat: order_request.6 as u64,
+		};
+		assert_eq!(fetched_offer, expected_offer);
+
+		// Verify the record is deleted
+		let result = sqlx::query("SELECT * FROM maker_requests WHERE robohash = ?")
+			.bind(hex::decode(robohash_hex)?)
+			.fetch_optional(&*database.db_pool)
+			.await?;
+		assert!(result.is_none());
+
+		Ok(())
+	}
+
 }
