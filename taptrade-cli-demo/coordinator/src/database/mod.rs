@@ -441,6 +441,50 @@ mod tests {
 
 		Ok(())
 	}
+	
+	#[tokio::test]
+    async fn test_fetch_maker_request() -> Result<()> {
+		let database = create_coordinator().await?;
+
+		// Create a sample order request and insert it into the database
+		let robohash_hex = "a3f1f1f0e2f3f4f5";
+		let order_request = (
+			hex::decode(robohash_hex).unwrap(),
+			true, // is_buy_order
+			1000, // amount_satoshi
+			50, // bond_ratio
+			1234567890, // offer_duration_ts
+			"1BitcoinAddress".to_string(), // bond_address
+			500, // bond_amount_sat
+		);
+
+		sqlx::query(
+			"INSERT INTO maker_requests (robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat)
+			VALUES (?, ?, ?, ?, ?, ?, ?)",
+		)
+		.bind(order_request.0.clone())
+		.bind(order_request.1)
+		.bind(order_request.2)
+		.bind(order_request.3)
+		.bind(order_request.4)
+		.bind(order_request.5.clone())
+		.bind(order_request.6)
+		.execute(&*database.db_pool)
+		.await?;
+
+		// Fetch and delete the order request
+		let fetched_offer = database.fetch_maker_request(&robohash_hex.to_string()).await?;
+
+        // Verify the result
+        let expected = BondRequirementResponse {
+            bond_address: "1BitcoinAddress".to_string(),
+            locking_amount_sat: 500_u64,
+        };
+        assert_eq!(fetched_offer, expected);
+
+        Ok(())
+    }
+	
 	#[tokio::test]
 	async fn test_fetch_and_delete_offer_from_bond_table() -> Result<()> {
     // Set up the in-memory database

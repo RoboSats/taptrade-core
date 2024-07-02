@@ -11,7 +11,7 @@ pub struct OrderRequest {
 }
 
 // Define a struct representing your response data
-#[derive(Serialize)]
+#[derive(Serialize, PartialEq, Debug)]
 pub struct BondRequirementResponse {
 	pub bond_address: String,
 	pub locking_amount_sat: u64, // min amount of the bond output in sat
