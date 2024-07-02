@@ -1,3 +1,5 @@
+mod utils;
+
 use super::*;
 use anyhow::Context;
 use bdk::{
@@ -10,11 +12,18 @@ use bdk::{
 	KeychainKind, SyncOptions, Wallet,
 };
 use std::str::FromStr;
+use utils::*;
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorWallet {
 	pub wallet: Arc<Mutex<Wallet<Tree>>>,
 	// database: Arc<Mutex<Tree>>,
+}
+
+pub struct BondRequirements {
+	pub bond_address: String,
+	pub locking_amount_sat: u64,
+	pub min_input_sum_sat: u64,
 }
 
 impl CoordinatorWallet {
@@ -54,16 +63,30 @@ impl CoordinatorWallet {
 	pub async fn validate_bond_tx_hex(
 		&self,
 		bond: &String,
-		requirements: &BondRequirementResponse,
+		requirements: BondRequirements,
 	) -> Result<bool> {
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 		let wallet = self.wallet.lock().await;
+		let blockchain = ElectrumBlockchain::from(Client::new(
+			&env::var("ELECTRUM_BACKEND")
+				.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
+		)?);
 
 		// we need to test this with signed and invalid/unsigned transactions
-		// let result = verify_tx(&tx, wallet.database(), blockchain);
+		// checks signatures and inputs
+		if let Err(e) = verify_tx(&tx, &*wallet.database(), &blockchain) {
+			dbg!(e);
+			return Ok(false);
+		}
+
+		// check if the tx has the correct input amounts (have to be >= trading amount)
+		if tx.input_sum(&blockchain, &*wallet.database())? < requirements.min_input_sum_sat {
+			return Ok(false);
+		}
+
+		// check if bond output to us is big enough
 
 		// let valid = tx.verify_tx();
-		panic!("Bond verification not implemented!");
 		Ok(true)
 	}
 }

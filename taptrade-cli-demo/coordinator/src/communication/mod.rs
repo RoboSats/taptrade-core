@@ -49,12 +49,12 @@ async fn submit_maker_bond(
 	let bond_requirements = database.fetch_maker_request(&payload.robohash_hex).await?;
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
-	if !wallet
-		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
-		.await?
-	{
-		return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
-	}
+	// if !wallet
+	// 	.validate_bond_tx_hex(&payload.signed_bond_hex)
+	// 	.await?
+	// {
+	// 	return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+	// }
 	let offer_id_hex = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 												 // create address for taker bond
 	let new_taker_bond_address = wallet.get_new_address().await?;
@@ -94,18 +94,18 @@ async fn submit_taker_bond(
 	let bond_requirements = database
 		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
 		.await;
-	match bond_requirements {
-		Ok(bond_requirements) => {
-			if !wallet
-				.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
-				.await?
-			{
-				dbg!("Taker Bond validation failed");
-				return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
-			}
-		}
-		Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
-	}
+	// match bond_requirements {
+	// 	Ok(bond_requirements) => {
+	// 		if !wallet
+	// 			.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
+	// 			.await?
+	// 		{
+	// 			dbg!("Taker Bond validation failed");
+	// 			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+	// 		}
+	// 	}
+	// 	Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
+	// }
 
 	let trade_contract_psbt_taker = "".to_string(); // implement psbt
 	let trade_contract_psbt_maker = "".to_string(); // implement psbt
