@@ -81,7 +81,8 @@ impl CoordinatorDB {
 				bond_tx_hex TEXT NOT NULL,
 				payout_address TEXT NOT NULL,
 				musig_pub_nonce_hex TEXT NOT NULL,
-				musig_pubkey_hex TEXT NOT NULL
+				musig_pubkey_hex TEXT NOT NULL,
+				taker_bond_address TEXT
 			)",
 		)
 		.execute(&db_pool)
@@ -199,7 +200,7 @@ impl CoordinatorDB {
 
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
-					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex)
+					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
 					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(offer_id)
@@ -246,6 +247,7 @@ impl CoordinatorDB {
 			)
 			.collect();
 		if available_offers.is_empty() {
+			println!("empty");
 			return Ok(None);
 		}
 		Ok(Some(available_offers))
@@ -616,4 +618,87 @@ mod tests {
 
         Ok(())
     }
+
+	#[tokio::test]
+    async fn test_fetch_suitable_offers() -> Result<()> {
+        let database = create_coordinator().await?;
+        // Insert test entries into active_maker_offers
+        let offers = vec![
+            (
+                "offer_id_1",
+                true, // is_buy_order
+                15000, // amount_sat
+                100, // bond_ratio
+                1234567890, // offer_duration_ts
+                "1BondAddress".to_string(), // bond_address
+                50, // bond_amount_sat
+                "signedBondHex".to_string(),
+                "1PayoutAddress".to_string(),
+                "musigPubNonceHex".to_string(),
+                "musigPubkeyHex".to_string(),
+				"1TakerBondAddress".to_string(),
+            ),
+            (
+                "offer_id_2",
+                true, // is_buy_order
+                1500, // amount_sat
+                200, // bond_ratio
+                1234567891, // offer_duration_ts
+                "2BondAddress".to_string(), // bond_address
+                100, // bond_amount_sat
+                "signedBondHex2".to_string(),
+                "2PayoutAddress".to_string(),
+                "musigPubNonceHex2".to_string(),
+                "musigPubkeyHex2".to_string(),
+				"2TakerBondAddress".to_string(),
+            ),
+        ];
+
+        for offer in offers {
+            sqlx::query(
+                "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            )
+            .bind(offer.0)
+            .bind(hex::decode("a3f1f1f0e2f3f4f5").unwrap()) // Example robohash
+            .bind(offer.1)
+            .bind(offer.2)
+            .bind(offer.3)
+            .bind(offer.4)
+            .bind(offer.5.clone())
+            .bind(offer.6)
+            .bind(offer.7.clone())
+            .bind(offer.8.clone())
+            .bind(offer.9.clone())
+            .bind(offer.10.clone())
+            .bind(offer.11.clone())
+            .execute(&*database.db_pool)
+            .await?;
+        }
+
+
+        // Create a sample OffersRequest
+        let offers_request = OffersRequest {
+            buy_offers: true,
+            amount_min_sat: 1000,
+            amount_max_sat: 2000,
+        };
+
+        // Call the fetch_suitable_offers function
+        let result = database.fetch_suitable_offers(&offers_request).await?;
+
+		println!("{:?}", result);
+        // Verify the result
+        assert!(result.is_some());
+        let available_offers = result.unwrap();
+        assert_eq!(available_offers.len(), 1);
+        let offer = &available_offers[0];
+        assert_eq!(offer.offer_id_hex, "offer_id_2");
+        assert_eq!(offer.amount_sat, 1500);
+        assert_eq!(offer.required_bond_amount_sat, 100);
+        assert_eq!(offer.bond_locking_address, "2TakerBondAddress");
+
+        Ok(())
+    }
+
 }
