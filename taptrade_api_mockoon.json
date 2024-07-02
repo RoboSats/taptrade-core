@@ -62,6 +62,25 @@
           "default": true,
           "crudKey": "id",
           "callbacks": []
+        },
+        {
+          "uuid": "f652991e-478b-43b7-8f6f-810308e54457",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 406,
+          "label": "In case bond is invalid",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
         }
       ],
       "responseMode": null
@@ -248,6 +267,54 @@
         }
       ],
       "responseMode": null
+    },
+    {
+      "uuid": "99b210a0-8919-44b4-96a7-91eee7aa0a4b",
+      "type": "http",
+      "documentation": "Gets polled when waiting on the other party to take action on something. Returns 200 if ready, 204 if not ready.",
+      "method": "post",
+      "endpoint": "poll-escrow-confirmation",
+      "responses": [
+        {
+          "uuid": "2cb56467-1055-4df1-b379-06b61548a923",
+          "body": "",
+          "latency": 0,
+          "statusCode": 204,
+          "label": "Returned if one party has to take action to continue",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": true,
+          "crudKey": "id",
+          "callbacks": []
+        },
+        {
+          "uuid": "90dbb065-f717-491d-a88e-9f767cdaba30",
+          "body": "{}",
+          "latency": 0,
+          "statusCode": 200,
+          "label": "Returned if trade can continue",
+          "headers": [],
+          "bodyType": "INLINE",
+          "filePath": "",
+          "databucketID": "",
+          "sendFileAsBody": false,
+          "rules": [],
+          "rulesOperator": "OR",
+          "disableTemplating": false,
+          "fallbackTo404": false,
+          "default": false,
+          "crudKey": "id",
+          "callbacks": []
+        }
+      ],
+      "responseMode": null
     }
   ],
   "rootChildren": [
@@ -278,6 +345,10 @@
     {
       "type": "route",
       "uuid": "34bda159-89cf-453c-bf5c-fa532b35f202"
+    },
+    {
+      "type": "route",
+      "uuid": "99b210a0-8919-44b4-96a7-91eee7aa0a4b"
     }
   ],
   "proxyMode": false,
