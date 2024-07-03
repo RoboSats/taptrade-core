@@ -10,7 +10,7 @@ use dotenv::dotenv;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
-use wallet::CoordinatorWallet;
+use wallet::*;
 
 // populate .env with values before starting
 #[tokio::main]

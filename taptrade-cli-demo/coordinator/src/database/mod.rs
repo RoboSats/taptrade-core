@@ -146,17 +146,18 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	pub async fn fetch_maker_request(&self, robohash: &String) -> Result<BondRequirementResponse> {
+	pub async fn fetch_bond_requirements(&self, robohash: &String) -> Result<BondRequirements> {
 		let maker_request = sqlx::query(
-			"SELECT bond_address, bond_amount_sat FROM maker_requests WHERE robohash = ?",
+			"SELECT bond_address, bond_amount_sat, amount_sat FROM maker_requests WHERE robohash = ?",
 		)
 		.bind(hex::decode(robohash)?)
 		.fetch_one(&*self.db_pool)
 		.await?;
 
-		Ok(BondRequirementResponse {
+		Ok(BondRequirements {
 			bond_address: maker_request.try_get("bond_address")?,
 			locking_amount_sat: maker_request.try_get::<i64, _>("bond_amount_sat")? as u64,
+			min_input_sum_sat: maker_request.try_get::<i64, _>("amount_sat")? as u64,
 		})
 	}
 

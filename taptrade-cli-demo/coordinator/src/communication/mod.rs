@@ -4,6 +4,7 @@ mod utils;
 use self::api::*;
 use self::utils::*;
 use super::*;
+use crate::wallet::*;
 use axum::{
 	http::StatusCode,
 	response::{IntoResponse, Response},
@@ -14,7 +15,6 @@ use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
-// use crate::coordinator::verify_psbt;
 
 //
 // Axum handler functions
@@ -46,17 +46,27 @@ async fn submit_maker_bond(
 	Extension(wallet): Extension<CoordinatorWallet>,
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Response, AppError> {
-	let bond_requirements = database.fetch_maker_request(&payload.robohash_hex).await?;
+	let bond_requirements = if let Ok(requirements) = database
+		.fetch_bond_requirements(&payload.robohash_hex)
+		.await
+	{
+		requirements
+	} else {
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	};
 
-	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
-	// if !wallet
-	// 	.validate_bond_tx_hex(&payload.signed_bond_hex)
-	// 	.await?
-	// {
-	// 	return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
-	// }
-	let offer_id_hex = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
-												 // create address for taker bond
+	match wallet
+		.validate_bond_tx_hex(&payload.signed_bond_hex, bond_requirements)
+		.await
+	{
+		Ok(()) => (),
+		Err(e) => {
+			dbg!(e);
+			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+		}
+	}
+	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
+														 // create address for taker bond
 	let new_taker_bond_address = wallet.get_new_address().await?;
 	// insert bond into sql database and move offer to different table
 	let bond_locked_until_timestamp = database
