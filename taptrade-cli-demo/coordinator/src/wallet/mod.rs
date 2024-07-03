@@ -64,30 +64,51 @@ impl CoordinatorWallet {
 		&self,
 		bond: &String,
 		requirements: BondRequirements,
-	) -> Result<bool> {
+	) -> Result<()> {
+		let input_sum: u64;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
-		let wallet = self.wallet.lock().await;
-		let blockchain = ElectrumBlockchain::from(Client::new(
-			&env::var("ELECTRUM_BACKEND")
-				.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
-		)?);
+		{
+			let blockchain = ElectrumBlockchain::from(Client::new(
+				&env::var("ELECTRUM_BACKEND")
+					.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
+			)?);
+			let wallet = self.wallet.lock().await;
 
-		// we need to test this with signed and invalid/unsigned transactions
-		// checks signatures and inputs
-		if let Err(e) = verify_tx(&tx, &*wallet.database(), &blockchain) {
-			dbg!(e);
-			return Ok(false);
+			// we need to test this with signed and invalid/unsigned transactions
+			// checks signatures and inputs
+			if let Err(e) = verify_tx(&tx, &*wallet.database(), &blockchain) {
+				return Err(anyhow!(e));
+			}
+
+			// check if the tx has the correct input amounts (have to be >= trading amount)
+			input_sum = match tx.input_sum(&blockchain, &*wallet.database()) {
+				Ok(amount) => {
+					if amount < requirements.min_input_sum_sat {
+						return Err(anyhow!("Bond input sum too small"));
+					}
+					amount
+				}
+				Err(e) => {
+					return Err(anyhow!(e));
+				}
+			};
 		}
-
-		// check if the tx has the correct input amounts (have to be >= trading amount)
-		if tx.input_sum(&blockchain, &*wallet.database())? < requirements.min_input_sum_sat {
-			return Ok(false);
-		}
-
 		// check if bond output to us is big enough
-		// trait bond_output_sum
+		let output_sum = match tx.bond_output_sum(&requirements.bond_address) {
+			Ok(amount) => {
+				if amount < requirements.locking_amount_sat {
+					return Err(anyhow!("Bond output sum too small"));
+				}
+				amount
+			}
+			Err(e) => {
+				return Err(anyhow!(e));
+			}
+		};
 
-		// let valid = tx.verify_tx();
-		Ok(true)
+		if ((input_sum - output_sum) / tx.vsize() as u64) < 200 {
+			return Err(anyhow!("Bond fee rate too low"));
+		}
+		Ok(())
 	}
 }

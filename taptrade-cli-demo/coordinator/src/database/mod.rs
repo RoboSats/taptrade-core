@@ -21,7 +21,7 @@ struct AwaitingBondOffer {
 	bond_amount_sat: u64,
 }
 
-struct AwaitinigTakerOffer {
+struct AwaitingTakerOffer {
 	offer_id: String,
 	robohash_maker: Vec<u8>,
 	is_buy_order: bool,
@@ -160,7 +160,7 @@ impl CoordinatorDB {
 		})
 	}
 
-	pub async fn fetch_and_delete_offer_from_bond_table(
+	async fn fetch_and_delete_offer_from_bond_table(
 		&self,
 		robohash_hex: &str,
 	) -> Result<AwaitingBondOffer> {
@@ -271,10 +271,10 @@ impl CoordinatorDB {
 		})
 	}
 
-	pub async fn fetch_and_delete_offer_from_public_offers_table(
+	async fn fetch_and_delete_offer_from_public_offers_table(
 		&self,
 		offer_id_hex: &str,
-	) -> Result<AwaitinigTakerOffer> {
+	) -> Result<AwaitingTakerOffer> {
 		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, i32, i64, String, i64, String, String, String, String)> (
 			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address,
 			musig_pub_nonce_hex, musig_pubkey_hex FROM active_maker_offers WHERE <unique_identifier_column> = ?",
@@ -289,7 +289,7 @@ impl CoordinatorDB {
 			.execute(&*self.db_pool)
 			.await?;
 
-		Ok(AwaitinigTakerOffer {
+		Ok(AwaitingTakerOffer {
 			offer_id: offer_id_hex.to_string(),
 			robohash_maker: fetched_values.0,
 			is_buy_order: fetched_values.1,
@@ -443,21 +443,21 @@ mod tests {
 
 		Ok(())
 	}
-	
+
 	#[tokio::test]
-    async fn test_fetch_maker_request() -> Result<()> {
+	async fn test_fetch_maker_request() -> Result<()> {
 		let database = create_coordinator().await?;
 
 		// Create a sample order request and insert it into the database
 		let robohash_hex = "a3f1f1f0e2f3f4f5";
 		let order_request = (
 			hex::decode(robohash_hex).unwrap(),
-			true, // is_buy_order
-			1000, // amount_satoshi
-			50, // bond_ratio
-			1234567890, // offer_duration_ts
+			true,                          // is_buy_order
+			1000,                          // amount_satoshi
+			50,                            // bond_ratio
+			1234567890,                    // offer_duration_ts
 			"1BitcoinAddress".to_string(), // bond_address
-			500, // bond_amount_sat
+			500,                           // bond_amount_sat
 		);
 
 		sqlx::query(
@@ -475,33 +475,35 @@ mod tests {
 		.await?;
 
 		// Fetch and delete the order request
-		let fetched_offer = database.fetch_maker_request(&robohash_hex.to_string()).await?;
+		let fetched_offer = database
+			.fetch_maker_request(&robohash_hex.to_string())
+			.await?;
 
-        // Verify the result
-        let expected = BondRequirementResponse {
-            bond_address: "1BitcoinAddress".to_string(),
-            locking_amount_sat: 500_u64,
-        };
-        assert_eq!(fetched_offer, expected);
+		// Verify the result
+		let expected = BondRequirementResponse {
+			bond_address: "1BitcoinAddress".to_string(),
+			locking_amount_sat: 500_u64,
+		};
+		assert_eq!(fetched_offer, expected);
 
-        Ok(())
-    }
-	
+		Ok(())
+	}
+
 	#[tokio::test]
 	async fn test_fetch_and_delete_offer_from_bond_table() -> Result<()> {
-    // Set up the in-memory database
+		// Set up the in-memory database
 		let database = create_coordinator().await?;
 
 		// Create a sample order request and insert it into the database
 		let robohash_hex = "a3f1f1f0e2f3f4f5";
 		let order_request = (
 			hex::decode(robohash_hex).unwrap(),
-			true, // is_buy_order
-			1000, // amount_satoshi
-			50, // bond_ratio
-			1234567890, // offer_duration_ts
+			true,                          // is_buy_order
+			1000,                          // amount_satoshi
+			50,                            // bond_ratio
+			1234567890,                    // offer_duration_ts
 			"1BitcoinAddress".to_string(), // bond_address
-			500, // bond_amount_sat
+			500,                           // bond_amount_sat
 		);
 
 		sqlx::query(
@@ -519,7 +521,9 @@ mod tests {
 		.await?;
 
 		// Fetch and delete the order request
-		let fetched_offer = database.fetch_and_delete_offer_from_bond_table(robohash_hex).await?;
+		let fetched_offer = database
+			.fetch_and_delete_offer_from_bond_table(robohash_hex)
+			.await?;
 
 		// Verify the fetched offer
 		let expected_offer = AwaitingBondOffer {
@@ -544,24 +548,23 @@ mod tests {
 	}
 
 	#[tokio::test]
-    async fn test_move_offer_to_active() -> Result<()> {
-        // Create a temporary SQLite database
-        let database = create_coordinator().await?;
+	async fn test_move_offer_to_active() -> Result<()> {
+		// Create a temporary SQLite database
+		let database = create_coordinator().await?;
 
-        
-        // Insert a test entry into maker_requests
-        let robohash_hex = "a3f1f1f0e2f3f4f5";
-        let order_request = (
-            hex::decode(robohash_hex).unwrap(),
-            true, // is_buy_order
-            1000, // amount_satoshi
-            50, // bond_ratio
-            1234567890, // offer_duration_ts
-            "1BitcoinAddress".to_string(), // bond_address
-            500, // bond_amount_sat
-        );
+		// Insert a test entry into maker_requests
+		let robohash_hex = "a3f1f1f0e2f3f4f5";
+		let order_request = (
+			hex::decode(robohash_hex).unwrap(),
+			true,                          // is_buy_order
+			1000,                          // amount_satoshi
+			50,                            // bond_ratio
+			1234567890,                    // offer_duration_ts
+			"1BitcoinAddress".to_string(), // bond_address
+			500,                           // bond_amount_sat
+		);
 
-        sqlx::query(
+		sqlx::query(
             "INSERT INTO maker_requests (robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat)
             VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
@@ -575,87 +578,87 @@ mod tests {
         .execute(&*database.db_pool)
         .await?;
 
-        // Create a sample BondSubmissionRequest
-        let bond_submission_request = BondSubmissionRequest {
-            robohash_hex: robohash_hex.to_string(),
-            signed_bond_hex: "signedBondHex".to_string(),
-            payout_address: "1PayoutAddress".to_string(),
-            musig_pub_nonce_hex: "musigPubNonceHex".to_string(),
-            musig_pubkey_hex: "musigPubkeyHex".to_string(),
-        };
+		// Create a sample BondSubmissionRequest
+		let bond_submission_request = BondSubmissionRequest {
+			robohash_hex: robohash_hex.to_string(),
+			signed_bond_hex: "signedBondHex".to_string(),
+			payout_address: "1PayoutAddress".to_string(),
+			musig_pub_nonce_hex: "musigPubNonceHex".to_string(),
+			musig_pubkey_hex: "musigPubkeyHex".to_string(),
+		};
 
-        // Call the move_offer_to_active function
-        let offer_id = "sample_offer_id".to_string();
-        let taker_bond_address = "1TakerBondAddress".to_string();
-        let result = database
-            .move_offer_to_active(&bond_submission_request, &offer_id, taker_bond_address)
-            .await?;
+		// Call the move_offer_to_active function
+		let offer_id = "sample_offer_id".to_string();
+		let taker_bond_address = "1TakerBondAddress".to_string();
+		let result = database
+			.move_offer_to_active(&bond_submission_request, &offer_id, taker_bond_address)
+			.await?;
 
-        // Verify the result
-        assert_eq!(result, 1234567890); // Verify that the offer_duration_ts is correct
+		// Verify the result
+		assert_eq!(result, 1234567890); // Verify that the offer_duration_ts is correct
 
-        // Verify that the entry was moved to active_maker_offers
-        let active_offer = sqlx::query_as::<_, (String, Vec<u8>, bool, i64, i64, i64, String, i64, String, String, String, String)> (
-            "SELECT offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex 
+		// Verify that the entry was moved to active_maker_offers
+		let active_offer = sqlx::query_as::<_, (String, Vec<u8>, bool, i64, i64, i64, String, i64, String, String, String, String)> (
+            "SELECT offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex
              FROM active_maker_offers WHERE offer_id = ?",
         )
         .bind(offer_id)
         .fetch_one(&*database.db_pool)
         .await?;
 
-        assert_eq!(active_offer.0, "sample_offer_id".to_string());
-        assert_eq!(hex::encode(active_offer.1), robohash_hex);
-        assert!(active_offer.2);
-        assert_eq!(active_offer.3, 1000);
-        assert_eq!(active_offer.4, 50);
-        assert_eq!(active_offer.5, 1234567890);
-        assert_eq!(active_offer.6, "1BitcoinAddress".to_string());
-        assert_eq!(active_offer.7, 500);
-        assert_eq!(active_offer.8, "signedBondHex".to_string());
-        assert_eq!(active_offer.9, "1PayoutAddress".to_string());
-        assert_eq!(active_offer.10, "musigPubNonceHex".to_string());
-        assert_eq!(active_offer.11, "musigPubkeyHex".to_string());
+		assert_eq!(active_offer.0, "sample_offer_id".to_string());
+		assert_eq!(hex::encode(active_offer.1), robohash_hex);
+		assert!(active_offer.2);
+		assert_eq!(active_offer.3, 1000);
+		assert_eq!(active_offer.4, 50);
+		assert_eq!(active_offer.5, 1234567890);
+		assert_eq!(active_offer.6, "1BitcoinAddress".to_string());
+		assert_eq!(active_offer.7, 500);
+		assert_eq!(active_offer.8, "signedBondHex".to_string());
+		assert_eq!(active_offer.9, "1PayoutAddress".to_string());
+		assert_eq!(active_offer.10, "musigPubNonceHex".to_string());
+		assert_eq!(active_offer.11, "musigPubkeyHex".to_string());
 
-        Ok(())
-    }
+		Ok(())
+	}
 
 	#[tokio::test]
-    async fn test_fetch_suitable_offers() -> Result<()> {
-        let database = create_coordinator().await?;
-        // Insert test entries into active_maker_offers
-        let offers = vec![
-            (
-                "offer_id_1",
-                true, // is_buy_order
-                15000, // amount_sat
-                100, // bond_ratio
-                1234567890, // offer_duration_ts
-                "1BondAddress".to_string(), // bond_address
-                50, // bond_amount_sat
-                "signedBondHex".to_string(),
-                "1PayoutAddress".to_string(),
-                "musigPubNonceHex".to_string(),
-                "musigPubkeyHex".to_string(),
+	async fn test_fetch_suitable_offers() -> Result<()> {
+		let database = create_coordinator().await?;
+		// Insert test entries into active_maker_offers
+		let offers = vec![
+			(
+				"offer_id_1",
+				true,                       // is_buy_order
+				15000,                      // amount_sat
+				100,                        // bond_ratio
+				1234567890,                 // offer_duration_ts
+				"1BondAddress".to_string(), // bond_address
+				50,                         // bond_amount_sat
+				"signedBondHex".to_string(),
+				"1PayoutAddress".to_string(),
+				"musigPubNonceHex".to_string(),
+				"musigPubkeyHex".to_string(),
 				"1TakerBondAddress".to_string(),
-            ),
-            (
-                "offer_id_2",
-                true, // is_buy_order
-                1500, // amount_sat
-                200, // bond_ratio
-                1234567891, // offer_duration_ts
-                "2BondAddress".to_string(), // bond_address
-                100, // bond_amount_sat
-                "signedBondHex2".to_string(),
-                "2PayoutAddress".to_string(),
-                "musigPubNonceHex2".to_string(),
-                "musigPubkeyHex2".to_string(),
+			),
+			(
+				"offer_id_2",
+				true,                       // is_buy_order
+				1500,                       // amount_sat
+				200,                        // bond_ratio
+				1234567891,                 // offer_duration_ts
+				"2BondAddress".to_string(), // bond_address
+				100,                        // bond_amount_sat
+				"signedBondHex2".to_string(),
+				"2PayoutAddress".to_string(),
+				"musigPubNonceHex2".to_string(),
+				"musigPubkeyHex2".to_string(),
 				"2TakerBondAddress".to_string(),
-            ),
-        ];
+			),
+		];
 
-        for offer in offers {
-            sqlx::query(
+		for offer in offers {
+			sqlx::query(
                 "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             )
@@ -674,43 +677,42 @@ mod tests {
             .bind(offer.11.clone())
             .execute(&*database.db_pool)
             .await?;
-        }
+		}
 
+		// Create a sample OffersRequest
+		let offers_request = OffersRequest {
+			buy_offers: true,
+			amount_min_sat: 1000,
+			amount_max_sat: 2000,
+		};
 
-        // Create a sample OffersRequest
-        let offers_request = OffersRequest {
-            buy_offers: true,
-            amount_min_sat: 1000,
-            amount_max_sat: 2000,
-        };
-
-        // Call the fetch_suitable_offers function
-        let result = database.fetch_suitable_offers(&offers_request).await?;
+		// Call the fetch_suitable_offers function
+		let result = database.fetch_suitable_offers(&offers_request).await?;
 
 		println!("{:?}", result);
-        // Verify the result
-        assert!(result.is_some());
-        let available_offers = result.unwrap();
-        assert_eq!(available_offers.len(), 1);
-        let offer = &available_offers[0];
-        assert_eq!(offer.offer_id_hex, "offer_id_2");
-        assert_eq!(offer.amount_sat, 1500);
-        assert_eq!(offer.required_bond_amount_sat, 100);
-        assert_eq!(offer.bond_locking_address, "2TakerBondAddress");
+		// Verify the result
+		assert!(result.is_some());
+		let available_offers = result.unwrap();
+		assert_eq!(available_offers.len(), 1);
+		let offer = &available_offers[0];
+		assert_eq!(offer.offer_id_hex, "offer_id_2");
+		assert_eq!(offer.amount_sat, 1500);
+		assert_eq!(offer.required_bond_amount_sat, 100);
+		assert_eq!(offer.bond_locking_address, "2TakerBondAddress");
 
-        Ok(())
-    }
+		Ok(())
+	}
 
 	#[tokio::test]
-    async fn test_fetch_taker_bond_requirements() -> Result<()> {
-        let database = create_coordinator().await?;
+	async fn test_fetch_taker_bond_requirements() -> Result<()> {
+		let database = create_coordinator().await?;
 
-        // Insert a test entry into active_maker_offers
-        let offer_id_hex = "offer_id_1";
-        let taker_bond_address = "1TakerBondAddress";
-        let bond_amount_sat = 100;
+		// Insert a test entry into active_maker_offers
+		let offer_id_hex = "offer_id_1";
+		let taker_bond_address = "1TakerBondAddress";
+		let bond_amount_sat = 100;
 
-        sqlx::query(
+		sqlx::query(
             "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
@@ -730,35 +732,37 @@ mod tests {
         .execute(&*database.db_pool)
         .await?;
 
-        // Call the fetch_taker_bond_requirements function
-        let result = database.fetch_taker_bond_requirements(&offer_id_hex.to_string()).await?;
+		// Call the fetch_taker_bond_requirements function
+		let result = database
+			.fetch_taker_bond_requirements(&offer_id_hex.to_string())
+			.await?;
 
-        // Verify the result
-        assert_eq!(result.bond_address, taker_bond_address);
-        assert_eq!(result.locking_amount_sat, bond_amount_sat as u64);
+		// Verify the result
+		assert_eq!(result.bond_address, taker_bond_address);
+		assert_eq!(result.locking_amount_sat, bond_amount_sat as u64);
 
-        Ok(())
-    }
+		Ok(())
+	}
 
-	 #[tokio::test]
-    async fn test_fetch_and_delete_offer_from_public_offers_table() -> Result<()> {
-        let database = create_coordinator().await?;
+	#[tokio::test]
+	async fn test_fetch_and_delete_offer_from_public_offers_table() -> Result<()> {
+		let database = create_coordinator().await?;
 
-        // Insert a test entry into active_maker_offers
-        let offer_id_hex = "offer_id_1";
-        let robohash = hex::decode("a3f1f1f0e2f3f4f5").unwrap(); // Example robohash
-        let is_buy_order = true;
-        let amount_sat = 1000;
-        let bond_ratio = 50;
-        let offer_duration_ts = 1234567890;
-        let bond_address = "1BondAddress".to_string();
-        let bond_amount_sat = 500;
-        let bond_tx_hex = "signedBondHex".to_string();
-        let payout_address = "1PayoutAddress".to_string();
-        let musig_pub_nonce_hex = "musigPubNonceHex".to_string();
-        let musig_pubkey_hex = "musigPubkeyHex".to_string();
+		// Insert a test entry into active_maker_offers
+		let offer_id_hex = "offer_id_1";
+		let robohash = hex::decode("a3f1f1f0e2f3f4f5").unwrap(); // Example robohash
+		let is_buy_order = true;
+		let amount_sat = 1000;
+		let bond_ratio = 50;
+		let offer_duration_ts = 1234567890;
+		let bond_address = "1BondAddress".to_string();
+		let bond_amount_sat = 500;
+		let bond_tx_hex = "signedBondHex".to_string();
+		let payout_address = "1PayoutAddress".to_string();
+		let musig_pub_nonce_hex = "musigPubNonceHex".to_string();
+		let musig_pubkey_hex = "musigPubkeyHex".to_string();
 
-        sqlx::query(
+		sqlx::query(
             "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
@@ -777,33 +781,35 @@ mod tests {
         .execute(&*database.db_pool)
         .await?;
 
-        // Call the fetch_and_delete_offer_from_public_offers_table function
-        let result = database.fetch_and_delete_offer_from_public_offers_table(offer_id_hex).await?;
+		// Call the fetch_and_delete_offer_from_public_offers_table function
+		let result = database
+			.fetch_and_delete_offer_from_public_offers_table(offer_id_hex)
+			.await?;
 
-        // Verify the result
-        assert_eq!(result.offer_id, offer_id_hex);
-        assert_eq!(result.robohash_maker, robohash);
-        assert_eq!(result.is_buy_order, is_buy_order);
-        assert_eq!(result.amount_sat, amount_sat);
-        assert_eq!(result.bond_ratio, bond_ratio);
-        assert_eq!(result.offer_duration_ts, offer_duration_ts);
-        assert_eq!(result.bond_address_maker, bond_address);
-        assert_eq!(result.bond_amount_sat, bond_amount_sat);
-        assert_eq!(result.bond_tx_hex_maker, bond_tx_hex);
-        assert_eq!(result.payout_address_maker, payout_address);
-        assert_eq!(result.musig_pub_nonce_hex_maker, musig_pub_nonce_hex);
-        assert_eq!(result.musig_pubkey_hex_maker, musig_pubkey_hex);
+		// Verify the result
+		assert_eq!(result.offer_id, offer_id_hex);
+		assert_eq!(result.robohash_maker, robohash);
+		assert_eq!(result.is_buy_order, is_buy_order);
+		assert_eq!(result.amount_sat, amount_sat);
+		assert_eq!(result.bond_ratio, bond_ratio);
+		assert_eq!(result.offer_duration_ts, offer_duration_ts);
+		assert_eq!(result.bond_address_maker, bond_address);
+		assert_eq!(result.bond_amount_sat, bond_amount_sat);
+		assert_eq!(result.bond_tx_hex_maker, bond_tx_hex);
+		assert_eq!(result.payout_address_maker, payout_address);
+		assert_eq!(result.musig_pub_nonce_hex_maker, musig_pub_nonce_hex);
+		assert_eq!(result.musig_pubkey_hex_maker, musig_pubkey_hex);
 
-        // Verify the deletion
-        let remaining_offers = sqlx::query("SELECT COUNT(*) FROM active_maker_offers WHERE offer_id = ?")
-            .bind(offer_id_hex)
-            .fetch_one(&*database.db_pool)
-            .await?;
+		// Verify the deletion
+		let remaining_offers =
+			sqlx::query("SELECT COUNT(*) FROM active_maker_offers WHERE offer_id = ?")
+				.bind(offer_id_hex)
+				.fetch_one(&*database.db_pool)
+				.await?;
 
-        let remaining_offers_count: i64 = remaining_offers.try_get(0)?;
-        assert_eq!(remaining_offers_count, 0);
+		let remaining_offers_count: i64 = remaining_offers.try_get(0)?;
+		assert_eq!(remaining_offers_count, 0);
 
-        Ok(())
-    }
-
+		Ok(())
+	}
 }

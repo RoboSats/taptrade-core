@@ -1,5 +1,9 @@
 use super::*;
-use bdk::{blockchain::GetTx, database::Database};
+use bdk::{
+	bitcoin::{Address, Network},
+	blockchain::GetTx,
+	database::Database,
+};
 
 pub trait BondTx {
 	fn input_sum<D: Database, B: GetTx>(&self, blockchain: &B, db: &D) -> Result<u64>;
@@ -35,10 +39,15 @@ impl BondTx for Transaction {
 	}
 
 	fn bond_output_sum(&self, bond_address: &str) -> Result<u64> {
-		panic!("implement");
-		// let bond_script = ScriptBuf;
+		let bond_script = Address::from_str(bond_address)?
+			.require_network(Network::Testnet)?
+			.script_pubkey();
 
-		for output in self.output.iter() {}
-		Ok(0)
+		for output in self.output.iter() {
+			if output.script_pubkey == bond_script {
+				return Ok(output.value);
+			}
+		}
+		Err(anyhow!("No output to bond address in transaction"))
 	}
 }
