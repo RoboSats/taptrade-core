@@ -56,7 +56,7 @@ async fn submit_maker_bond(
 	};
 
 	match wallet
-		.validate_bond_tx_hex(&payload.signed_bond_hex, bond_requirements)
+		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
 		.await
 	{
 		Ok(()) => (),

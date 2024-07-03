@@ -20,6 +20,7 @@ pub struct CoordinatorWallet {
 	// database: Arc<Mutex<Tree>>,
 }
 
+#[derive(PartialEq, Debug)]
 pub struct BondRequirements {
 	pub bond_address: String,
 	pub locking_amount_sat: u64,
@@ -63,7 +64,7 @@ impl CoordinatorWallet {
 	pub async fn validate_bond_tx_hex(
 		&self,
 		bond: &String,
-		requirements: BondRequirements,
+		requirements: &BondRequirements,
 	) -> Result<()> {
 		let input_sum: u64;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;

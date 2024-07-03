@@ -1,10 +1,12 @@
 mod communication;
-// mod coordinator;
+mod coordinator;
 mod database;
 mod wallet;
 
 use anyhow::{anyhow, Result};
 use communication::{api::*, api_server};
+use coordinator::monitoring::monitor_bonds;
+use coordinator::monitoring::*;
 use database::CoordinatorDB;
 use dotenv::dotenv;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -21,6 +23,10 @@ async fn main() -> Result<()> {
 	let coordinator_db = CoordinatorDB::init().await?;
 	let wallet = CoordinatorWallet::init()?;
 
+	// begin monitoring bonds
+	monitor_bonds(&coordinator_db, &wallet).await?;
+
+	// Start the API server
 	api_server(coordinator_db, wallet).await?;
 	Ok(())
 }
