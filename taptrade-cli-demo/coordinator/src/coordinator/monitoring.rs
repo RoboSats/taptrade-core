@@ -16,10 +16,30 @@ pub struct MonitoringBond {
 	pub table: Table,
 }
 
-pub async fn monitor_bonds(
-	coordinator_db: &CoordinatorDB,
-	coordinator_wallet: &CoordinatorWallet,
+// the current implementation only publishes the bond and removes the offer from the db
+// in a more advanced implementation we could increase the transaction fee (cpfp) and
+// continue monitoring the bond transaction until a confirmation happens for maximum pain
+// in case the trader is actively malicious and did not just accidentally invalidate the bond
+// we could directly forward bond sats to the other parties payout address in case it is a taken trade
+async fn punish_trader(
+	coordinator: &Coordinator,
+	robohash: Vec<u8>,
+	bond: MonitoringBond,
 ) -> Result<()> {
+	// publish bond
+	coordinator
+		.coordinator_wallet
+		.publish_bond_tx_hex(bond_tx_hex)
+		.await?;
+
+	// remove offer from db/orderbook
+	Ok(())
+}
+
+pub async fn monitor_bonds(coordinator: &Coordinator) -> Result<()> {
+	let coordinator_db = &coordinator.coordinator_db;
+	let coordinator_wallet = &coordinator.coordinator_wallet;
+
 	loop {
 		// fetch all bonds
 		let bonds = coordinator_db.fetch_all_bonds().await?;
@@ -30,8 +50,20 @@ pub async fn monitor_bonds(
 				.validate_bond_tx_hex(&bond.1.bond_tx_hex, &bond.1.requirements)
 				.await
 			{
-				// punish the violator (publish bond, remove offer from db/orderbook)
-				panic!("Implement bond violation punishment logic: {:?}", e);
+				match env::var("PUNISHMENT_ENABLED")
+					.unwrap_or_else(|_| "0".to_string())
+					.as_str()
+				{
+					"1" => {
+						dbg!("Punishing trader for bond violation: {:?}", e);
+						punish_trader(coordinator, bond.0, bond.1).await?;
+					}
+					"0" => {
+						dbg!("Punishment disabled, ignoring bond violation: {:?}", e);
+						continue;
+					}
+					_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
+				}
 			}
 		}
 

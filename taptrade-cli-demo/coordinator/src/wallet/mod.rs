@@ -4,8 +4,9 @@ use super::*;
 use anyhow::Context;
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey, consensus::encode::deserialize, Transaction},
-	blockchain::ElectrumBlockchain,
+	blockchain::{Blockchain, ElectrumBlockchain, EsploraBlockchain},
 	electrum_client::Client,
+	esplora_client::AsyncClient,
 	sled::{self, Tree},
 	template::Bip86,
 	wallet::verify::*,
@@ -18,7 +19,7 @@ use utils::*;
 #[derive(Clone)]
 pub struct CoordinatorWallet {
 	pub wallet: Arc<Mutex<Wallet<Tree>>>,
-	pub backend: Arc<ElectrumBlockchain>,
+	pub backend: Arc<EsploraBlockchain>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -33,10 +34,11 @@ impl CoordinatorWallet {
 		let wallet_xprv = ExtendedPrivKey::from_str(
 			&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 		)?;
-		let backend = ElectrumBlockchain::from(Client::new(
-			&env::var("ELECTRUM_BACKEND")
-				.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
-		)?);
+		// let backend = ElectrumBlockchain::from(Client::new(
+		// 	&env::var("ELECTRUM_BACKEND")
+		// 		.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
+		// )?);
+		let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
 		let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
@@ -108,6 +110,14 @@ impl CoordinatorWallet {
 		if ((input_sum - output_sum) / tx.vsize() as u64) < 200 {
 			return Err(anyhow!("Bond fee rate too low"));
 		}
+		Ok(())
+	}
+
+	pub async fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
+		let blockchain = &*self.backend;
+		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
+
+		blockchain.broadcast(&tx).await?;
 		Ok(())
 	}
 }

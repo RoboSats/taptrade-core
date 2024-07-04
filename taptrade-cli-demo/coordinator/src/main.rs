@@ -14,19 +14,26 @@ use std::{env, sync::Arc};
 use tokio::sync::Mutex;
 use wallet::*;
 
+pub struct Coordinator {
+	pub coordinator_db: CoordinatorDB,
+	pub coordinator_wallet: CoordinatorWallet,
+}
+
 // populate .env with values before starting
 #[tokio::main]
 async fn main() -> Result<()> {
 	dotenv().ok();
 
 	// Initialize the database pool
-	let coordinator_db = CoordinatorDB::init().await?;
-	let wallet = CoordinatorWallet::init()?;
+	let coordinator = Coordinator {
+		coordinator_db: CoordinatorDB::init().await?,
+		coordinator_wallet: CoordinatorWallet::init()?,
+	};
 
 	// begin monitoring bonds
-	monitor_bonds(&coordinator_db, &wallet).await?;
+	monitor_bonds(&coordinator).await?;
 
 	// Start the API server
-	api_server(coordinator_db, wallet).await?;
+	api_server(coordinator).await?;
 	Ok(())
 }
