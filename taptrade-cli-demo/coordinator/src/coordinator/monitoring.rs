@@ -29,8 +29,7 @@ async fn punish_trader(
 	// publish bond
 	coordinator
 		.coordinator_wallet
-		.publish_bond_tx_hex(bond_tx_hex)
-		.await?;
+		.publish_bond_tx_hex(&bond.bond_tx_hex)?; // can be made async with esplora backend if we figure out the compilation error of bdk
 
 	// remove offer from db/orderbook
 	Ok(())

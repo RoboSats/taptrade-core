@@ -1,12 +1,12 @@
 mod utils;
+// pub mod verify_tx;
 
 use super::*;
 use anyhow::Context;
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey, consensus::encode::deserialize, Transaction},
-	blockchain::{Blockchain, ElectrumBlockchain, EsploraBlockchain},
-	electrum_client::Client,
-	esplora_client::AsyncClient,
+	blockchain::{Blockchain, ElectrumBlockchain},
+	electrum_client::client::Client,
 	sled::{self, Tree},
 	template::Bip86,
 	wallet::verify::*,
@@ -15,11 +15,12 @@ use bdk::{
 use std::fmt;
 use std::str::FromStr;
 use utils::*;
+// use verify_tx::*;
 
 #[derive(Clone)]
 pub struct CoordinatorWallet {
 	pub wallet: Arc<Mutex<Wallet<Tree>>>,
-	pub backend: Arc<EsploraBlockchain>,
+	pub backend: Arc<ElectrumBlockchain>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -34,11 +35,11 @@ impl CoordinatorWallet {
 		let wallet_xprv = ExtendedPrivKey::from_str(
 			&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 		)?;
-		// let backend = ElectrumBlockchain::from(Client::new(
-		// 	&env::var("ELECTRUM_BACKEND")
-		// 		.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
-		// )?);
-		let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
+		let backend = ElectrumBlockchain::from(Client::new(
+			&env::var("ELECTRUM_BACKEND")
+				.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
+		)?);
+		// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
 		let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
@@ -113,11 +114,11 @@ impl CoordinatorWallet {
 		Ok(())
 	}
 
-	pub async fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
+	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
 		let blockchain = &*self.backend;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 
-		blockchain.broadcast(&tx).await?;
+		blockchain.broadcast(&tx)?;
 		Ok(())
 	}
 }
