@@ -73,9 +73,6 @@ async fn submit_maker_bond(
 		.move_offer_to_active(&payload, &offer_id_hex, new_taker_bond_address)
 		.await?;
 
-	// begin monitoring bond -> async loop monitoring bonds in sql table "active_maker_offers" -> see ../coordinator/monitoring.rs
-	// show trade to orderbook -> orderbook endpoint will scan sql table "active_maker_offers" and return fitting results
-
 	// Create the JSON response
 	Ok(Json(OrderActivatedResponse {
 		bond_locked_until_timestamp,
