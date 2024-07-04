@@ -11,13 +11,14 @@ use bdk::{
 	wallet::verify::*,
 	KeychainKind, SyncOptions, Wallet,
 };
+use std::fmt;
 use std::str::FromStr;
 use utils::*;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct CoordinatorWallet {
 	pub wallet: Arc<Mutex<Wallet<Tree>>>,
-	// database: Arc<Mutex<Tree>>,
+	pub backend: Arc<ElectrumBlockchain>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -50,7 +51,7 @@ impl CoordinatorWallet {
 		dbg!(wallet.get_balance()?);
 		Ok(CoordinatorWallet {
 			wallet: Arc::new(Mutex::new(wallet)),
-			// database: Arc::new(Mutex::new(sled_db)),
+			backend: Arc::new(backend),
 		})
 	}
 
@@ -67,22 +68,19 @@ impl CoordinatorWallet {
 		requirements: &BondRequirements,
 	) -> Result<()> {
 		let input_sum: u64;
+		let blockchain = &*self.backend;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 		{
-			let blockchain = ElectrumBlockchain::from(Client::new(
-				&env::var("ELECTRUM_BACKEND")
-					.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
-			)?);
 			let wallet = self.wallet.lock().await;
 
 			// we need to test this with signed and invalid/unsigned transactions
 			// checks signatures and inputs
-			if let Err(e) = verify_tx(&tx, &*wallet.database(), &blockchain) {
+			if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
 				return Err(anyhow!(e));
 			}
 
 			// check if the tx has the correct input amounts (have to be >= trading amount)
-			input_sum = match tx.input_sum(&blockchain, &*wallet.database()) {
+			input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
 				Ok(amount) => {
 					if amount < requirements.min_input_sum_sat {
 						return Err(anyhow!("Bond input sum too small"));
@@ -111,5 +109,16 @@ impl CoordinatorWallet {
 			return Err(anyhow!("Bond fee rate too low"));
 		}
 		Ok(())
+	}
+}
+
+impl fmt::Debug for CoordinatorWallet {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("CoordinatorWallet")
+			.field("wallet", &self.wallet)
+			// Since ElectrumBlockchain doesn't implement Debug, we can't automatically derive it.
+			// Instead, we can print a placeholder or simply omit it from the debug output.
+			.field("backend", &"ElectrumBlockchain (Debug not implemented)")
+			.finish()
 	}
 }
