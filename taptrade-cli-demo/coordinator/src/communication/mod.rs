@@ -149,6 +149,9 @@ async fn request_offer_status_maker(
 }
 
 /// receives the signed escrow psbt and verifies it
+/// Supposed to be the endpoint that both maker & taker will send their part of the PSBT to (with signatures), the
+/// coordinator then has to check if their signatures are valid and everything else is according to the agreed upon contract.
+/// Once the coordinator has received both partitial signed PSBTs he can assemble them together to a transaction and publish it to the bitcoin network.
 async fn submit_escrow_psbt(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -157,6 +160,11 @@ async fn submit_escrow_psbt(
 	panic!("implement")
 }
 
+/// Will get polled by the traders once they submitted their PSBT part. The coorinator will return status code 200 once he received both PSBTs and they got mined,
+/// then the traders will know it is secure to begin with the fiat exchange and can continue with the trade (exchange information in the chat and transfer fiat).
+/// We can implement this once the PSBT is done.
+/// In theory this polling mechanism could also be replaced by the traders scanning the blockchain themself so they could also see once the tx is confirmed.
+/// We have to see what makes more sense later, but maybe this would be more elegant. TBD.
 async fn poll_escrow_confirmation(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
@@ -173,6 +181,10 @@ async fn submit_obligation_confirmation(
 	panic!("implement")
 }
 
+/// Is supposed to get polled by the traders once they clicked on "i sent the fiat" or "i received the fiat".
+/// If both agree then the payout logic (tbd) will be called (assembly of a payout transaction out of the escrow contract to their payout addresses).
+/// If one of them is not happy and initiating escrow (e.g. claiming they didn't receive the fiat) then this
+/// endpoint can return 201 and the escrow mediation logic will get executed (tbd).
 async fn poll_final_payout(
 	Extension(database): Extension<CoordinatorDB>,
 	Extension(wallet): Extension<CoordinatorWallet>,
