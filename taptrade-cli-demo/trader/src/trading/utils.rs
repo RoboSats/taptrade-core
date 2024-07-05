@@ -16,8 +16,8 @@ impl ActiveOffer {
 		&self,
 		trader_config: &TraderSettings,
 	) -> Result<&Self> {
-		IsOfferReadyRequest::poll(trader_config, &self)?;
-		Ok(&self)
+		IsOfferReadyRequest::poll(trader_config, self)?;
+		Ok(self)
 	}
 
 	pub fn fiat_confirmation_cli_input(&self, trade_settings: &TraderSettings) -> Result<bool> {

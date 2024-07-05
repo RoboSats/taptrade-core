@@ -1,15 +1,70 @@
-use bitcoin::util::address::Address;
-use bitcoin::util::psbt::{PartiallySignedTransaction, PSBTInput, PSBTOutput};
-use bitcoin::network::constants::Network;
 use bitcoin::blockdata::transaction::{Transaction, TxIn, TxOut};
 use bitcoin::blockdata::script::Builder;
 use bitcoin::consensus::encode;
 use miniscript::{Miniscript, Descriptor, DescriptorPublicKey, policy::Concrete};
 use miniscript::bitcoin::secp256k1::{Secp256k1, SecretKey, PublicKey, Message, Signature};
-use miniscript::bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
+// use miniscript::bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use std::str::FromStr;
+use bitcoin::psbt::PartiallySignedTransaction;
+use bitcoin::util::taproot::{TaprootBuilder, TaprootSpendInfo};
+use bitcoin::util::schnorr::SchnorrSig;
+use bitcoin::secp256k1::{Secp256k1, SecretKey};
+use bitcoin::Transaction;
 
-async fn generate_taproot_PSBT() {
+
+
+fn create_taproot_psbt(inputs: Vec<UTXO>, outputs: Vec<Output>) -> PartiallySignedTransaction {
+    let secp = Secp256k1::new();
+    let mut psbt = PartiallySignedTransaction::new();
+
+    // Add inputs
+    for input in inputs {
+        psbt.inputs.push(input.to_psbt_input());
+    }
+
+    // Add outputs
+    for output in outputs {
+        psbt.outputs.push(output.to_psbt_output());
+    }
+
+    // Add Taproot data
+    // call create_script here, and add descriptor here
+    let taproot_info = TaprootSpendInfo::new(secp, root);
+    psbt.global.taproot_spend_info = Some(taproot_info);
+
+    psbt
+}
+
+impl UTXO {
+    fn to_psbt_input(&self) -> PsbtInput {
+        PsbtInput {
+            witness_utxo: Some(self.clone()),
+            ..Default::default()
+        }
+    }
+}
+impl Output {
+    fn to_psbt_output(&self) -> PsbtOutput {
+        PsbtOutput {
+            value: self.amount,
+            script: self.taproot_script.clone(),
+            ..Default::default()
+        }
+    }
+}
+
+fn sign_psbt(psbt: &mut PartiallySignedTransaction, privkey: SecretKey) {
+    let secp = Secp256k1::new();
+
+    for (index, input) in psbt.inputs.iter_mut().enumerate() {
+        let sighash = psbt.sighash(index, secp);
+        let signature = SchnorrSig::sign(sighash, &privkey, secp);
+        input.taproot_key_sig = Some(signature);
+    }
+}
+
+
+async fn create_script(coordinator_pub_key, maker_pub_key,taker_pub_key ) {
     // Define the Miniscript policies
     let policy_a = format!("and_v(v:pk({}),and_v(v:pk({}),after(144)))", coordinator_pub_key, maker_pub_key);
     let policy_b = format!("and_v(v:pk({}),and_v(v:pk({}),pk({})))", maker_pub_key, taker_pub_key, coordinator_pub_key);
@@ -49,57 +104,19 @@ async fn generate_taproot_PSBT() {
     println!("Taproot Address E: {}", address_e);
     println!("Taproot Address F: {}", address_f);
 
-    // Create a sample PSBT (Partially Signed Bitcoin Transaction)
-    let mut psbt = PartiallySignedTransaction {
-        global: Default::default(),
-        inputs: vec![],
-        outputs: vec![],
-    };
+}
 
-    // Add an example input (Replace with actual input)
-    psbt.inputs.push(PSBTInput {
-        non_witness_utxo: None,
-        witness_utxo: Some(TxOut {
-            value: 1000,
-            script_pubkey: address_a.script_pubkey(),
-        }),
-        ..Default::default()
-    });
 
-    // Add the output addresses
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_a.script_pubkey(),
-        ..Default::default()
-    });
+async fn procedure() {
+    let inputs = vec![/* ... UTXOs ... */ ];
+    let outputs = vec![/* ... Outputs ... */];
 
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_b.script_pubkey(),
-        ..Default::default()
-    });
+    let mut psbt = create_taproot_psbt(inputs, outputs);
+    let privkey = SecretKey::from_slice(&[/* private key bytes */]).unwrap();
 
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_c.script_pubkey(),
-        ..Default::default()
-    });
+    sign_psbt(&mut psbt, privkey);
 
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_d.script_pubkey(),
-        ..Default::default()
-    });
-
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_e.script_pubkey(),
-        ..Default::default()
-    });
-
-    psbt.outputs.push(PSBTOutput {
-        value: 1000,
-        script_pubkey: address_f.script_pubkey(),
-        ..Default::default()
-    });
+    // Finalize and broadcast the PSBT
+    let tx = psbt.finalize().unwrap();
+    broadcast_transaction(tx);
 }
