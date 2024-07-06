@@ -1,21 +1,29 @@
+/// This module contains functions related to creating and broadcasting Taproot transactions.
+/// It includes functions to combine and broadcast the partially signed transactions (PSBTs)
+/// from multiple participants, create a Taproot script descriptor, create a PSBT from the
+/// descriptor, and handle the case when the taker is unresponsive.
+
+use bdk::bitcoin::address::NetworkUnchecked;
+use bitcoin::address::NetworkChecked;
 use bitcoin::Address;
 use bdk::descriptor::Descriptor;
 use bdk::miniscript::psbt::PsbtExt;
-use bitcoin::Network;
-use bitcoin::taproot::TaprootSpendInfo;
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
 use bdk::blockchain::EsploraBlockchain;
-use std::str::FromStr;
+use bdk::SignOptions;
 use bdk::bitcoin::secp256k1::Secp256k1;
-use bdk::bitcoin::hashes::hex::FromHex;
-use bdk::bitcoin::PublicKey;
-use bdk::descriptor;
 use bdk::miniscript::descriptor::TapTree;
 use bdk::miniscript::policy::Concrete;
-// use bdk::miniscript::DummyKey;
 use std::sync::Arc;
+use bdk::database::MemoryDatabase;
+use bdk::wallet::AddressIndex;
+use bdk::{FeeRate, Wallet, KeychainKind, SyncOptions};
+use std::collections::BTreeMap;
+use std::str::FromStr;
 
-fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
+/// The main function in this module is `combine_and_broadcast`, which combines the PSBTs
+/// from the maker and taker, finalizes the transaction, and broadcasts it on the blockchain.
+pub async fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
     let mut base_psbt = PartiallySignedTransaction::from_str("TODO: insert the psbt created in step 3 here")?;
     let signed_psbts = vec![
          // TODO: Paste each participant's PSBT here
@@ -37,63 +45,7 @@ fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
     dbg!(blockchain.broadcast(&finalized_tx));
     Ok(())
 }
-
-// fn create_taproot_psbt(inputs: Vec<UTXO>, outputs: Vec<Output>) -> PartiallySignedTransaction {
-//     let secp = Secp256k1::new();
-//     let mut psbt = PartiallySignedTransaction::new();
-
-//     // Add inputs
-//     for input in inputs {
-//         psbt.inputs.push(input.to_psbt_input());
-//     }
-
-//     // Add outputs
-//     for output in outputs {
-//         psbt.outputs.push(output.to_psbt_output());
-//     }
-
-//     // Add Taproot data
-//     // call create_script here, and add descriptor here
-//     let taproot_info = TaprootSpendInfo::new(secp, root);
-//     psbt.global.taproot_spend_info = Some(taproot_info);
-
-//     psbt
-// }
-// struct UTXO {
-
-// }
-// impl UTXO {
-//     fn to_psbt_input(&self) -> PsbtInput {
-//         PsbtInput {
-//             witness_utxo: Some(self.clone()),
-//             ..Default::default()
-//         }
-//     }
-// }
-// struct Output{
-
-// }
-// impl Output {
-//     fn to_psbt_output(&self) -> PsbtOutput {
-//         PsbtOutput {
-//             value: self.amount,
-//             script: self.taproot_script.clone(),
-//             ..Default::default()
-//         }
-//     }
-// }
-
-// fn sign_psbt(psbt: &mut PartiallySignedTransaction, privkey: SecretKey) {
-//     let secp = Secp256k1::new();
-
-//     for (index, input) in psbt.inputs.iter_mut().enumerate() {
-//         let sighash = psbt.sighash(index, secp);
-//         let signature = SchnorrSig::sign(sighash, &privkey, secp);
-//         input.taproot_key_sig = Some(signature);
-//     }
-// }
-
-
+/// Other functions include `create_script`, which creates a Taproot script descriptor from
 async fn create_script(coordinator_key: &str, maker_key:&str, taker_key:&str ) -> Result<(bdk::descriptor::Descriptor<std::string::String>), Box<dyn std::error::Error>> {
 
     // let maker_key = "020202020202020202020202020202020202020202020202020202020202020202";
@@ -138,3 +90,79 @@ async fn create_script(coordinator_key: &str, maker_key:&str, taker_key:&str ) -
 
 }
 
+/// the provided keys, and `create_psbt`, which creates a PSBT from the descriptor
+/// Figure out how to put UTXO's
+pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
+    // Step 1: Create a BDK wallet
+    let wallet = Wallet::new(
+        // TODO: insert your descriptor here
+        "tr(youshouldputyourdescriptorhere)",
+        None,
+        bdk::bitcoin::Network::Testnet,
+        MemoryDatabase::new()
+    )?;
+
+    // Step 2: Print the first address
+    println!("Deposit funds here: {:?}", wallet.get_address(AddressIndex::New)?);
+
+    // Step 3: Deposit funds
+    // Use some testnet faucet, such as https://bitcoinfaucet.uo1.net/send.php
+
+    // Step 4: Print balance
+    let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
+    wallet.sync(&blockchain, SyncOptions::default())?;
+    println!("{:#?}", wallet.get_balance()?);
+
+    let maker_utxos = vec![/* UTXO details here */];
+    let taker_utxos = vec![/* UTXO details here */];
+
+    //TODO: Change type to NetworkChecked
+    // Recipient address (where funds will be sent)
+    let recipient_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
+
+
+    // Build the PSBT
+    let mut tx_builder = wallet.build_tx();
+    tx_builder
+        .add_utxos(&maker_utxos)?
+        .add_utxos(&taker_utxos)?
+        .drain_wallet()
+        .drain_to(recipient_address.script_pubkey())
+        .fee_rate(FeeRate::from_sat_per_vb(3.0))
+        .policy_path(BTreeMap::new(), KeychainKind::External);
+
+    let (psbt, tx_details) = tx_builder.finish()?;
+    println!("PSBT: {:?}", psbt);
+    Ok(psbt)
+}
+
+
+/// The `taker_unresponsive` function handles the case when the taker is unresponsive and
+/// the coordinator needs to sign the PSBT using an alternative path.
+// TODO: Figure out how to use UTXO's
+fn taker_unresponsive(psbt: PartiallySignedTransaction, wallet: Wallet<MemoryDatabase>, maker_utxos: Vec<UTXO>, taker_utxos: Vec<UTXO>, recipient_address: Address<NetworkChecked>) -> Result<(), Box<dyn std::error::Error>> {
+    // Maker signs the PSBT
+    let maker_signed_psbt = wallet.sign(&mut psbt.clone(), SignOptions::default())?;
+    println!("Maker signed PSBT: {:?}", maker_signed_psbt);
+
+    // If taker is unresponsive, coordinator signs using alternative path
+    let taker_responsive = false; // Assume taker is unresponsive
+    if !taker_responsive {
+        let mut path = BTreeMap::new();
+        path.insert(wallet.policies(KeychainKind::External)?.unwrap().id, vec![1]); // Path for coordinator and maker
+
+        let mut coordinator_tx_builder = wallet.build_tx();
+        coordinator_tx_builder
+            .add_utxos(&maker_utxos)?
+            .add_utxos(&taker_utxos)?
+            .drain_wallet()
+            .drain_to(recipient_address.script_pubkey())
+            .fee_rate(FeeRate::from_sat_per_vb(3.0))
+            .policy_path(path, KeychainKind::External);
+
+        let (coordinator_psbt, _details) = coordinator_tx_builder.finish()?;
+        let coordinator_signed_psbt = wallet.sign(&mut coordinator_psbt, SignOptions::default())?;
+        println!("Coordinator signed PSBT: {:?}", coordinator_signed_psbt);
+    }
+    Ok(())
+}
