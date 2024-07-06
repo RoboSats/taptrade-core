@@ -1,12 +1,19 @@
 use bitcoin::Address;
+use bdk::descriptor::Descriptor;
 use bdk::miniscript::psbt::PsbtExt;
 use bitcoin::Network;
 use bitcoin::taproot::TaprootSpendInfo;
-use miniscript::{Miniscript, Descriptor, DescriptorPublicKey};
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
 use bdk::blockchain::EsploraBlockchain;
 use std::str::FromStr;
 use bdk::bitcoin::secp256k1::Secp256k1;
+use bdk::bitcoin::hashes::hex::FromHex;
+use bdk::bitcoin::PublicKey;
+use bdk::descriptor;
+use bdk::miniscript::descriptor::TapTree;
+use bdk::miniscript::policy::Concrete;
+// use bdk::miniscript::DummyKey;
+use std::sync::Arc;
 
 fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
     let mut base_psbt = PartiallySignedTransaction::from_str("TODO: insert the psbt created in step 3 here")?;
@@ -87,45 +94,47 @@ fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
 // }
 
 
-// async fn create_script(coordinator_pub_key, maker_pub_key,taker_pub_key ) {
-//     // Define the Miniscript policies
-//     let policy_a = format!("and_v(v:pk({}),and_v(v:pk({}),after(144)))", coordinator_pub_key, maker_pub_key);
-//     let policy_b = format!("and_v(v:pk({}),and_v(v:pk({}),pk({})))", maker_pub_key, taker_pub_key, coordinator_pub_key);
-//     let policy_c = format!("and_v(v:pk({}),pk({}))", maker_pub_key, coordinator_pub_key);
-//     let policy_d = format!("and_v(v:pk({}),pk({}))", taker_pub_key, coordinator_pub_key);
-//     let policy_e = format!("and_v(v:pk({}),after(12228))", maker_pub_key);
-//     let policy_f = format!("and_v(and_v(v:pk({}),v:pk({})),after(2048))", maker_pub_key, taker_pub_key);
+async fn create_script(coordinator_key: &str, maker_key:&str, taker_key:&str ) -> Result<(bdk::descriptor::Descriptor<std::string::String>), Box<dyn std::error::Error>> {
 
-//     // Compile the policies into Miniscript
-//     let miniscript_a: Miniscript<DescriptorPublicKey> = policy_a.parse().unwrap().compile().unwrap();
-//     let miniscript_b: Miniscript<DescriptorPublicKey> = policy_b.parse().unwrap().compile().unwrap();
-//     let miniscript_c: Miniscript<DescriptorPublicKey> = policy_c.parse().unwrap().compile().unwrap();
-//     let miniscript_d: Miniscript<DescriptorPublicKey> = policy_d.parse().unwrap().compile().unwrap();
-//     let miniscript_e: Miniscript<DescriptorPublicKey> = policy_e.parse().unwrap().compile().unwrap();
-//     let miniscript_f: Miniscript<DescriptorPublicKey> = policy_f.parse().unwrap().compile().unwrap();
+    // let maker_key = "020202020202020202020202020202020202020202020202020202020202020202";
+    // let taker_key = "03833be68fb7559c0e62ffdbb6d46cc44a58c19c6ba82e51144b583cff0519c791";
+    // let coordinator_key = "03b2f6e8abf3624f8e9b93f7b2567b158c15b0f20ab368f9fcb2d9251d6a788d09";
 
-//     // Create the Taproot descriptors
-//     let descriptor_a = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_a]);
-//     let descriptor_b = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_b]);
-//     let descriptor_c = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_c]);
-//     let descriptor_d = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_d]);
-//     let descriptor_e = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_e]);
-//     let descriptor_f = Descriptor::Tr(coordinator_pub_key.clone(), vec![miniscript_f]);
+    // Define policies based on the scripts provided
+    let script_a = format!("and(and(after(escrow_timer),pk({})),pk({}))", maker_key, coordinator_key);
+    let script_b = format!("and_v(v:pk({}),and_v(v:pk({}),pk({})))", maker_key, taker_key, coordinator_key);
+    let script_c = format!("and(pk({}),pk({}))", maker_key, coordinator_key);
+    let script_d = format!("and(pk({}),pk({}))", taker_key, coordinator_key);
+    let script_e = format!("and(pk({}),after(very_long_timelock))", maker_key);
+    let script_f = format!("and_v(and_v(v:pk({}),v:pk({})),after(2048))", maker_key, taker_key);
 
-//     // Generate the Taproot addresses
-//     let address_a = Address::p2tr(&descriptor_a, Network::Bitcoin);
-//     let address_b = Address::p2tr(&descriptor_b, Network::Bitcoin);
-//     let address_c = Address::p2tr(&descriptor_c, Network::Bitcoin);
-//     let address_d = Address::p2tr(&descriptor_d, Network::Bitcoin);
-//     let address_e = Address::p2tr(&descriptor_e, Network::Bitcoin);
-//     let address_f = Address::p2tr(&descriptor_f, Network::Bitcoin);
+    // Compile the policies
+    let compiled_a = Concrete::<String>::from_str(&script_a)?.compile()?;
+    let compiled_b = Concrete::<String>::from_str(&script_b)?.compile()?;
+    let compiled_c = Concrete::<String>::from_str(&script_c)?.compile()?;
+    let compiled_d = Concrete::<String>::from_str(&script_d)?.compile()?;
+    let compiled_e = Concrete::<String>::from_str(&script_e)?.compile()?;
+    let compiled_f = Concrete::<String>::from_str(&script_f)?.compile()?;
 
-//     println!("Taproot Address A: {}", address_a);
-//     println!("Taproot Address B: {}", address_b);
-//     println!("Taproot Address C: {}", address_c);
-//     println!("Taproot Address D: {}", address_d);
-//     println!("Taproot Address E: {}", address_e);
-//     println!("Taproot Address F: {}", address_f);
+    // Create TapTree leaves
+    let tap_leaf_a = TapTree::Leaf(Arc::new(compiled_a));
+    let tap_leaf_b = TapTree::Leaf(Arc::new(compiled_b));
+    let tap_leaf_c = TapTree::Leaf(Arc::new(compiled_c));
+    let tap_leaf_d = TapTree::Leaf(Arc::new(compiled_d));
+    let tap_leaf_e = TapTree::Leaf(Arc::new(compiled_e));
+    let tap_leaf_f = TapTree::Leaf(Arc::new(compiled_f));
 
-// }
+    // Create the TapTree (example combining leaves, adjust as necessary)
+    let tap_tree = TapTree::Tree(Arc::new(tap_leaf_a), Arc::new(tap_leaf_b));
+
+    // Define a dummy internal key (replace with an actual key)
+    let dummy_internal_key = "020202020202020202020202020202020202020202020202020202020202020202".to_string();
+
+    // Create the descriptor
+    let descriptor = Descriptor::new_tr(dummy_internal_key, Some(tap_tree))?;
+    println!("{}", descriptor);
+
+    Ok(descriptor)
+
+}
 
