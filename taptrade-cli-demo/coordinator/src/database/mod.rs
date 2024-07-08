@@ -1,6 +1,7 @@
 pub mod db_tests;
 
 use anyhow::Context;
+use axum::routing::trace;
 use futures_util::{lock, StreamExt};
 
 use super::*;
@@ -38,6 +39,14 @@ struct AwaitingTakerOffer {
 	payout_address_maker: String,
 	musig_pub_nonce_hex_maker: String,
 	musig_pubkey_hex_maker: String,
+}
+
+fn bool_to_sql_int(flag: bool) -> Option<i64> {
+	if flag {
+		Some(1)
+	} else {
+		None
+	}
 }
 
 // is our implementation resistant against sql injections?
@@ -130,8 +139,6 @@ impl CoordinatorDB {
 		order: &OrderRequest,
 		bond_requirements: &BondRequirementResponse,
 	) -> Result<()> {
-		let bool_to_sql_int = |flag: bool| if flag { Some(1) } else { None };
-
 		sqlx::query(
 			"INSERT OR REPLACE INTO maker_requests (robohash, is_buy_order, amount_sat,
 					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat)
@@ -181,8 +188,7 @@ impl CoordinatorDB {
 			.bind(hex::decode(robohash_hex)?)
 			.execute(&*self.db_pool)
 			.await?;
-
-		Ok(AwaitingBondOffer {
+		let awaiting_bond_offer = AwaitingBondOffer {
 			robohash_hex: hex::encode(fetched_values.0),
 			is_buy_order: fetched_values.1,
 			amount_satoshi: fetched_values.2 as u64,
@@ -190,7 +196,12 @@ impl CoordinatorDB {
 			offer_duration_ts: fetched_values.4 as u64,
 			bond_address: fetched_values.5,
 			bond_amount_sat: fetched_values.6 as u64,
-		})
+		};
+		info!(
+			"Deleted offer from maker_requests table. Fetched offer: {:#?}",
+			awaiting_bond_offer
+		);
+		Ok(awaiting_bond_offer)
 	}
 
 	pub async fn move_offer_to_active(
@@ -203,6 +214,10 @@ impl CoordinatorDB {
 			.fetch_and_delete_offer_from_bond_table(&data.robohash_hex)
 			.await?;
 
+		info!(
+			"DATABASE: Moving maker offer to active trades table. Bond data: {:#?}",
+			data
+		);
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
 					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
@@ -210,9 +225,9 @@ impl CoordinatorDB {
 		)
 		.bind(offer_id)
 		.bind(hex::decode(&data.robohash_hex)?)
-		.bind(remaining_offer_information.is_buy_order)
+		.bind(bool_to_sql_int(remaining_offer_information.is_buy_order))
 		.bind(remaining_offer_information.amount_satoshi as i64)
-		.bind(remaining_offer_information.bond_ratio)
+		.bind(remaining_offer_information.bond_ratio as i32)
 		.bind(remaining_offer_information.offer_duration_ts as i64)
 		.bind(remaining_offer_information.bond_address.clone())
 		.bind(remaining_offer_information.bond_amount_sat as i64)
@@ -223,7 +238,7 @@ impl CoordinatorDB {
 		.bind(taker_bond_address)
 		.execute(&*self.db_pool)
 		.await?;
-
+		debug!("\nDATABASE: moved offer to active trades\n");
 		Ok(remaining_offer_information.offer_duration_ts)
 	}
 
@@ -231,6 +246,10 @@ impl CoordinatorDB {
 		&self,
 		requested_offer: &OffersRequest,
 	) -> Result<Option<Vec<PublicOffer>>> {
+		info!(
+			"Fetching suitable offers from db. Specification: {:#?}",
+			requested_offer
+		);
 		let fetched_offers = sqlx::query_as::<_, (String, i64, i64, String)> (
             "SELECT offer_id, amount_sat, bond_amount_sat, taker_bond_address FROM active_maker_offers WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
         )
@@ -252,7 +271,7 @@ impl CoordinatorDB {
 			)
 			.collect();
 		if available_offers.is_empty() {
-			debug!("No available offers in db...");
+			info!("No available offers in db...");
 			return Ok(None);
 		}
 		Ok(Some(available_offers))
@@ -332,7 +351,7 @@ impl CoordinatorDB {
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
 			.bind(hex::decode(&trade_and_taker_info.trade_data.robohash_hex)?)
-			.bind(public_offer.is_buy_order)
+			.bind(bool_to_sql_int(public_offer.is_buy_order))
 			.bind(public_offer.amount_sat)
 			.bind(public_offer.bond_ratio)
 			.bind(public_offer.offer_duration_ts)

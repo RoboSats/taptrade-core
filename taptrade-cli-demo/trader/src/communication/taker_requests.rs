@@ -11,7 +11,7 @@ impl PublicOffers {
 			amount_min_sat: (amount as f64 * 0.9).round() as u64, // range can be made variable in production
 			amount_max_sat: (amount as f64 * 1.1).round() as u64,
 		};
-
+		debug!("Taker requesting offers: {:#?}", request);
 		let client = reqwest::blocking::Client::new();
 		let res = client
 			.post(format!(
@@ -19,9 +19,27 @@ impl PublicOffers {
 				taker_config.coordinator_endpoint, "/fetch-available-offers"
 			))
 			.json(&request)
-			.send()?
-			.json::<PublicOffers>()?;
-		Ok(res)
+			.send();
+		let res = match res {
+			Ok(res) => res,
+			Err(e) => {
+				return Err(anyhow!("Error fetching offers: {:#?}", e));
+			}
+		};
+		if res.status() == 204 {
+			return Ok(PublicOffers { offers: None });
+		} else {
+			match res.json::<PublicOffers>() {
+				Ok(offers) => {
+					debug!("Received offers: {:#?}", offers);
+					Ok(offers)
+				}
+				Err(e) => Err(anyhow!(
+					"Error unpacking fetching offers response: {:#?}",
+					e
+				)),
+			}
+		}
 	}
 
 	// ask the user to select a offer to take on the CLI

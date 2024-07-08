@@ -82,7 +82,7 @@ async fn submit_maker_bond(
 	{
 		Ok(timestamp) => timestamp,
 		Err(e) => {
-			dbg!("Error in validate_bond_tx_hex: {}", e);
+			debug!("Error in validate_bond_tx_hex: {}", e);
 			return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
 		}
 	};
@@ -99,10 +99,12 @@ async fn submit_maker_bond(
 async fn fetch_available_offers(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
 	Json(payload): Json<OffersRequest>,
-) -> Result<Json<PublicOffers>, AppError> {
+) -> Result<Response, AppError> {
 	let offers: Option<Vec<PublicOffer>> = database.fetch_suitable_offers(&payload).await?;
-
-	Ok(Json(PublicOffers { offers }))
+	if offers.is_none() {
+		return Ok(StatusCode::NO_CONTENT.into_response());
+	}
+	Ok(Json(PublicOffers { offers }).into_response())
 }
 
 /// receives the taker bond for a given offer, verifies it, creates escrow transaction psbt
