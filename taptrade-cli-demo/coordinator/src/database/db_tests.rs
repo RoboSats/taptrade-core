@@ -1,6 +1,7 @@
 use super::*;
 #[cfg(test)]
 use anyhow::Ok;
+
 async fn create_coordinator() -> Result<database::CoordinatorDB, anyhow::Error> {
 	// Set up the in-memory database
 	env::set_var("DATABASE_PATH", ":memory:");

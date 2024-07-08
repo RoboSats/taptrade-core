@@ -6,7 +6,7 @@ mod wallet;
 
 use anyhow::{anyhow, Result};
 use cli::CliSettings;
-use core::panic;
+use log::{debug, error, info, trace, warn};
 
 fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 	match cli_input {
@@ -20,10 +20,12 @@ fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-	// env_logger::builder().filter_level(log::LevelFilter::Debug).init(); // enable to show extended BDK debug messages
+	env_logger::builder()
+		.filter_level(log::LevelFilter::Info)
+		.init();
 
 	let mode = CliSettings::parse_cli_args()?;
-	dbg!("CLI input :", &mode);
+	info!("CLI input : {:#?}", &mode);
 	start_trade_pipeline(&mode)?;
 
 	Ok(())

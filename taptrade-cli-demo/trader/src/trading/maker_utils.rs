@@ -7,13 +7,7 @@ impl ActiveOffer {
 		maker_config: &TraderSettings,
 	) -> Result<ActiveOffer> {
 		let offer_conditions = BondRequirementResponse::fetch(maker_config)?;
-		// let offer_conditions = OfferCreationResponse {
-		// 	// hardcoded for testing, locking_address is owned by .env xprv
-		// 	locking_amount_sat: 90000,
-		// 	bond_address: "tb1pfdvgfzwp8vhmelpv8w9kezz7nsmxw68jz6yehgze6mzx0t6r9t2qv9ynmm"
-		// 		.to_string(),
-		// };
-
+		debug!("Offer conditions fetched: {:#?}", &offer_conditions);
 		let (bond, mut musig_data, payout_address) =
 			trading_wallet.trade_onchain_assembly(&offer_conditions, maker_config)?;
 		let submission_result = BondSubmissionRequest::send_maker(
@@ -24,7 +18,7 @@ impl ActiveOffer {
 			maker_config,
 		)?;
 		Ok(ActiveOffer {
-			offer_id_hex: submission_result.order_id_hex,
+			offer_id_hex: submission_result.offer_id_hex,
 			used_musig_config: musig_data,
 			used_bond: bond,
 			expected_payout_address: payout_address,

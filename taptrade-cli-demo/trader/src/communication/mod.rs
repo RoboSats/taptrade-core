@@ -1,6 +1,7 @@
 pub mod api;
 pub mod taker_requests;
 
+use super::*;
 use crate::{
 	cli::{OfferType, TraderSettings},
 	trading::utils::ActiveOffer,
@@ -40,16 +41,27 @@ impl BondRequirementResponse {
 	}
 
 	pub fn fetch(trader_setup: &TraderSettings) -> Result<BondRequirementResponse> {
+		trace!("Fetching bond requirements from coordinator. (create-offer)");
 		let client = reqwest::blocking::Client::new();
-		let res = client
-			.post(format!(
-				"{}{}",
-				trader_setup.coordinator_endpoint, "/create-offer"
-			))
+		let endpoint = format!("{}{}", trader_setup.coordinator_endpoint, "/create-offer");
+		let res = match client
+			.post(endpoint)
 			.json(&Self::_format_request(trader_setup))
-			.send()?
-			.json::<BondRequirementResponse>()?;
-		Ok(res)
+			.send()
+		{
+			Ok(res) => res,
+			Err(e) => return Err(anyhow!("Error calling /create-offer: {}", e)),
+		};
+		let status_code = res.status();
+		debug!("/create-offer Response status code: {}", status_code);
+		match res.json::<BondRequirementResponse>() {
+			Ok(response) => Ok(response),
+			Err(e) => Err(anyhow!(
+				"Error fetching bond requirements: {}. Status code: {}",
+				e,
+				status_code
+			)),
+		}
 	}
 }
 
@@ -89,9 +101,21 @@ impl BondSubmissionRequest {
 				trader_setup.coordinator_endpoint, "/submit-maker-bond"
 			))
 			.json(&request)
-			.send()?
-			.json::<OrderActivatedResponse>()?;
-		Ok(res)
+			.send();
+		match res {
+			Ok(res) => {
+				let status_code = res.status();
+				match res.json::<OrderActivatedResponse>() {
+					Ok(response) => Ok(response),
+					Err(e) => Err(anyhow!(
+						"Error submitting maker bond: {}. Status code: {}",
+						e,
+						status_code
+					)),
+				}
+			}
+			Err(e) => Err(anyhow!("Error submitting maker bond: {}", e)),
+		}
 	}
 }
 
