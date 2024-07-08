@@ -193,9 +193,9 @@ async fn poll_final_payout(
 	panic!("implement")
 }
 
-pub async fn api_server(coordinator: Coordinator) -> Result<()> {
-	let database = coordinator.coordinator_db;
-	let wallet = coordinator.coordinator_wallet;
+pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
+	let database = Arc::clone(&coordinator.coordinator_db);
+	let wallet = Arc::clone(&coordinator.coordinator_wallet);
 
 	let app = Router::new()
 		.route("/create-offer", post(receive_order))

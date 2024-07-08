@@ -15,8 +15,8 @@ use tokio::sync::Mutex;
 use wallet::*;
 
 pub struct Coordinator {
-	pub coordinator_db: CoordinatorDB,
-	pub coordinator_wallet: CoordinatorWallet,
+	pub coordinator_db: Arc<CoordinatorDB>,
+	pub coordinator_wallet: Arc<CoordinatorWallet>,
 }
 
 // populate .env with values before starting
@@ -25,13 +25,13 @@ async fn main() -> Result<()> {
 	dotenv().ok();
 
 	// Initialize the database pool
-	let coordinator = Coordinator {
-		coordinator_db: CoordinatorDB::init().await?,
-		coordinator_wallet: CoordinatorWallet::init()?,
-	};
+	let coordinator = Arc::new(Coordinator {
+		coordinator_db: Arc::new(CoordinatorDB::init().await?),
+		coordinator_wallet: Arc::new(CoordinatorWallet::init()?),
+	});
 
 	// begin monitoring bonds
-	monitor_bonds(&coordinator).await?;
+	tokio::spawn(monitor_bonds(Arc::clone(&coordinator)));
 
 	// Start the API server
 	api_server(coordinator).await?;

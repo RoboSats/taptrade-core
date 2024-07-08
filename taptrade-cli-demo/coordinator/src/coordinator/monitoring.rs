@@ -35,9 +35,9 @@ async fn punish_trader(
 	Ok(())
 }
 
-pub async fn monitor_bonds(coordinator: &Coordinator) -> Result<()> {
-	let coordinator_db = &coordinator.coordinator_db;
-	let coordinator_wallet = &coordinator.coordinator_wallet;
+pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
+	let coordinator_db = Arc::clone(&coordinator.coordinator_db);
+	let coordinator_wallet = Arc::clone(&coordinator.coordinator_wallet);
 
 	loop {
 		// fetch all bonds
@@ -55,7 +55,7 @@ pub async fn monitor_bonds(coordinator: &Coordinator) -> Result<()> {
 				{
 					"1" => {
 						dbg!("Punishing trader for bond violation: {:?}", e);
-						punish_trader(coordinator, bond.0, bond.1).await?;
+						punish_trader(&coordinator, bond.0, bond.1).await?;
 					}
 					"0" => {
 						dbg!("Punishment disabled, ignoring bond violation: {:?}", e);
