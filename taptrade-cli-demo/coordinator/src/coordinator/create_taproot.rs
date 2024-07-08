@@ -23,13 +23,12 @@ use std::sync::Arc;
 /// The main function in this module is `combine_and_broadcast`, which combines the PSBTs
 /// from the maker and taker, finalizes the transaction, and broadcasts it on the blockchain.
 pub async fn combine_and_broadcast() -> Result<(), Box<dyn std::error::Error>> {
-	let mut base_psbt =
-		PartiallySignedTransaction::from_str("TODO: insert the psbt created in step 3 here")?;
-	let signed_psbts = vec![
-		// TODO: Paste each participant's PSBT here
-		"makers_psbt",
-		"takers_psbt",
-	];
+    let mut base_psbt = PartiallySignedTransaction::from_str("TODO: insert the psbt created by the coordinator here")?;
+    let signed_psbts = vec![
+         // TODO: Paste each participant's PSBT here
+         "makers_psbt",
+         "takers_psbt",
+    ];
 
 	for psbt in signed_psbts {
 		let psbt = PartiallySignedTransaction::from_str(psbt)?;
@@ -104,17 +103,17 @@ async fn create_script(
 
 /// the provided keys, and `create_psbt`, which creates a PSBT from the descriptor
 /// Figure out how to put UTXO's
-pub async fn create_psbt(
-	descriptor: Descriptor<String>,
-) -> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
-	// Step 1: Create a BDK wallet
-	let wallet = Wallet::new(
-		// TODO: insert your descriptor here
-		"tr(youshouldputyourdescriptorhere)",
-		None,
-		bdk::bitcoin::Network::Testnet,
-		MemoryDatabase::new(),
-	)?;
+pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
+    let descriptor_str = descriptor.to_string(); // Step 2 and 3
+    // Step 1: Create a BDK wallet
+    let wallet = Wallet::new(
+        // TODO: insert your descriptor here
+        // "tr(youshouldputyourdescriptorhere)",
+        &descriptor_str,
+        None,
+        bdk::bitcoin::Network::Testnet,
+        MemoryDatabase::new()
+    )?;
 
 	// Step 2: Print the first address
 	info!(
