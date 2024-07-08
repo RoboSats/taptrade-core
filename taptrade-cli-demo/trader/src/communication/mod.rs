@@ -41,15 +41,20 @@ impl BondRequirementResponse {
 
 	pub fn fetch(trader_setup: &TraderSettings) -> Result<BondRequirementResponse> {
 		let client = reqwest::blocking::Client::new();
+		let endpoint = format!("{}{}", trader_setup.coordinator_endpoint, "/create-offer");
 		let res = client
-			.post(format!(
-				"{}{}",
-				trader_setup.coordinator_endpoint, "/create-offer"
-			))
+			.post(endpoint)
 			.json(&Self::_format_request(trader_setup))
-			.send()?
-			.json::<BondRequirementResponse>()?;
-		Ok(res)
+			.send()?;
+		let status_code = res.status();
+		match res.json::<BondRequirementResponse>() {
+			Ok(response) => Ok(response),
+			Err(e) => Err(anyhow!(
+				"Error fetching bond requirements: {}. Status code: {}",
+				e,
+				status_code
+			)),
+		}
 	}
 }
 
@@ -89,9 +94,21 @@ impl BondSubmissionRequest {
 				trader_setup.coordinator_endpoint, "/submit-maker-bond"
 			))
 			.json(&request)
-			.send()?
-			.json::<OrderActivatedResponse>()?;
-		Ok(res)
+			.send();
+		match res {
+			Ok(res) => {
+				let status_code = res.status();
+				match res.json::<OrderActivatedResponse>() {
+					Ok(response) => Ok(response),
+					Err(e) => Err(anyhow!(
+						"Error submitting maker bond: {}. Status code: {}",
+						e,
+						status_code
+					)),
+				}
+			}
+			Err(e) => Err(anyhow!("Error submitting maker bond: {}", e)),
+		}
 	}
 }
 

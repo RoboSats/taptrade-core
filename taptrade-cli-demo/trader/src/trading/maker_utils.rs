@@ -24,7 +24,7 @@ impl ActiveOffer {
 			maker_config,
 		)?;
 		Ok(ActiveOffer {
-			offer_id_hex: submission_result.order_id_hex,
+			offer_id_hex: submission_result.offer_id_hex,
 			used_musig_config: musig_data,
 			used_bond: bond,
 			expected_payout_address: payout_address,
