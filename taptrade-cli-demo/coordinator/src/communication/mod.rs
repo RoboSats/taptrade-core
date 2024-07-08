@@ -38,7 +38,7 @@ async fn receive_order(
 	database
 		.insert_new_maker_request(&order, &bond_requirements)
 		.await?;
-	println!("Coordinator received new offer: {:?}", order);
+	debug!("Coordinator received new offer: {:?}", order);
 	Ok(Json(bond_requirements))
 }
 
@@ -48,7 +48,7 @@ async fn submit_maker_bond(
 	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Response, AppError> {
-	println!("\n\nReceived maker bond: {:?}", payload);
+	debug!("\n\nReceived maker bond: {:?}", payload);
 	let bond_requirements = if let Ok(requirements) = database
 		.fetch_bond_requirements(&payload.robohash_hex)
 		.await
@@ -68,7 +68,7 @@ async fn submit_maker_bond(
 			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
 		}
 	}
-	println!("\nBond validation successful");
+	trace!("\nBond validation successful");
 	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 														 // create address for taker bond
 	let new_taker_bond_address = wallet.get_new_address().await.context(format!(
@@ -236,7 +236,7 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 	let port: u16 = env::var("PORT")
 		.unwrap_or_else(|_| "9999".to_string())
 		.parse()?;
-	println!("Listening on {}", port);
+	info!("Listening on {}", port);
 	let addr = SocketAddr::from(([127, 0, 0, 1], port));
 	let tcp = TcpListener::bind(&addr).await.unwrap();
 	axum::serve(tcp, app).await?;

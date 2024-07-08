@@ -252,7 +252,7 @@ impl CoordinatorDB {
 			)
 			.collect();
 		if available_offers.is_empty() {
-			println!("empty");
+			debug!("No available offers in db...");
 			return Ok(None);
 		}
 		Ok(Some(available_offers))

@@ -97,7 +97,7 @@ async fn create_script(
 
 	// Create the descriptor
 	let descriptor = Descriptor::new_tr(dummy_internal_key, Some(tap_tree))?;
-	println!("{}", descriptor);
+	debug!("{}", descriptor);
 
 	Ok(descriptor)
 }
@@ -117,7 +117,7 @@ pub async fn create_psbt(
 	)?;
 
 	// Step 2: Print the first address
-	println!(
+	info!(
 		"Deposit funds here: {:?}",
 		wallet.get_address(AddressIndex::New)?
 	);
@@ -129,7 +129,7 @@ pub async fn create_psbt(
 	// Step 4: Print balance
 	let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
 	wallet.sync(&blockchain, SyncOptions::default())?;
-	println!("{:#?}", wallet.get_balance()?);
+	info!("{:#?}", wallet.get_balance()?);
 
 	let maker_utxos = vec![/* UTXO details here */];
 	let taker_utxos = vec![/* UTXO details here */];
@@ -149,7 +149,7 @@ pub async fn create_psbt(
 		.policy_path(BTreeMap::new(), KeychainKind::External);
 
 	let (psbt, tx_details) = tx_builder.finish()?;
-	println!("PSBT: {:?}", psbt);
+	debug!("PSBT: {:?}", psbt);
 	Ok(psbt)
 }
 
@@ -165,7 +165,7 @@ fn taker_unresponsive(
 ) -> Result<(), Box<dyn std::error::Error>> {
 	// Maker signs the PSBT
 	let maker_signed_psbt = wallet.sign(&mut psbt.clone(), SignOptions::default())?;
-	println!("Maker signed PSBT: {:?}", maker_signed_psbt);
+	debug!("Maker signed PSBT: {:?}", maker_signed_psbt);
 
 	// If taker is unresponsive, coordinator signs using alternative path
 	let taker_responsive = false; // Assume taker is unresponsive
@@ -187,7 +187,7 @@ fn taker_unresponsive(
 
 		let (coordinator_psbt, _details) = coordinator_tx_builder.finish()?;
 		let coordinator_signed_psbt = wallet.sign(&mut coordinator_psbt, SignOptions::default())?;
-		println!("Coordinator signed PSBT: {:?}", coordinator_signed_psbt);
+		debug!("Coordinator signed PSBT: {:?}", coordinator_signed_psbt);
 	}
 	Ok(())
 }

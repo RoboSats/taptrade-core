@@ -9,6 +9,7 @@ use coordinator::monitoring::monitor_bonds;
 use coordinator::monitoring::*;
 use database::CoordinatorDB;
 use dotenv::dotenv;
+use log::{debug, error, info, trace, warn};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;
@@ -22,6 +23,9 @@ pub struct Coordinator {
 // populate .env with values before starting
 #[tokio::main]
 async fn main() -> Result<()> {
+	env_logger::builder()
+		.filter_level(log::LevelFilter::Info)
+		.init();
 	dotenv().ok();
 
 	// Initialize the database pool

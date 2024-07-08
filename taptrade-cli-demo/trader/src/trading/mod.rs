@@ -3,6 +3,7 @@ pub mod taker_utils;
 pub mod utils;
 
 use self::utils::ActiveOffer;
+use super::*;
 use crate::{
 	cli::TraderSettings,
 	communication::api::{
@@ -16,7 +17,6 @@ use crate::{
 		TradingWallet,
 	},
 };
-use anyhow::Result;
 use bdk::{
 	bitcoin::{amount::serde::as_btc::deserialize, psbt::PartiallySignedTransaction},
 	database::MemoryDatabase,
@@ -28,7 +28,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let wallet = TradingWallet::load_wallet(maker_config)?; // initialize the wallet with xprv
 
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
-	dbg!(&offer);
+	info!("Maker offer created: {:#?}", &offer);
 
 	let mut escrow_contract_psbt = offer.wait_until_taken(maker_config)?;
 	wallet
@@ -47,10 +47,10 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	if offer.fiat_confirmation_cli_input(maker_config)? {
 		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&offer.offer_id_hex, maker_config)?;
-		println!("Waiting for other party to confirm the trade.");
+		info!("Waiting for other party to confirm the trade.");
 		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	} else {
-		println!("Trade failed.");
+		error!("Trade failed.");
 		panic!("Escrow to be implemented!");
 	}
 	Ok(())

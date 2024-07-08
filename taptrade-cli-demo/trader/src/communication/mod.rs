@@ -1,6 +1,7 @@
 pub mod api;
 pub mod taker_requests;
 
+use super::*;
 use crate::{
 	cli::{OfferType, TraderSettings},
 	trading::utils::ActiveOffer,
@@ -40,13 +41,19 @@ impl BondRequirementResponse {
 	}
 
 	pub fn fetch(trader_setup: &TraderSettings) -> Result<BondRequirementResponse> {
+		trace!("Fetching bond requirements from coordinator. (create-offer)");
 		let client = reqwest::blocking::Client::new();
 		let endpoint = format!("{}{}", trader_setup.coordinator_endpoint, "/create-offer");
-		let res = client
+		let res = match client
 			.post(endpoint)
 			.json(&Self::_format_request(trader_setup))
-			.send()?;
+			.send()
+		{
+			Ok(res) => res,
+			Err(e) => return Err(anyhow!("Error calling /create-offer: {}", e)),
+		};
 		let status_code = res.status();
+		debug!("/create-offer Response status code: {}", status_code);
 		match res.json::<BondRequirementResponse>() {
 			Ok(response) => Ok(response),
 			Err(e) => Err(anyhow!(
