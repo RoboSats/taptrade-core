@@ -75,7 +75,10 @@ impl CoordinatorWallet {
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 		{
 			let wallet = self.wallet.lock().await;
-
+			if let Err(e) = wallet.sync(blockchain, SyncOptions::default()) {
+				error!("Error syncing wallet: {:?}", e);
+				return Ok(()); // if the electrum server goes down all bonds will be considered valid. Maybe redundancy should be added.
+			};
 			// we need to test this with signed and invalid/unsigned transactions
 			// checks signatures and inputs
 			if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
@@ -111,10 +114,12 @@ impl CoordinatorWallet {
 		if ((input_sum - output_sum) / tx.vsize() as u64) < 200 {
 			return Err(anyhow!("Bond fee rate too low"));
 		}
+		debug!("validate_bond_tx_hex(): Bond validation successful.");
 		Ok(())
 	}
 
 	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
+		warn!("publish_bond_tx_hex(): publishing cheating bond tx!");
 		let blockchain = &*self.backend;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 

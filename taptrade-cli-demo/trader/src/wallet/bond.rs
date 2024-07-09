@@ -7,6 +7,7 @@ use bdk::{
 	database::MemoryDatabase, wallet::coin_selection::BranchAndBoundCoinSelection, FeeRate,
 	SignOptions, Wallet,
 };
+use log::debug;
 use serde::de::value;
 use std::str::FromStr;
 
@@ -29,6 +30,7 @@ impl Bond {
 		bond_target: &BondRequirementResponse,
 		trader_input: &TraderSettings,
 	) -> Result<PartiallySignedTransaction> {
+		debug!("Assembling bond transaction");
 		// parse bond locking address as Address struct and verify network is testnet
 		let address: Address =
 			Address::from_str(&bond_target.bond_address)?.require_network(Network::Testnet)?;
@@ -45,15 +47,16 @@ impl Bond {
 
 			builder
 				.add_recipient(address.script_pubkey(), bond_target.locking_amount_sat)
-				.do_not_spend_change()
+				.do_not_spend_change() // reconsider if we need this?
 				.fee_rate(FeeRate::from_sat_per_vb(201.0));
 
 			builder.finish()?
 		};
-		let finalized = wallet.sign(&mut psbt, SignOptions::default())?;
-		if !finalized {
-			return Err(anyhow!("Transaction could not be finalized"));
-		};
+		debug!("Signing bond transaction.");
+		// let finalized = wallet.sign(&mut psbt, SignOptions::default())?;  // deactivated to test bond validation
+		// if !finalized {
+		// 	return Err(anyhow!("Transaction could not be finalized"));
+		// };
 		Ok(psbt)
 	}
 }

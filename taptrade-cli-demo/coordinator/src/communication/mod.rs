@@ -25,10 +25,11 @@ async fn receive_order(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
 	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
 	Json(order): Json<OrderRequest>,
-) -> Result<Json<BondRequirementResponse>, AppError> {
+) -> Result<Response, AppError> {
 	debug!("{:#?}", &order);
 	if order.sanity_check().is_err() {
-		return Err(AppError(anyhow!("Invalid order request")));
+		warn!("Received order failed sanity check");
+		return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
 	}
 	let bond_requirements = BondRequirementResponse {
 		bond_address: wallet.get_new_address().await?,
@@ -39,7 +40,7 @@ async fn receive_order(
 		.insert_new_maker_request(&order, &bond_requirements)
 		.await?;
 	debug!("Coordinator received new offer: {:?}", order);
-	Ok(Json(bond_requirements))
+	Ok(Json(bond_requirements).into_response())
 }
 
 /// receives the maker bond, verifies it and moves to offer to the active table (orderbook)
