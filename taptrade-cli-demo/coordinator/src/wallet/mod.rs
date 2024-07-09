@@ -74,6 +74,7 @@ impl CoordinatorWallet {
 		let blockchain = &*self.backend;
 		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
 		{
+			debug!("Called validate_bond_tx_hex()");
 			let wallet = self.wallet.lock().await;
 			if let Err(e) = wallet.sync(blockchain, SyncOptions::default()) {
 				error!("Error syncing wallet: {:?}", e);
