@@ -61,7 +61,7 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 	let mut available_offers = PublicOffers::fetch(taker_config)?;
 
 	while available_offers.offers.is_none() {
-		println!("No offers available, fetching again in 10 sec.");
+		debug!("No offers available, fetching again in 10 sec.");
 		thread::sleep(Duration::from_secs(10));
 		available_offers = PublicOffers::fetch(taker_config)?;
 	}
@@ -74,12 +74,12 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 	if accepted_offer.fiat_confirmation_cli_input(taker_config)? {
 		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&accepted_offer.offer_id_hex, taker_config)?;
-		println!("Waiting for other party to confirm the trade.");
+		debug!("Waiting for other party to confirm the trade.");
 		// pull for other parties confirmation, then receive the transaction to create MuSig signature for (keyspend) to payout address
 		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(taker_config, &accepted_offer)?;
 	// here we need to handle if the other party is not cooperating
 	} else {
-		println!("Trade failed.");
+		error!("Trade failed.");
 		panic!("Escrow to be implemented!");
 	}
 	Ok(())
