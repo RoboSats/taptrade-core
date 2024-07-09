@@ -24,10 +24,11 @@ pub struct Coordinator {
 #[tokio::main]
 async fn main() -> Result<()> {
 	env_logger::builder()
+		.filter_module("coordinator", log::LevelFilter::Debug)
 		.filter_level(log::LevelFilter::Info)
 		.init();
 	dotenv().ok();
-
+	debug!("Starting coordinator");
 	// Initialize the database pool
 	let coordinator = Arc::new(Coordinator {
 		coordinator_db: Arc::new(CoordinatorDB::init().await?),

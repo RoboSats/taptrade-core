@@ -7,7 +7,7 @@ impl PublicOffers {
 	pub fn fetch(taker_config: &TraderSettings) -> Result<PublicOffers> {
 		let amount = taker_config.trade_type.value();
 		let request = OffersRequest {
-			buy_offers: taker_config.trade_type.is_buy_order(),
+			buy_offers: !taker_config.trade_type.is_buy_order(),
 			amount_min_sat: (amount as f64 * 0.9).round() as u64, // range can be made variable in production
 			amount_max_sat: (amount as f64 * 1.1).round() as u64,
 		};

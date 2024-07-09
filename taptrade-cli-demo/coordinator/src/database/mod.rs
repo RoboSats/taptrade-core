@@ -197,7 +197,7 @@ impl CoordinatorDB {
 			bond_address: fetched_values.5,
 			bond_amount_sat: fetched_values.6 as u64,
 		};
-		info!(
+		debug!(
 			"Deleted offer from maker_requests table. Fetched offer: {:#?}",
 			awaiting_bond_offer
 		);
@@ -214,7 +214,7 @@ impl CoordinatorDB {
 			.fetch_and_delete_offer_from_bond_table(&data.robohash_hex)
 			.await?;
 
-		info!(
+		debug!(
 			"DATABASE: Moving maker offer to active trades table. Bond data: {:#?}",
 			data
 		);
@@ -238,6 +238,7 @@ impl CoordinatorDB {
 		.bind(taker_bond_address)
 		.execute(&*self.db_pool)
 		.await?;
+
 		debug!("\nDATABASE: moved offer to active trades\n");
 		Ok(remaining_offer_information.offer_duration_ts)
 	}
@@ -246,7 +247,7 @@ impl CoordinatorDB {
 		&self,
 		requested_offer: &OffersRequest,
 	) -> Result<Option<Vec<PublicOffer>>> {
-		info!(
+		debug!(
 			"Fetching suitable offers from db. Specification: {:#?}",
 			requested_offer
 		);
@@ -271,7 +272,7 @@ impl CoordinatorDB {
 			)
 			.collect();
 		if available_offers.is_empty() {
-			info!("No available offers in db...");
+			debug!("No available offers in db...");
 			return Ok(None);
 		}
 		Ok(Some(available_offers))
