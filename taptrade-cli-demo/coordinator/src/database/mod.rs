@@ -281,18 +281,19 @@ impl CoordinatorDB {
 	pub async fn fetch_taker_bond_requirements(
 		&self,
 		offer_id_hex: &String,
-	) -> Result<BondRequirementResponse> {
+	) -> Result<BondRequirements> {
 		let taker_bond_requirements = sqlx::query(
-			"SELECT taker_bond_address, bond_amount_sat FROM active_maker_offers WHERE offer_id = ?",
+			"SELECT taker_bond_address, bond_amount_sat, amount_sat FROM active_maker_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
 		.fetch_one(&*self.db_pool)
 		.await?;
 
-		Ok(BondRequirementResponse {
+		Ok(BondRequirements {
 			bond_address: taker_bond_requirements.try_get("taker_bond_address")?,
 			locking_amount_sat: taker_bond_requirements.try_get::<i64, _>("bond_amount_sat")?
 				as u64,
+			min_input_sum_sat: taker_bond_requirements.try_get::<i64, _>("amount_sat")? as u64,
 		})
 	}
 

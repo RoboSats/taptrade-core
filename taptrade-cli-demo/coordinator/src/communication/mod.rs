@@ -26,7 +26,7 @@ async fn receive_order(
 	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
 	Json(order): Json<OrderRequest>,
 ) -> Result<Json<BondRequirementResponse>, AppError> {
-	dbg!(&order);
+	debug!("{:#?}", &order);
 	if order.sanity_check().is_err() {
 		return Err(AppError(anyhow!("Invalid order request")));
 	}
@@ -64,11 +64,11 @@ async fn submit_maker_bond(
 	{
 		Ok(()) => (),
 		Err(e) => {
-			dbg!(e);
+			error!("{}", e);
 			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
 		}
 	}
-	trace!("\nBond validation successful");
+	debug!("\nBond validation successful");
 	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 														 // create address for taker bond
 	let new_taker_bond_address = wallet.get_new_address().await.context(format!(
@@ -117,22 +117,26 @@ async fn submit_taker_bond(
 	let bond_requirements = database
 		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
 		.await;
-	// match bond_requirements {
-	// 	Ok(bond_requirements) => {
-	// 		if !wallet
-	// 			.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
-	// 			.await?
-	// 		{
-	// 			dbg!("Taker Bond validation failed");
-	// 			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
-	// 		}
-	// 	}
-	// 	Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
-	// }
+	match bond_requirements {
+		Ok(bond_requirements) => {
+			match wallet
+				.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
+				.await
+			{
+				Ok(()) => (),
+				Err(e) => {
+					warn!("{}", e);
+					return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+				}
+			}
+		}
+		Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
+	}
+	debug!("\nTaker bond validation successful");
 
+	panic!("Trade contract PSBT not implemented!");
 	let trade_contract_psbt_taker = "".to_string(); // implement psbt
 	let trade_contract_psbt_maker = "".to_string(); // implement psbt
-	panic!("Trade contract PSBT not implemented!");
 
 	database
 		.add_taker_info_and_move_table(
