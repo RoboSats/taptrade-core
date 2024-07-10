@@ -196,7 +196,7 @@ async fn create_script(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bdk::bitcoin::bip32::ExtendedPrivKey;
+    use bdk::{bitcoin::bip32::ExtendedPrivKey, descriptor};
     use bitcoin::consensus::deserialize;
     use bdk::blockchain::ElectrumBlockchain;
     use bdk::template::Bip86;
@@ -204,13 +204,43 @@ mod tests {
     use anyhow::{Context, Error};
     use bdk::sled;
 
+    async fn create_descriptor() -> Result<Descriptor<String>, Box<dyn std::error::Error>>{
+    let coordinator_pub = "0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082";
+    let coordinator_xpub = "xpub6C3kuZk67kPgw2evdJ72ckEARaqjwtx62KZY4t4YR6AsqJrsFSnDNm5sh9FkfdHLcXNWgcwAZs2prhNj23xG5Ui1pwyW1mtcGfEtBQdmima";
+    let maker_pub = "02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe";
+    let taker_pub = "0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0";
 
+    let result = create_script(&coordinator_pub, maker_pub, taker_pub).await;
+    match result {
+        Ok(descriptor) => {
+            println!("{}", descriptor);
+            Ok(descriptor)
+        },
+        Err(e) => {
+            println!("Error: {}", e);
+            Err(e)
+        },
+    }
+}
 // https://github.com/danielabrozzoni/multisigs_and_carrots/tree/master
     #[tokio::test]
     async fn test_create_script()-> Result<(), Error>{
+        // Taking public key using https://iancoleman.io/bip39/ that generates addresses and respective public key by the seed phrase of wallet (Using sparrow wallet)
         
-
-        // let wallet_xprv = ExtendedPrivKey::from_str(coordinator_xprv,
+        let result = create_descriptor().await;
+        match &result{
+            Ok(descriptor) => {
+                println!("{}", descriptor);
+            },
+            Err(e) => println!("Error: {}", e),
+        }
+        assert!(result.is_ok());
+        Ok(())
+        // tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum
+    }
+    
+    async fn create_wallet(){
+         // let wallet_xprv = ExtendedPrivKey::from_str(coordinator_xprv,
 		// )?;
 		// let backend = ElectrumBlockchain::from(bdk::electrum_client::Client::new(
 		// 	&env::var("ELECTRUM_BACKEND")
@@ -240,24 +270,7 @@ mod tests {
 		// coordinator_wallet.sync(&backend, SyncOptions::default())?;
 		// dbg!("Balance: {} SAT", wallet.get_balance()?);
 
-
-        // Taking public key using https://iancoleman.io/bip39/ that generates addresses and respective public key by the seed phrase of wallet (Using sparrow wallet)
-        let coordinator_pub= "0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082";
-        let coordinator_xpub= "xpub6C3kuZk67kPgw2evdJ72ckEARaqjwtx62KZY4t4YR6AsqJrsFSnDNm5sh9FkfdHLcXNWgcwAZs2prhNj23xG5Ui1pwyW1mtcGfEtBQdmima";
-        let maker_pub = "02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe";
-        let taker_pub = "0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0";
-
-        let result = create_script(&coordinator_pub, maker_pub, taker_pub).await;
-        match result {
-            Ok(descriptor) => println!("{}", descriptor),
-            Err(e) => println!("Error: {}", e),
-        }
-        // assert!(result.is_ok());
-        Ok(())
-        // tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum
-
     }
-    
     // #[tokio::test]
     // async fn test_combine_and_broadcast() {
     //     // Create a base PSBT
