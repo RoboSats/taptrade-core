@@ -68,7 +68,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	// also check if inputs are confirmed already
 	pub async fn validate_bond_tx_hex(
 		&self,
-		bond: &String,
+		bond: &str,
 		requirements: &BondRequirements,
 	) -> Result<()> {
 		let input_sum: u64;
@@ -150,7 +150,7 @@ mod tests {
 	// use tokio::test;
 	// use bitcoincore_rpc_json::GetRawTransactionResult;
 
-	async fn new_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
+	async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 		let backend = ElectrumBlockchain::from(Client::new("ssl://mempool.space:40002").unwrap());
 
 		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
@@ -171,7 +171,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_valid_bond_tx() {
-		let test_wallet = new_wallet("xprv9s21ZrQH143K2XqaJ5boFeHgrJTsMgfzrgrsFXdk3UBYtLLhUkCj2QKPmqYpC92zd6bv46Nh8QxXmjH2MwJWVLQzfC6Bv1Tbeoz28nXjeM2").await;
+		let test_wallet = new_test_wallet("xprv9s21ZrQH143K2XqaJ5boFeHgrJTsMgfzrgrsFXdk3UBYtLLhUkCj2QKPmqYpC92zd6bv46Nh8QxXmjH2MwJWVLQzfC6Bv1Tbeoz28nXjeM2").await;
 		let bond = "020000000001010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb380140000000000010000000250c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c653236aa900000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c014010e19c8b915624bd4aa0ba4d094d26ca031a6f2d8f23fe51372c7ea50e05f3caf81c7e139f6fed3e9ffd20c03d79f78542acb3d8aed664898f1c4b2909c2188c00000000";
 		let requirements = BondRequirements {
 			min_input_sum_sat: 100000,
@@ -186,18 +186,14 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_invalid_bond_tx_low_input_sum() {
-		let test_wallet = TestWallet::new().await;
-		let bond = "020000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff0502c5080101ffffffff0200f2052a010000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000";
+		let test_wallet = new_test_wallet("xprv9s21ZrQH143K2XqaJ5boFeHgrJTsMgfzrgrsFXdk3UBYtLLhUkCj2QKPmqYpC92zd6bv46Nh8QxXmjH2MwJWVLQzfC6Bv1Tbeoz28nXjeM2").await;
+		let bond = "020000000001010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb380140000000000010000000250c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c653236aa900000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c014010e19c8b915624bd4aa0ba4d094d26ca031a6f2d8f23fe51372c7ea50e05f3caf81c7e139f6fed3e9ffd20c03d79f78542acb3d8aed664898f1c4b2909c2188c00000000";
 		let requirements = BondRequirements {
-			min_input_sum_sat: 1000000, // Set higher than the actual input sum
+			min_input_sum_sat: 2000000, // Set higher than the actual input sum
 			locking_amount_sat: 50000,
-			bond_address: Address::from_str("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx").unwrap(),
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
 		};
-
-		test_wallet
-			.backend
-			.expect_get_tx()
-			.returning(|_| Ok(Some(Transaction::default())));
 
 		let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
 		assert!(result.is_err());
@@ -209,18 +205,14 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_invalid_bond_tx_low_output_sum() {
-		let test_wallet = TestWallet::new().await;
-		let bond = "020000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff0502c5080101ffffffff0200f2052a010000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000";
+		let test_wallet = new_test_wallet("xprv9s21ZrQH143K2XqaJ5boFeHgrJTsMgfzrgrsFXdk3UBYtLLhUkCj2QKPmqYpC92zd6bv46Nh8QxXmjH2MwJWVLQzfC6Bv1Tbeoz28nXjeM2").await;
+		let bond = "020000000001010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb380140000000000010000000250c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c653236aa900000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c014010e19c8b915624bd4aa0ba4d094d26ca031a6f2d8f23fe51372c7ea50e05f3caf81c7e139f6fed3e9ffd20c03d79f78542acb3d8aed664898f1c4b2909c2188c00000000";
 		let requirements = BondRequirements {
 			min_input_sum_sat: 100000,
 			locking_amount_sat: 1000000, // Set higher than the actual output sum
-			bond_address: Address::from_str("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx").unwrap(),
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
 		};
-
-		test_wallet
-			.backend
-			.expect_get_tx()
-			.returning(|_| Ok(Some(Transaction::default())));
 
 		let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
 		assert!(result.is_err());
@@ -232,33 +224,16 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_invalid_bond_tx_low_fee_rate() {
-		let test_wallet = TestWallet::new().await;
-		let bond = "020000000001010000000000000000000000000000000000000000000000000000000000000000ffffffff0502c5080101ffffffff0200f2052a010000001976a914d0c59903c5bac2868760e90fd521a4665aa7652088ac0000000000000000266a24aa21a9ede2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf90120000000000000000000000000000000000000000000000000000000000000000000000000";
+		let test_wallet = new_test_wallet("xprv9s21ZrQH143K2XqaJ5boFeHgrJTsMgfzrgrsFXdk3UBYtLLhUkCj2QKPmqYpC92zd6bv46Nh8QxXmjH2MwJWVLQzfC6Bv1Tbeoz28nXjeM2").await;
+		let bond = "020000000001010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb380140000000000fdffffff0259b00000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c50c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c6532360140bee11f7f644cf09d5031683203bbe61109090b1e4be4626e13de7a889d6e5d2f154233a2bfaf9cb983f31ccf01b1be5db2cd37bb0cb9a395e2632bc50105b4583f860000";
 		let requirements = BondRequirements {
 			min_input_sum_sat: 100000,
 			locking_amount_sat: 50000,
-			bond_address: Address::from_str("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx").unwrap(),
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
 		};
 
-		test_wallet
-			.backend
-			.expect_get_tx()
-			.returning(|_| Ok(Some(Transaction::default())));
-
-		// Modify the transaction to have a very low fee
-		let mut tx: Transaction = deserialize(&hex::decode(bond).unwrap()).unwrap();
-		tx.output[0].value = tx
-			.input_sum(
-				&*test_wallet.backend,
-				&*test_wallet.wallet.lock().await.database(),
-			)
-			.unwrap() - 1;
-
-		let low_fee_bond = hex::encode(serialize(&tx));
-
-		let result = test_wallet
-			.validate_bond_tx_hex(&low_fee_bond, &requirements)
-			.await;
+		let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
 		assert!(result.is_err());
 		assert!(result
 			.unwrap_err()
