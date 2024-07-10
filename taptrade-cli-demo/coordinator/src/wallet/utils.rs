@@ -8,6 +8,7 @@ use bdk::{
 pub trait BondTx {
 	fn input_sum<D: Database, B: GetTx>(&self, blockchain: &B, db: &D) -> Result<u64>;
 	fn bond_output_sum(&self, bond_address: &str) -> Result<u64>;
+	fn all_output_sum(&self) -> u64;
 }
 
 impl BondTx for Transaction {
@@ -49,5 +50,9 @@ impl BondTx for Transaction {
 			}
 		}
 		Err(anyhow!("No output to bond address in transaction"))
+	}
+
+	fn all_output_sum(&self) -> u64 {
+		self.output.iter().map(|output| output.value).sum()
 	}
 }

@@ -2,6 +2,7 @@ use super::*;
 #[cfg(test)]
 use anyhow::Ok;
 
+#[allow(dead_code)]
 async fn create_coordinator() -> Result<database::CoordinatorDB, anyhow::Error> {
 	// Set up the in-memory database
 	env::set_var("DATABASE_PATH", ":memory:");
@@ -370,7 +371,7 @@ async fn test_fetch_and_delete_offer_from_public_offers_table() -> Result<()> {
 	// Insert a test entry into active_maker_offers
 	let offer_id_hex = "offer_id_1";
 	let robohash = hex::decode("a3f1f1f0e2f3f4f5").unwrap(); // Example robohash
-	let is_buy_order = true;
+	let is_buy_order = bool_to_sql_int(true);
 	let amount_sat = 1000;
 	let bond_ratio = 50;
 	let offer_duration_ts = 1234567890;
@@ -408,7 +409,7 @@ async fn test_fetch_and_delete_offer_from_public_offers_table() -> Result<()> {
 	// Verify the result
 	assert_eq!(result.offer_id, offer_id_hex);
 	assert_eq!(result.robohash_maker, robohash);
-	assert_eq!(result.is_buy_order, is_buy_order);
+	assert_eq!(bool_to_sql_int(result.is_buy_order), is_buy_order);
 	assert_eq!(result.amount_sat, amount_sat);
 	assert_eq!(result.bond_ratio, bond_ratio);
 	assert_eq!(result.offer_duration_ts, offer_duration_ts);
