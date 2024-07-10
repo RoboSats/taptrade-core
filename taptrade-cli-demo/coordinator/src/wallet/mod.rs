@@ -66,6 +66,8 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
 	// also check if inputs are confirmed already
+	// bdk::blockchain::compact_filters::Mempool::iter_txs() -> Vec(Tx) to check if contained in mempool
+	// blockchain::get_tx to get input
 	pub async fn validate_bond_tx_hex(
 		&self,
 		bond: &str,
