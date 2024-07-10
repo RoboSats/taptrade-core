@@ -74,7 +74,7 @@ async fn create_script(
 		maker_key, taker_key
 	);
 	// Compile the policies
-	// let compiled_a = Concrete::<String>::from_str(&script_a)?.compile()?;
+	// let compiled_a = Concrete::<String>::from_str(&script_a)?.compile::<Tap>()?;
 	// let compiled_b = Concrete::<String>::from_str(&script_b)?.compile()?;
     let compiled_c = Concrete::<String>::from_str(&script_c)?.compile::<Tap>()?;
 	let compiled_d = Concrete::<String>::from_str(&script_d)?.compile::<Tap>()?;
@@ -89,15 +89,12 @@ async fn create_script(
 	// let tap_leaf_e = TapTree::Leaf(Arc::new(compiled_e));
 	// let tap_leaf_f = TapTree::Leaf(Arc::new(compiled_f));
 
-    // println!("tap_leaf_c is {:}", tap_leaf_c); 
 
-	// Create the TapTree (example combining leaves, adjust as necessary)
+	// Create the TapTree (example combining leaves, adjust as necessary), will be used for Script Path Spending (Alternative Spending Paths) in the descriptor
 	let tap_tree = TapTree::Tree(Arc::new(tap_leaf_c), Arc::new(tap_leaf_d));
 
-    // println!("taptree is {:?}", tap_tree);
-	// Define a dummy internal key (replace with an actual key)
-	let dummy_internal_key =
-		"020202020202020202020202020202020202020202020202020202020202020202".to_string();
+	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
+	let dummy_internal_key = coordinator_key.to_string();
 
 	// Create the descriptor
 	let descriptor = Descriptor::new_tr(dummy_internal_key, Some(tap_tree))?;
@@ -212,13 +209,6 @@ mod tests {
     #[tokio::test]
     async fn test_create_script()-> Result<(), Error>{
         
-        // Taking public key using https://iancoleman.io/bip39/ that generates addresses and respective public key by the seed phrase of wallet (Using sparrow wallet)
-        let coordinator_pub= "0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082";
-        let coordinator_xpub= "xpub6C3kuZk67kPgw2evdJ72ckEARaqjwtx62KZY4t4YR6AsqJrsFSnDNm5sh9FkfdHLcXNWgcwAZs2prhNj23xG5Ui1pwyW1mtcGfEtBQdmima";
-        let maker_pub = "02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe";
-        let taker_pub = "0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0";
-
-        
 
         // let wallet_xprv = ExtendedPrivKey::from_str(coordinator_xprv,
 		// )?;
@@ -250,6 +240,13 @@ mod tests {
 		// coordinator_wallet.sync(&backend, SyncOptions::default())?;
 		// dbg!("Balance: {} SAT", wallet.get_balance()?);
 
+
+        // Taking public key using https://iancoleman.io/bip39/ that generates addresses and respective public key by the seed phrase of wallet (Using sparrow wallet)
+        let coordinator_pub= "0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082";
+        let coordinator_xpub= "xpub6C3kuZk67kPgw2evdJ72ckEARaqjwtx62KZY4t4YR6AsqJrsFSnDNm5sh9FkfdHLcXNWgcwAZs2prhNj23xG5Ui1pwyW1mtcGfEtBQdmima";
+        let maker_pub = "02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe";
+        let taker_pub = "0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0";
+
         let result = create_script(&coordinator_pub, maker_pub, taker_pub).await;
         match result {
             Ok(descriptor) => println!("{}", descriptor),
@@ -257,6 +254,8 @@ mod tests {
         }
         // assert!(result.is_ok());
         Ok(())
+        // tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum
+
     }
     
     // #[tokio::test]
