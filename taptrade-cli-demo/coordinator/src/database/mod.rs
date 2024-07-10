@@ -1,8 +1,7 @@
 pub mod db_tests;
 
 use anyhow::Context;
-use axum::routing::trace;
-use futures_util::{lock, StreamExt};
+use futures_util::StreamExt;
 
 use super::*;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
@@ -301,16 +300,16 @@ impl CoordinatorDB {
 		&self,
 		offer_id_hex: &str,
 	) -> Result<AwaitingTakerOffer> {
-		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, i32, i64, String, i64, String, String, String, String)> (
+		let fetched_values = sqlx::query_as::<_, (Vec<u8>, i32, i64, i32, i64, String, i64, String, String, String, String)> (
 			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address,
-			musig_pub_nonce_hex, musig_pubkey_hex FROM active_maker_offers WHERE <unique_identifier_column> = ?",
+			musig_pub_nonce_hex, musig_pubkey_hex FROM active_maker_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
 		.fetch_one(&*self.db_pool)
 		.await?;
 
 		// Delete the database entry.
-		sqlx::query("DELETE FROM active_maker_offers WHERE <unique_identifier_column> = ?")
+		sqlx::query("DELETE FROM active_maker_offers WHERE offer_id = ?")
 			.bind(offer_id_hex)
 			.execute(&*self.db_pool)
 			.await?;
@@ -318,7 +317,7 @@ impl CoordinatorDB {
 		Ok(AwaitingTakerOffer {
 			offer_id: offer_id_hex.to_string(),
 			robohash_maker: fetched_values.0,
-			is_buy_order: fetched_values.1,
+			is_buy_order: fetched_values.1 != 0,
 			amount_sat: fetched_values.2,
 			bond_ratio: fetched_values.3,
 			offer_duration_ts: fetched_values.4,
