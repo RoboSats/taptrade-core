@@ -116,7 +116,6 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			return Err(anyhow!("Bond fee rate too low"));
 		}
 		debug!("validate_bond_tx_hex(): Bond validation successful.");
-		panic!("fix function");
 		Ok(())
 	}
 
@@ -165,6 +164,21 @@ mod tests {
 			wallet: Arc::new(Mutex::new(wallet)),
 			backend: Arc::new(backend),
 		}
+	}
+
+	#[tokio::test]
+	async fn test_transaction_without_signature() {
+		panic!("Not implemented");
+	}
+
+	#[tokio::test]
+	async fn test_transaction_with_invalid_signature() {
+		panic!("Not implemented");
+	}
+
+	#[tokio::test]
+	async fn test_transaction_with_spent_input() {
+		panic!("Not implemented");
 	}
 
 	#[tokio::test]
