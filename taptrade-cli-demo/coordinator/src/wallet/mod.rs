@@ -168,17 +168,54 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_transaction_without_signature() {
-		panic!("Not implemented");
+		let test_wallet = new_test_wallet("tprv8ZgxMBicQKsPdHuCSjhQuSZP1h6ZTeiRqREYS5guGPdtL7D1uNLpnJmb2oJep99Esq1NbNZKVJBNnD2ZhuXSK7G5eFmmcx73gsoa65e2U32").await;
+		let bond_without_signature = "02000000010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb380140000000000fdffffff02998d0000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c50c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c6532364f860000";
+		let requirements = BondRequirements {
+			min_input_sum_sat: 51000,
+			locking_amount_sat: 50000,
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
+		};
+
+		let result = test_wallet
+			.validate_bond_tx_hex(&bond_without_signature, &requirements)
+			.await;
+		assert!(result.is_err());
 	}
 
 	#[tokio::test]
 	async fn test_transaction_with_invalid_signature() {
-		panic!("Not implemented");
+		let test_wallet = new_test_wallet("tprv8ZgxMBicQKsPdHuCSjhQuSZP1h6ZTeiRqREYS5guGPdtL7D1uNLpnJmb2oJep99Esq1NbNZKVJBNnD2ZhuXSK7G5eFmmcx73gsoa65e2U32").await;
+		// assembled bond tx but with the signature of a different bond = invalid
+		let bond_with_invalid_signature = "020000000001010127a9d96655011fca55dc2667f30b98655e46da98d0f84df676b53d7fb3801400000000001900000002aa900000000000002251207dd0d1650cdc22537709e35620f3b5cc3249b305bda1209ba4e5e01bc3ad2d8c50c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c65323601401fddcc681a1d0324c8fdeabbc08a3b06c26741872363c0ddfc82f15b6abe43d37815bcdc2ce1fb2f70cac426f7fb269d322ac6a621886208d0c625335bba670800000000";
+		let requirements = BondRequirements {
+			min_input_sum_sat: 51000,
+			locking_amount_sat: 50000,
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
+		};
+
+		let result = test_wallet
+			.validate_bond_tx_hex(&bond_with_invalid_signature, &requirements)
+			.await;
+		assert!(result.is_err());
 	}
 
 	#[tokio::test]
-	async fn test_transaction_with_spent_input() {
-		panic!("Not implemented");
+	async fn test_bond_with_spent_input() {
+		let test_wallet = new_test_wallet("tprv8ZgxMBicQKsPdHuCSjhQuSZP1h6ZTeiRqREYS5guGPdtL7D1uNLpnJmb2oJep99Esq1NbNZKVJBNnD2ZhuXSK7G5eFmmcx73gsoa65e2U32").await;
+		let bond_with_spent_input = "02000000000101f7d992795b0b43227ea83e296a7c2a91771ede3ef54f1eb5664393c79b9399080100000000fdffffff0250c3000000000000225120a12e5d145a4a3ab43f6cc1188435e74f253eace72bd986f1aaf780fd0c653236abc6010000000000225120b83c64b440203fb74a0c672cd829f387b957129835dd3b5c4e33fc71a146b3ae0140afdafbae5b76217f469790b211d7fbda427e5b4379c4603e9ae08c9ef5aaae30bfecfc16e5f636c737bea8e0e27974854d1cd0d094ed737aadfc679a974074574f860000";
+		let requirements = BondRequirements {
+			min_input_sum_sat: 51000,
+			locking_amount_sat: 50000,
+			bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+				.to_string(),
+		};
+
+		let result = test_wallet
+			.validate_bond_tx_hex(&bond_with_spent_input, &requirements)
+			.await;
+		assert!(result.is_err());
 	}
 
 	#[tokio::test]
