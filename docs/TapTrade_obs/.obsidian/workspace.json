@@ -11,14 +11,11 @@
             "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
-                "viewState": {
-                  "x": -125.12881895131909,
-                  "y": 859.308783676805,
-                  "zoom": 0.20434041253440594
-                }
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "mode": "source",
+                "source": false
               }
             }
           }
@@ -88,7 +85,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -105,7 +102,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -128,7 +125,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas"
+                "file": "Research/Bitcoin fundamentals/Knowledge sources.md"
               }
             }
           }
