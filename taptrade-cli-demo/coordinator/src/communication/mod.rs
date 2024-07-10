@@ -23,7 +23,7 @@ use tokio::net::TcpListener;
 /// Handler function to process the received data
 async fn receive_order(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(order): Json<OrderRequest>,
 ) -> Result<Response, AppError> {
 	debug!("{:#?}", &order);
@@ -46,7 +46,7 @@ async fn receive_order(
 /// receives the maker bond, verifies it and moves to offer to the active table (orderbook)
 async fn submit_maker_bond(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Response, AppError> {
 	debug!("\n\nReceived maker bond: {:?}", payload);
@@ -112,7 +112,7 @@ async fn fetch_available_offers(
 /// and moves the offer to the taken table. Will return the trade contract psbt for the taker to sign.
 async fn submit_taker_bond(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferPsbtRequest>,
 ) -> Result<Response, AppError> {
 	let bond_requirements = database
@@ -175,7 +175,7 @@ async fn request_offer_status_maker(
 /// Once the coordinator has received both partitial signed PSBTs he can assemble them together to a transaction and publish it to the bitcoin network.
 async fn submit_escrow_psbt(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<PsbtSubmissionRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
@@ -188,7 +188,7 @@ async fn submit_escrow_psbt(
 /// We have to see what makes more sense later, but maybe this would be more elegant. TBD.
 async fn poll_escrow_confirmation(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
@@ -196,7 +196,7 @@ async fn poll_escrow_confirmation(
 
 async fn submit_obligation_confirmation(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
@@ -208,7 +208,7 @@ async fn submit_obligation_confirmation(
 /// endpoint can return 201 and the escrow mediation logic will get executed (tbd).
 async fn poll_final_payout(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")

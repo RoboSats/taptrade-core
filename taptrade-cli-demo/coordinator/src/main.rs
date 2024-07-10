@@ -4,6 +4,7 @@ mod database;
 mod wallet;
 
 use anyhow::{anyhow, Result};
+use bdk::sled;
 use communication::{api::*, api_server};
 use coordinator::monitoring::monitor_bonds;
 use coordinator::monitoring::*;
@@ -17,7 +18,7 @@ use wallet::*;
 
 pub struct Coordinator {
 	pub coordinator_db: Arc<CoordinatorDB>,
-	pub coordinator_wallet: Arc<CoordinatorWallet>,
+	pub coordinator_wallet: Arc<CoordinatorWallet<sled::Tree>>,
 }
 
 // populate .env with values before starting
@@ -32,7 +33,7 @@ async fn main() -> Result<()> {
 	// Initialize the database pool
 	let coordinator = Arc::new(Coordinator {
 		coordinator_db: Arc::new(CoordinatorDB::init().await?),
-		coordinator_wallet: Arc::new(CoordinatorWallet::init()?),
+		coordinator_wallet: Arc::new(init_coordinator_wallet()?),
 	});
 
 	// begin monitoring bonds
