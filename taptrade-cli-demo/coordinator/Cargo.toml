@@ -19,7 +19,7 @@ rand = "0.8.5"
 reqwest = { version = "0.12.4", features = ["blocking", "json"] }
 serde = "1.0.203"
 sqlx = { version = "0.7.4", features = ["runtime-tokio", "sqlite"] }
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { version = "1.38.0", features = ["full", "test-util"] }
 tower = "0.4.13"
 log = "0.4.22"
 env_logger = "0.11.3"

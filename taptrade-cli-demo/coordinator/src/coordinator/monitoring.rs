@@ -4,11 +4,13 @@
 // Also needs to implement punishment logic in case a fraud is detected.
 use super::*;
 
+#[derive(Debug)]
 pub enum Table {
 	Orderbook,
 	ActiveTrades,
 }
 
+#[derive(Debug)]
 pub struct MonitoringBond {
 	pub bond_tx_hex: String,
 	pub trade_id_hex: String,
@@ -42,13 +44,14 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 	loop {
 		// fetch all bonds
 		let bonds = coordinator_db.fetch_all_bonds().await?;
-
+		debug!("Monitoring active bonds: {}", bonds.len());
 		// verify all bonds and initiate punishment if necessary
 		for bond in bonds {
 			if let Err(e) = coordinator_wallet
 				.validate_bond_tx_hex(&bond.1.bond_tx_hex, &bond.1.requirements)
 				.await
 			{
+				warn!("Bond validation failed: {:?}", e);
 				match env::var("PUNISHMENT_ENABLED")
 					.unwrap_or_else(|_| "0".to_string())
 					.as_str()
@@ -67,6 +70,6 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 		}
 
 		// sleep for a while
-		tokio::time::sleep(tokio::time::Duration::from_secs(30)).await;
+		tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 	}
 }
