@@ -10,10 +10,10 @@ use coordinator::monitoring::monitor_bonds;
 use coordinator::monitoring::*;
 use database::CoordinatorDB;
 use dotenv::dotenv;
-use log::{debug, error, info, trace, warn};
+use log::{debug, error, info, warn};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
-use tokio::sync::Mutex;
+use tokio::{sync::Mutex, task::spawn_blocking};
 use wallet::*;
 
 pub struct Coordinator {
@@ -37,7 +37,7 @@ async fn main() -> Result<()> {
 	});
 
 	// begin monitoring bonds
-	tokio::spawn(monitor_bonds(Arc::clone(&coordinator)));
+	// spawn_blocking(monitor_bonds(Arc::clone(&coordinator)));
 
 	// Start the API server
 	api_server(coordinator).await?;

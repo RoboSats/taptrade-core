@@ -5,25 +5,26 @@ use super::*;
 use anyhow::Context;
 use bdk::{
 	bitcoin::{self, bip32::ExtendedPrivKey, consensus::encode::deserialize, Transaction},
-	blockchain::{Blockchain, ElectrumBlockchain},
-	electrum_client::client::Client,
+	bitcoincore_rpc::{Client, RawTx, RpcApi},
+	blockchain::{rpc::Auth, Blockchain, ConfigurableBlockchain, RpcBlockchain, RpcConfig},
 	sled::{self, Tree},
 	template::Bip86,
 	wallet::verify::*,
 	KeychainKind, SyncOptions, Wallet,
 };
-use std::fmt;
 use std::str::FromStr;
+use std::{fmt, ops::Deref};
 use utils::*;
 // use verify_tx::*;
 
 #[derive(Clone)]
 pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 	pub wallet: Arc<Mutex<Wallet<D>>>,
-	pub backend: Arc<ElectrumBlockchain>,
+	pub backend: Arc<RpcBlockchain>,
+	pub json_rpc_client: Arc<bdk::bitcoincore_rpc::Client>,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct BondRequirements {
 	pub bond_address: String,
 	pub locking_amount_sat: u64,
@@ -34,10 +35,17 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	let wallet_xprv = ExtendedPrivKey::from_str(
 		&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 	)?;
-	let backend = ElectrumBlockchain::from(Client::new(
-		&env::var("ELECTRUM_BACKEND")
-			.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
-	)?);
+	let rpc_config = RpcConfig {
+		url: env::var("BITCOIN_RPC_ADDRESS_PORT")?.to_string(),
+		auth: Auth::Cookie {
+			file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
+		},
+		network: bdk::bitcoin::Network::Testnet,
+		wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		sync_params: None,
+	};
+	let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into())?;
+	let backend = RpcBlockchain::from_config(&rpc_config)?;
 	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
 	let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
 	let wallet = Wallet::new(
@@ -54,6 +62,7 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),
 		backend: Arc::new(backend),
+		json_rpc_client: Arc::new(json_rpc_client),
 	})
 }
 
@@ -68,57 +77,98 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	// also check if inputs are confirmed already
 	// bdk::blockchain::compact_filters::Mempool::iter_txs() -> Vec(Tx) to check if contained in mempool
 	// blockchain::get_tx to get input
-	pub async fn validate_bond_tx_hex(
+	pub async fn validate_bonds(
 		&self,
-		bond: &str,
-		requirements: &BondRequirements,
-	) -> Result<()> {
-		let input_sum: u64;
+		bonds: &Vec<MonitoringBond>,
+	) -> Result<Vec<(MonitoringBond, anyhow::Error)>> {
+		let mut invalid_bonds: Vec<(MonitoringBond, anyhow::Error)> = Vec::new();
 		let blockchain = &*self.backend;
-		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
-		{
-			debug!("Called validate_bond_tx_hex()");
-			let wallet = self.wallet.lock().await;
-			if let Err(e) = wallet.sync(blockchain, SyncOptions::default()) {
-				error!("Error syncing wallet: {:?}", e);
-				return Ok(()); // if the electrum server goes down all bonds will be considered valid. Maybe redundancy should be added.
-			};
-			// we need to test this with signed and invalid/unsigned transactions
-			// checks signatures and inputs
-			if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
-				return Err(anyhow!(e));
-			}
 
-			// check if the tx has the correct input amounts (have to be >= trading amount)
-			input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
-				Ok(amount) => {
-					if amount < requirements.min_input_sum_sat {
-						return Err(anyhow!("Bond input sum too small"));
+		{
+			let wallet = self.wallet.lock().await;
+			for bond in bonds {
+				let input_sum: u64;
+
+				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
+				debug!("Validating bond in validate_bonds()");
+				// we need to test this with signed and invalid/unsigned transactions
+				// checks signatures and inputs
+				if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
+					invalid_bonds.push((bond.clone(), anyhow!(e)));
+					continue;
+				}
+
+				// check if the tx has the correct input amounts (have to be >= trading amount)
+				input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
+					Ok(amount) => {
+						if amount < bond.requirements.min_input_sum_sat {
+							invalid_bonds.push((
+								bond.clone(),
+								anyhow!("Bond input sum too small: {}", amount),
+							));
+							continue;
+						}
+						amount
 					}
-					amount
+					Err(e) => {
+						return Err(anyhow!(e));
+					}
+				};
+				// check if bond output to us is big enough
+				match tx.bond_output_sum(&bond.requirements.bond_address) {
+					Ok(amount) => {
+						if amount < bond.requirements.locking_amount_sat {
+							invalid_bonds.push((
+								bond.clone(),
+								anyhow!("Bond output sum too small: {}", amount),
+							));
+							continue;
+						}
+						amount
+					}
+					Err(e) => {
+						return Err(anyhow!(e));
+					}
+				};
+				if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
+					invalid_bonds.push((
+						bond.clone(),
+						anyhow!(
+							"Bond fee rate too low: {}",
+							(input_sum - tx.all_output_sum()) / tx.vsize() as u64
+						),
+					));
+					continue;
 				}
-				Err(e) => {
-					return Err(anyhow!(e));
-				}
-			};
-		}
-		// check if bond output to us is big enough
-		match tx.bond_output_sum(&requirements.bond_address) {
-			Ok(amount) => {
-				if amount < requirements.locking_amount_sat {
-					return Err(anyhow!("Bond output sum too small"));
-				}
-				amount
 			}
-			Err(e) => {
-				return Err(anyhow!(e));
-			}
-		};
-		if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
-			return Err(anyhow!("Bond fee rate too low"));
 		}
-		debug!("validate_bond_tx_hex(): Bond validation successful.");
-		Ok(())
+
+		let raw_bonds: Vec<String> = bonds
+			.iter()
+			.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
+			.collect();
+		let test_mempool_accept_res = self
+			.json_rpc_client
+			.deref()
+			.test_mempool_accept(&raw_bonds)?;
+
+		for res in test_mempool_accept_res {
+			if !res.allowed {
+				let invalid_bond =
+					Self::search_monitoring_bond_by_txid(&bonds, &res.txid.to_string())?;
+				invalid_bonds.push((
+					invalid_bond,
+					anyhow!(
+						"Bond not accepted by testmempoolaccept: {:?}",
+						res.reject_reason
+							.unwrap_or("rejected by testmempoolaccept".to_string())
+					),
+				));
+			}
+		}
+
+		debug!("validate_bond_tx_hex(): Bond validation done.");
+		Ok(invalid_bonds)
 	}
 
 	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
@@ -128,6 +178,19 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		blockchain.broadcast(&tx)?;
 		Ok(())
+	}
+
+	fn search_monitoring_bond_by_txid(
+		monitoring_bonds: &Vec<MonitoringBond>,
+		txid: &str,
+	) -> Result<MonitoringBond> {
+		for bond in monitoring_bonds {
+			let bond_tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
+			if bond_tx.txid().to_string() == txid {
+				return Ok(bond.clone());
+			}
+		}
+		Err(anyhow!("Bond not found in monitoring bonds"))
 	}
 }
 
@@ -147,10 +210,20 @@ mod tests {
 	use super::*;
 	use bdk::bitcoin::Network;
 	use bdk::database::MemoryDatabase;
-	use bdk::{blockchain::ElectrumBlockchain, Wallet};
+	use bdk::{blockchain::RpcBlockchain, Wallet};
 
 	async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
-		let backend = ElectrumBlockchain::from(Client::new("ssl://mempool.space:40002").unwrap());
+		let rpc_config = RpcConfig {
+			url: env::var("BITCOIN_RPC_ADDRESS_PORT")?.to_string(),
+			auth: Auth::Cookie {
+				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
+			},
+			network: bdk::bitcoin::Network::Testnet,
+			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+			sync_params: None,
+		};
+		let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into())?;
+		let backend = RpcBlockchain::from_config(&rpc_config)?;
 
 		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
 		let wallet = Wallet::new(
@@ -165,6 +238,7 @@ mod tests {
 		CoordinatorWallet::<MemoryDatabase> {
 			wallet: Arc::new(Mutex::new(wallet)),
 			backend: Arc::new(backend),
+			json_rpc_client: Arc::new(json_rpc_client),
 		}
 	}
 

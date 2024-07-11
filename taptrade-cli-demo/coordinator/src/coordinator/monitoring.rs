@@ -4,16 +4,17 @@
 // Also needs to implement punishment logic in case a fraud is detected.
 use super::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Table {
 	Orderbook,
 	ActiveTrades,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MonitoringBond {
 	pub bond_tx_hex: String,
 	pub trade_id_hex: String,
+	pub robot: Vec<u8>,
 	pub requirements: BondRequirements,
 	pub table: Table,
 }
@@ -23,11 +24,7 @@ pub struct MonitoringBond {
 // continue monitoring the bond transaction until a confirmation happens for maximum pain
 // in case the trader is actively malicious and did not just accidentally invalidate the bond
 // we could directly forward bond sats to the other parties payout address in case it is a taken trade
-async fn punish_trader(
-	coordinator: &Coordinator,
-	robohash: Vec<u8>,
-	bond: MonitoringBond,
-) -> Result<()> {
+async fn punish_trader(coordinator: &Coordinator, bond: &MonitoringBond) -> Result<()> {
 	// publish bond
 	coordinator
 		.coordinator_wallet
@@ -44,31 +41,26 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 	loop {
 		// fetch all bonds
 		let bonds = coordinator_db.fetch_all_bonds().await?;
+		let validation_results = coordinator_wallet.validate_bonds(&bonds).await?;
 		debug!("Monitoring active bonds: {}", bonds.len());
 		// verify all bonds and initiate punishment if necessary
-		for bond in bonds {
-			if let Err(e) = coordinator_wallet
-				.validate_bond_tx_hex(&bond.1.bond_tx_hex, &bond.1.requirements)
-				.await
+		for (bond, error) in validation_results {
+			warn!("Bond validation failed: {:?}", error);
+			match env::var("PUNISHMENT_ENABLED")
+				.unwrap_or_else(|_| "0".to_string())
+				.as_str()
 			{
-				warn!("Bond validation failed: {:?}", e);
-				match env::var("PUNISHMENT_ENABLED")
-					.unwrap_or_else(|_| "0".to_string())
-					.as_str()
-				{
-					"1" => {
-						dbg!("Punishing trader for bond violation: {:?}", e);
-						punish_trader(&coordinator, bond.0, bond.1).await?;
-					}
-					"0" => {
-						dbg!("Punishment disabled, ignoring bond violation: {:?}", e);
-						continue;
-					}
-					_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
+				"1" => {
+					dbg!("Punishing trader for bond violation: {:?}", error);
+					punish_trader(&coordinator, &bond).await?;
 				}
+				"0" => {
+					dbg!("Punishment disabled, ignoring bond violation: {:?}", e);
+					continue;
+				}
+				_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
 			}
 		}
-
 		// sleep for a while
 		tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 	}
