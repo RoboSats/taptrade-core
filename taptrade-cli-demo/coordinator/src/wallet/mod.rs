@@ -73,6 +73,26 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(address.address.to_string())
 	}
 
+	pub async fn validate_bond_tx_hex(
+		&self,
+		bond_tx_hex: &str,
+		requirements: &BondRequirements,
+	) -> Result<()> {
+		debug!("Validating bond in validate_bond_tx_hex()");
+		let dummy_monitoring_bond = MonitoringBond {
+			bond_tx_hex: bond_tx_hex.to_string(),
+			trade_id_hex: "0".to_string(),
+			robot: vec![0],
+			requirements: requirements.clone(),
+			table: Table::Memory,
+		};
+		let invalid_bond = self.validate_bonds(&vec![dummy_monitoring_bond]).await?;
+		if !invalid_bond.is_empty() {
+			return Err(anyhow!(invalid_bond[0].1.to_string()));
+		}
+		Ok(())
+	}
+
 	// validate bond (check amounts, valid inputs, correct addresses, valid signature, feerate)
 	// also check if inputs are confirmed already
 	// bdk::blockchain::compact_filters::Mempool::iter_txs() -> Vec(Tx) to check if contained in mempool
@@ -142,11 +162,21 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				}
 			}
 		}
+		self.test_mempool_accept_bonds(bonds, &mut invalid_bonds)?;
+		debug!("validate_bond_tx_hex(): Bond validation done.");
+		Ok(invalid_bonds)
+	}
 
+	fn test_mempool_accept_bonds(
+		&self,
+		bonds: &Vec<MonitoringBond>,
+		invalid_bonds: &mut Vec<(MonitoringBond, anyhow::Error)>,
+	) -> Result<()> {
 		let raw_bonds: Vec<String> = bonds
 			.iter()
 			.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
 			.collect();
+
 		let test_mempool_accept_res = self
 			.json_rpc_client
 			.deref()
@@ -154,7 +184,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		for res in test_mempool_accept_res {
 			if !res.allowed {
-				let invalid_bond =
+				let invalid_bond: MonitoringBond =
 					Self::search_monitoring_bond_by_txid(&bonds, &res.txid.to_string())?;
 				invalid_bonds.push((
 					invalid_bond,
@@ -164,23 +194,13 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 							.unwrap_or("rejected by testmempoolaccept".to_string())
 					),
 				));
-			}
+			};
 		}
-
-		debug!("validate_bond_tx_hex(): Bond validation done.");
-		Ok(invalid_bonds)
-	}
-
-	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
-		warn!("publish_bond_tx_hex(): publishing cheating bond tx!");
-		let blockchain = &*self.backend;
-		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
-
-		blockchain.broadcast(&tx)?;
 		Ok(())
 	}
 
 	fn search_monitoring_bond_by_txid(
+		// this should not happen often, so the inefficiency is acceptable
 		monitoring_bonds: &Vec<MonitoringBond>,
 		txid: &str,
 	) -> Result<MonitoringBond> {
@@ -191,6 +211,15 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			}
 		}
 		Err(anyhow!("Bond not found in monitoring bonds"))
+	}
+
+	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
+		warn!("publish_bond_tx_hex(): publishing cheating bond tx!");
+		let blockchain = &*self.backend;
+		let tx: Transaction = deserialize(&hex::decode(bond)?)?;
+
+		blockchain.broadcast(&tx)?;
+		Ok(())
 	}
 }
 
@@ -211,19 +240,19 @@ mod tests {
 	use bdk::bitcoin::Network;
 	use bdk::database::MemoryDatabase;
 	use bdk::{blockchain::RpcBlockchain, Wallet};
-
 	async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
+		dotenv().ok();
 		let rpc_config = RpcConfig {
-			url: env::var("BITCOIN_RPC_ADDRESS_PORT")?.to_string(),
+			url: env::var("BITCOIN_RPC_ADDRESS_PORT").unwrap().to_string(),
 			auth: Auth::Cookie {
-				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
+				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH").unwrap().into(),
 			},
 			network: bdk::bitcoin::Network::Testnet,
-			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME").unwrap(),
 			sync_params: None,
 		};
-		let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into())?;
-		let backend = RpcBlockchain::from_config(&rpc_config)?;
+		let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into()).unwrap();
+		let backend = RpcBlockchain::from_config(&rpc_config).unwrap();
 
 		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
 		let wallet = Wallet::new(

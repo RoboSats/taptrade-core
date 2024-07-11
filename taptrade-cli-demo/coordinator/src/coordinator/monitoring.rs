@@ -8,6 +8,7 @@ use super::*;
 pub enum Table {
 	Orderbook,
 	ActiveTrades,
+	Memory,
 }
 
 #[derive(Debug, Clone)]
@@ -55,7 +56,7 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 					punish_trader(&coordinator, &bond).await?;
 				}
 				"0" => {
-					dbg!("Punishment disabled, ignoring bond violation: {:?}", e);
+					dbg!("Punishment disabled, ignoring bond violation: {:?}", error);
 					continue;
 				}
 				_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
