@@ -1,29 +1,34 @@
+use anyhow::Context;
 /// This module contains functions related to creating and broadcasting Taproot transactions.
 /// It includes functions to combine and broadcast the partially signed transactions (PSBTs)
 /// from multiple participants, create a Taproot script descriptor, create a PSBT from the
 /// descriptor, and handle the case when the taker is unresponsive.
 use bdk::bitcoin::address::NetworkUnchecked;
+use bdk::bitcoin::bip32::ExtendedPrivKey;
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
 use bdk::bitcoin::secp256k1::Secp256k1;
-use bdk::blockchain::EsploraBlockchain;
+use bdk::blockchain::{ElectrumBlockchain, EsploraBlockchain};
 use bdk::database::MemoryDatabase;
 use bdk::descriptor::Descriptor;
+use bdk::electrum_client::Client;
 use bdk::miniscript::descriptor::TapTree;
 use bdk::miniscript::policy::Concrete;
 use bdk::miniscript::psbt::PsbtExt;
+use bdk::template::Bip86;
 use bdk::wallet::AddressIndex;
-use bdk::SignOptions;
+use bdk::{sled, SignOptions};
 use bdk::{FeeRate, KeychainKind, SyncOptions, Wallet};
-use bitcoin::address::NetworkChecked;
 use bitcoin::Address;
 use std::collections::BTreeMap;
+use std::env;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use log::debug;
-use bdk::bitcoin::PublicKey;
+use bdk::bitcoin::{PublicKey, ScriptBuf};
 use log::info;
 // use bdk::miniscript::DummyKey;
 use bdk::miniscript::Tap;
+
 
 
 /// The main function in this module is `combine_and_broadcast`, which combines the PSBTs
@@ -103,56 +108,74 @@ async fn create_script(
 	Ok(descriptor)
 }
 
-// /// the provided keys, and `create_psbt`, which creates a PSBT from the descriptor
-// /// Figure out how to put UTXO's
+#[derive(Clone)]
+pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
+	pub wallet: Arc<Mutex<Wallet<D>>>,
+	pub backend: Arc<ElectrumBlockchain>,
+}
+
+pub fn init_coordinator_wallet(wallet_xprv: &str) -> Result<CoordinatorWallet<sled::Tree>, Box<dyn std::error::Error>> {
+	let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv)?;
+	let backend = ElectrumBlockchain::from(Client::new(
+		&env::var("ELECTRUM_BACKEND")
+			.context("Parsing ELECTRUM_BACKEND from .env failed, is it set?")?,
+	)?);
+	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
+	let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
+	let wallet = Wallet::new(
+		Bip86(wallet_xprv, KeychainKind::External),
+		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
+		bdk::bitcoin::Network::Testnet,
+		sled_db,
+	)?;
+
+	wallet
+		.sync(&backend, SyncOptions::default())
+		.context("Connection to electrum server failed.")?; // we could also use Esplora to make this async
+	dbg!(wallet.get_balance()?);
+	Ok(CoordinatorWallet {
+		wallet: Arc::new(Mutex::new(wallet)),
+		backend: Arc::new(backend),
+	})
+}
+/// the provided keys, and `create_psbt`, which creates a PSBT from the descriptor
+/// Figure out how to put UTXO's
 // pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
-//     let descriptor_str = descriptor.to_string(); // Step 2 and 3
-//     // Step 1: Create a BDK wallet
-//     let wallet = Wallet::new(
-//         // TODO: insert your descriptor here
-//         // "tr(youshouldputyourdescriptorhere)",
-//         &descriptor_str,
-//         None,
-//         bdk::bitcoin::Network::Testnet,
-//         MemoryDatabase::new()
-//     )?;
+pub async fn create_psbt(descriptor: Descriptor<String>){
+    let coordinator_wallet= init_coordinator_wallet("xprv9xom13daMHDPvuivoBnceYvuhPHS6EHZZcND9nN3qvnRw8xM8Jrr24KHnARuReaX1G7PAyYxvkqTRdfhjC9MvQFPbQCXfJwiDiEfbFNSWd4");
 
-// 	// Step 2: Print the first address
-// 	info!(
-// 		"Deposit funds here: {:?}",
-// 		wallet.get_address(AddressIndex::New)?
-// 	);
+	// Step 3: Deposit funds
+	// Use some testnet faucet, such as https://bitcoinfaucet.uo1.net/send.php
+	// https://coinfaucet.eu/en/btc-testnet4/
 
-// 	// Step 3: Deposit funds
-// 	// Use some testnet faucet, such as https://bitcoinfaucet.uo1.net/send.php
-// 	// https://coinfaucet.eu/en/btc-testnet4/
+	// // Step 4: Print balance
+	// let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
+	// wallet.sync(&blockchain, SyncOptions::default())?;
+	// info!("{:#?}", wallet.get_balance()?);
 
-// 	// Step 4: Print balance
-// 	let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
-// 	wallet.sync(&blockchain, SyncOptions::default())?;
-// 	info!("{:#?}", wallet.get_balance()?);
+	// let maker_utxos = vec![/* UTXO details here */];
+	// let taker_utxos = vec![/* UTXO details here */];
 
-// 	let maker_utxos = vec![/* UTXO details here */];
-// 	let taker_utxos = vec![/* UTXO details here */];
+	// // Recipient address (where funds will be sent)
+    //  let faucet_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
 
-// 	//TODO: Change type to NetworkChecked
-// 	// Recipient address (where funds will be sent)
-// 	let recipient_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
+    // // let address = get_address_from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
+    // let address_str = "tb1qqw8ledhkhezru0rwj7acpker8srtcs28sng0d6";
+    
+    // let mut tx_builder = wallet.build_tx();
+    // tx_builder
+    //     .add_utxos(&maker_utxos)?
+    //     .add_utxos(&taker_utxos)?
+    //     .drain_wallet()
+	// 	.drain_to(ScriptBuf::from(faucet_address.script_pubkey().to_owned()))
+    //     .fee_rate(FeeRate::from_sat_per_vb(3.0))
+    //     .policy_path(BTreeMap::new(), KeychainKind::External);
 
-// 	// Build the PSBT
-// 	let mut tx_builder = wallet.build_tx();
-// 	tx_builder
-// 		.add_utxos(&maker_utxos)?
-// 		.add_utxos(&taker_utxos)?
-// 		.drain_wallet()
-// 		.drain_to(recipient_address.script_pubkey())
-// 		.fee_rate(FeeRate::from_sat_per_vb(3.0))
-// 		.policy_path(BTreeMap::new(), KeychainKind::External);
-
-// 	let (psbt, tx_details) = tx_builder.finish()?;
-// 	debug!("PSBT: {:?}", psbt);
-// 	Ok(psbt)
-// }
+    // let (psbt, tx_details) = tx_builder.finish()?;
+    // debug!("PSBT: {:?}", psbt);
+    // Ok(psbt)
+	
+}
 
 // /// The `taker_unresponsive` function handles the case when the taker is unresponsive and
 // /// the coordinator needs to sign the PSBT using an alternative path.
