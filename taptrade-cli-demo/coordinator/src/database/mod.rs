@@ -404,8 +404,8 @@ impl CoordinatorDB {
 
 	// returns a hashmap of RoboHash, MonitoringBond for the monitoring loop
 	// in case this gets a bottleneck (db too large for heap) we can implement in place checking
-	pub async fn fetch_all_bonds(&self) -> Result<HashMap<Vec<u8>, MonitoringBond>> {
-		let mut bonds = HashMap::new();
+	pub async fn fetch_all_bonds(&self) -> Result<Vec<MonitoringBond>> {
+		let mut bonds = Vec::new();
 		let mut rows_orderbook = sqlx::query(
 			"SELECT offer_id, robohash, bond_address, bond_amount_sat, amount_sat, bond_tx_hex FROM active_maker_offers",
 		)
@@ -422,11 +422,12 @@ impl CoordinatorDB {
 
 			let bond = MonitoringBond {
 				bond_tx_hex: row.get("bond_tx_hex"),
+				robot: robohash,
 				trade_id_hex: row.get("offer_id"),
 				requirements,
 				table: Table::Orderbook,
 			};
-			bonds.insert(robohash, bond);
+			bonds.push(bond);
 		}
 
 		let mut rows_taken = sqlx::query(
@@ -453,11 +454,12 @@ impl CoordinatorDB {
 
 			let bond_maker = MonitoringBond {
 				bond_tx_hex: row.get("bond_tx_hex_maker"),
+				robot: robohash_maker,
 				trade_id_hex: trade_id_hex.clone(),
 				requirements: requirements_maker,
 				table: Table::ActiveTrades,
 			};
-			bonds.insert(robohash_maker, bond_maker);
+			bonds.push(bond_maker);
 
 			let requirements_maker = BondRequirements {
 				bond_address: row.get("bond_address_taker"),
@@ -465,13 +467,14 @@ impl CoordinatorDB {
 				min_input_sum_sat,
 			};
 
-			let bond_maker = MonitoringBond {
+			let bond_taker = MonitoringBond {
 				bond_tx_hex: row.get("bond_tx_hex_taker"),
 				trade_id_hex,
+				robot: robohash_taker,
 				requirements: requirements_maker,
 				table: Table::ActiveTrades,
 			};
-			bonds.insert(robohash_taker, bond_maker);
+			bonds.push(bond_taker);
 		}
 		Ok(bonds)
 	}
