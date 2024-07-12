@@ -108,7 +108,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		{
 			let wallet = self.wallet.lock().await;
-			for bond in *bonds {
+			for bond in bonds.as_ref().iter() {
 				let input_sum: u64;
 
 				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
