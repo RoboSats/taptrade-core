@@ -86,7 +86,9 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			requirements: requirements.clone(),
 			table: Table::Memory,
 		};
-		let invalid_bond = self.validate_bonds(&vec![dummy_monitoring_bond]).await?;
+		let invalid_bond = self
+			.validate_bonds(Arc::new(vec![dummy_monitoring_bond]))
+			.await?;
 		if !invalid_bond.is_empty() {
 			return Err(anyhow!(invalid_bond[0].1.to_string()));
 		}
@@ -99,14 +101,14 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	// blockchain::get_tx to get input
 	pub async fn validate_bonds(
 		&self,
-		bonds: &Vec<MonitoringBond>,
+		bonds: Arc<Vec<MonitoringBond>>,
 	) -> Result<Vec<(MonitoringBond, anyhow::Error)>> {
 		let mut invalid_bonds: Vec<(MonitoringBond, anyhow::Error)> = Vec::new();
 		let blockchain = &*self.backend;
 
 		{
 			let wallet = self.wallet.lock().await;
-			for bond in bonds {
+			for bond in *bonds {
 				let input_sum: u64;
 
 				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
@@ -162,55 +164,15 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				}
 			}
 		}
-		self.test_mempool_accept_bonds(bonds, &mut invalid_bonds)?;
+		// let invalid_bonds = Arc::new(invalid_bonds);
+		// let json_rpc_client = self.json_rpc_client.clone();
+		// let mempool_accept_future = tokio::task::spawn_blocking(move || {
+		// 	test_mempool_accept_bonds(json_rpc_client, bonds, &mut invalid_bonds)
+		// });
+		// mempool_accept_future.await??;
+
 		debug!("validate_bond_tx_hex(): Bond validation done.");
 		Ok(invalid_bonds)
-	}
-
-	fn test_mempool_accept_bonds(
-		&self,
-		bonds: &Vec<MonitoringBond>,
-		invalid_bonds: &mut Vec<(MonitoringBond, anyhow::Error)>,
-	) -> Result<()> {
-		let raw_bonds: Vec<String> = bonds
-			.iter()
-			.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
-			.collect();
-
-		let test_mempool_accept_res = self
-			.json_rpc_client
-			.deref()
-			.test_mempool_accept(&raw_bonds)?;
-
-		for res in test_mempool_accept_res {
-			if !res.allowed {
-				let invalid_bond: MonitoringBond =
-					Self::search_monitoring_bond_by_txid(&bonds, &res.txid.to_string())?;
-				invalid_bonds.push((
-					invalid_bond,
-					anyhow!(
-						"Bond not accepted by testmempoolaccept: {:?}",
-						res.reject_reason
-							.unwrap_or("rejected by testmempoolaccept".to_string())
-					),
-				));
-			};
-		}
-		Ok(())
-	}
-
-	fn search_monitoring_bond_by_txid(
-		// this should not happen often, so the inefficiency is acceptable
-		monitoring_bonds: &Vec<MonitoringBond>,
-		txid: &str,
-	) -> Result<MonitoringBond> {
-		for bond in monitoring_bonds {
-			let bond_tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
-			if bond_tx.txid().to_string() == txid {
-				return Ok(bond.clone());
-			}
-		}
-		Err(anyhow!("Bond not found in monitoring bonds"))
 	}
 
 	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
@@ -221,6 +183,49 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		blockchain.broadcast(&tx)?;
 		Ok(())
 	}
+}
+
+fn search_monitoring_bond_by_txid(
+	// this should not happen often, so the inefficiency is acceptable
+	monitoring_bonds: &Vec<MonitoringBond>,
+	txid: &str,
+) -> Result<MonitoringBond> {
+	for bond in monitoring_bonds {
+		let bond_tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
+		if bond_tx.txid().to_string() == txid {
+			return Ok(bond.clone());
+		}
+	}
+	Err(anyhow!("Bond not found in monitoring bonds"))
+}
+
+fn test_mempool_accept_bonds(
+	json_rpc_client: Arc<Client>,
+	bonds: Arc<Vec<MonitoringBond>>,
+	invalid_bonds: &mut Vec<(MonitoringBond, anyhow::Error)>,
+) -> Result<()> {
+	let raw_bonds: Vec<String> = bonds
+		.iter()
+		.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
+		.collect();
+
+	let test_mempool_accept_res = json_rpc_client.deref().test_mempool_accept(&raw_bonds)?;
+
+	for res in test_mempool_accept_res {
+		if !res.allowed {
+			let invalid_bond: MonitoringBond =
+				search_monitoring_bond_by_txid(&bonds, &res.txid.to_string())?;
+			invalid_bonds.push((
+				invalid_bond,
+				anyhow!(
+					"Bond not accepted by testmempoolaccept: {:?}",
+					res.reject_reason
+						.unwrap_or("rejected by testmempoolaccept".to_string())
+				),
+			));
+		};
+	}
+	Ok(())
 }
 
 impl fmt::Debug for CoordinatorWallet<Tree> {

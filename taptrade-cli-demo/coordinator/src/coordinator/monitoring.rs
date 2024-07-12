@@ -41,8 +41,10 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 
 	loop {
 		// fetch all bonds
-		let bonds = coordinator_db.fetch_all_bonds().await?;
-		let validation_results = coordinator_wallet.validate_bonds(&bonds).await?;
+		let bonds = Arc::new(coordinator_db.fetch_all_bonds().await?);
+		let validation_results = coordinator_wallet
+			.validate_bonds(Arc::clone(&bonds))
+			.await?;
 		debug!("Monitoring active bonds: {}", bonds.len());
 		// verify all bonds and initiate punishment if necessary
 		for (bond, error) in validation_results {

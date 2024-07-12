@@ -37,8 +37,16 @@ async fn main() -> Result<()> {
 	});
 
 	// begin monitoring bonds
-	// spawn_blocking(monitor_bonds(Arc::clone(&coordinator)));
-
+	let coordinator_ref = Arc::clone(&coordinator);
+	tokio::spawn(async move {
+		loop {
+			if let Err(e) = monitor_bonds(coordinator_ref.clone()).await {
+				error!("Error in monitor_bonds: {:?}", e);
+				// Optionally add a delay before retrying
+				tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+			}
+		}
+	});
 	// Start the API server
 	api_server(coordinator).await?;
 	Ok(())
