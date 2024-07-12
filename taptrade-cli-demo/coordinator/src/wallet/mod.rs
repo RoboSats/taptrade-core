@@ -12,7 +12,7 @@ use bdk::{
 	wallet::verify::*,
 	KeychainKind, SyncOptions, Wallet,
 };
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 use std::{fmt, ops::Deref};
 use utils::*;
 // use verify_tx::*;
@@ -90,7 +90,8 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			.validate_bonds(Arc::new(vec![dummy_monitoring_bond]))
 			.await?;
 		if !invalid_bond.is_empty() {
-			return Err(anyhow!(invalid_bond[0].1.to_string()));
+			let (_, error) = invalid_bond.values().next().unwrap();
+			return Err(anyhow!(error.to_string()));
 		}
 		Ok(())
 	}
@@ -102,10 +103,9 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	pub async fn validate_bonds(
 		&self,
 		bonds: Arc<Vec<MonitoringBond>>,
-	) -> Result<Vec<(MonitoringBond, anyhow::Error)>> {
-		let mut invalid_bonds: Vec<(MonitoringBond, anyhow::Error)> = Vec::new();
+	) -> Result<HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)>> {
+		let mut invalid_bonds: HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)> = HashMap::new();
 		let blockchain = &*self.backend;
-
 		{
 			let wallet = self.wallet.lock().await;
 			for bond in bonds.as_ref().iter() {
@@ -116,7 +116,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				// we need to test this with signed and invalid/unsigned transactions
 				// checks signatures and inputs
 				if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
-					invalid_bonds.push((bond.clone(), anyhow!(e)));
+					invalid_bonds.insert(bond.id()?, (bond.clone(), anyhow!(e)));
 					continue;
 				}
 
@@ -124,10 +124,13 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
 					Ok(amount) => {
 						if amount < bond.requirements.min_input_sum_sat {
-							invalid_bonds.push((
-								bond.clone(),
-								anyhow!("Bond input sum too small: {}", amount),
-							));
+							invalid_bonds.insert(
+								bond.id()?,
+								(
+									bond.clone(),
+									anyhow!("Bond input sum too small: {}", amount),
+								),
+							);
 							continue;
 						}
 						amount
@@ -140,10 +143,13 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				match tx.bond_output_sum(&bond.requirements.bond_address) {
 					Ok(amount) => {
 						if amount < bond.requirements.locking_amount_sat {
-							invalid_bonds.push((
-								bond.clone(),
-								anyhow!("Bond output sum too small: {}", amount),
-							));
+							invalid_bonds.insert(
+								bond.id()?,
+								(
+									bond.clone(),
+									anyhow!("Bond output sum too small: {}", amount),
+								),
+							);
 							continue;
 						}
 						amount
@@ -153,23 +159,27 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 					}
 				};
 				if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
-					invalid_bonds.push((
-						bond.clone(),
-						anyhow!(
-							"Bond fee rate too low: {}",
-							(input_sum - tx.all_output_sum()) / tx.vsize() as u64
+					invalid_bonds.insert(
+						bond.id()?,
+						(
+							bond.clone(),
+							anyhow!(
+								"Bond fee rate too low: {}",
+								(input_sum - tx.all_output_sum()) / tx.vsize() as u64
+							),
 						),
-					));
+					);
 					continue;
 				}
 			}
 		}
-		// let invalid_bonds = Arc::new(invalid_bonds);
-		// let json_rpc_client = self.json_rpc_client.clone();
-		// let mempool_accept_future = tokio::task::spawn_blocking(move || {
-		// 	test_mempool_accept_bonds(json_rpc_client, bonds, &mut invalid_bonds)
-		// });
-		// mempool_accept_future.await??;
+
+		// now test all bonds with bitcoin core rpc testmempoolaccept
+		let json_rpc_client = self.json_rpc_client.clone();
+		let mempool_accept_future =
+			tokio::task::spawn_blocking(move || test_mempool_accept_bonds(json_rpc_client, bonds));
+		let invalid_bonds_testmempoolaccept = mempool_accept_future.await??;
+		invalid_bonds.extend(invalid_bonds_testmempoolaccept.into_iter());
 
 		debug!("validate_bond_tx_hex(): Bond validation done.");
 		Ok(invalid_bonds)
@@ -202,8 +212,9 @@ fn search_monitoring_bond_by_txid(
 fn test_mempool_accept_bonds(
 	json_rpc_client: Arc<Client>,
 	bonds: Arc<Vec<MonitoringBond>>,
-	invalid_bonds: &mut Vec<(MonitoringBond, anyhow::Error)>,
-) -> Result<()> {
+) -> Result<HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)>> {
+	let mut invalid_bonds: HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)> = HashMap::new();
+
 	let raw_bonds: Vec<String> = bonds
 		.iter()
 		.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
@@ -215,17 +226,20 @@ fn test_mempool_accept_bonds(
 		if !res.allowed {
 			let invalid_bond: MonitoringBond =
 				search_monitoring_bond_by_txid(&bonds, &res.txid.to_string())?;
-			invalid_bonds.push((
-				invalid_bond,
-				anyhow!(
-					"Bond not accepted by testmempoolaccept: {:?}",
-					res.reject_reason
-						.unwrap_or("rejected by testmempoolaccept".to_string())
+			invalid_bonds.insert(
+				invalid_bond.id()?,
+				(
+					invalid_bond,
+					anyhow!(
+						"Bond not accepted by testmempoolaccept: {:?}",
+						res.reject_reason
+							.unwrap_or("rejected by testmempoolaccept".to_string())
+					),
 				),
-			));
+			);
 		};
 	}
-	Ok(())
+	Ok(invalid_bonds)
 }
 
 impl fmt::Debug for CoordinatorWallet<Tree> {

@@ -3,6 +3,7 @@
 // prevent querying the db all the time.
 // Also needs to implement punishment logic in case a fraud is detected.
 use super::*;
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone)]
 pub enum Table {
@@ -20,19 +21,27 @@ pub struct MonitoringBond {
 	pub table: Table,
 }
 
-// the current implementation only publishes the bond and removes the offer from the db
-// in a more advanced implementation we could increase the transaction fee (cpfp) and
-// continue monitoring the bond transaction until a confirmation happens for maximum pain
-// in case the trader is actively malicious and did not just accidentally invalidate the bond
-// we could directly forward bond sats to the other parties payout address in case it is a taken trade
-async fn punish_trader(coordinator: &Coordinator, bond: &MonitoringBond) -> Result<()> {
-	// publish bond
-	coordinator
-		.coordinator_wallet
-		.publish_bond_tx_hex(&bond.bond_tx_hex)?; // can be made async with esplora backend if we figure out the compilation error of bdk
+impl MonitoringBond {
+	// used a hash of bond instead of txid to prevent issues when a valid txid can't be generated
+	// due to missing fields etc. (crate error)
+	pub fn id(&self) -> Result<Vec<u8>> {
+		Ok(sha256(&hex::decode(&self.bond_tx_hex)?))
+	}
 
-	// remove offer from db/orderbook
-	Ok(())
+	// the current implementation only publishes the bond and removes the offer from the db
+	// in a more advanced implementation we could increase the transaction fee (cpfp) and
+	// continue monitoring the bond transaction until a confirmation happens for maximum pain
+	// in case the trader is actively malicious and did not just accidentally invalidate the bond
+	// we could directly forward bond sats to the other parties payout address in case it is a taken trade
+	async fn punish(&self, coordinator: &Coordinator) -> Result<()> {
+		// publish bond
+		coordinator
+			.coordinator_wallet
+			.publish_bond_tx_hex(&self.bond_tx_hex)?; // can be made async with esplora backend if we figure out the compilation error of bdk
+
+		// remove offer from db/orderbook
+		Ok(())
+	}
 }
 
 pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
@@ -47,7 +56,7 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 			.await?;
 		debug!("Monitoring active bonds: {}", bonds.len());
 		// verify all bonds and initiate punishment if necessary
-		for (bond, error) in validation_results {
+		for (_, (bond, error)) in validation_results {
 			warn!("Bond validation failed: {:?}", error);
 			match env::var("PUNISHMENT_ENABLED")
 				.unwrap_or_else(|_| "0".to_string())
@@ -55,7 +64,7 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 			{
 				"1" => {
 					dbg!("Punishing trader for bond violation: {:?}", error);
-					punish_trader(&coordinator, &bond).await?;
+					bond.punish(&coordinator).await?;
 				}
 				"0" => {
 					dbg!("Punishment disabled, ignoring bond violation: {:?}", error);
@@ -67,4 +76,11 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 		// sleep for a while
 		tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 	}
+}
+
+fn sha256(data: &[u8]) -> Vec<u8> {
+	let mut hasher = Sha256::new();
+	hasher.update(data);
+	let result = hasher.finalize();
+	result.to_vec()
 }
