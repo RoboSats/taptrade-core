@@ -1,0 +1,41 @@
+services:
+  bitcoin:
+    build: ./data
+    container_name: bitcoin
+    ports:
+      - 8332:8332
+      - 18444:18444
+    networks:
+      - bitcoin
+    volumes:
+      - bitcoin:/home/bitcoin/.bitcoin
+  
+  electrs:
+    build: ./electrs
+    container_name: electrs
+    ports:
+      - 50001:50001
+    volumes:
+      - bitcoin:/home/electrs
+    networks:
+      - bitcoin
+    restart: always
+    environment:
+      - ELECTRS_DB_DIR=/home/electrs/db
+      - ELECTRS_ELECTRUM_RPC_ADDR=0.0.0.0:50001
+      - ELECTRS_NETWORK=regtest
+      - ELECTRS_COOKIE_FILE=/home/electrs/.cookie
+      - ELECTRS_DAEMON_RPC_ADDR=bitcoin:8332
+      - ELECTRS_DAEMON_P2P_ADDR=bitcoin:18444
+      - ELECTRS_LOG_FILTERS=INFO
+    depends_on:
+      bitcoin:
+        condition: service_started
+
+
+volumes:
+  bitcoin:
+
+networks:
+  bitcoin:
+    driver: bridge

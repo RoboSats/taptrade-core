@@ -11,11 +11,14 @@
             "id": "bdb9fd88a01a8909",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "canvas",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
-                "mode": "source",
-                "source": false
+                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
+                "viewState": {
+                  "x": 31,
+                  "y": -44.99563086871524,
+                  "zoom": -0.432684559607355
+                }
               }
             }
           }
@@ -85,7 +88,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -102,7 +105,7 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md",
+                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               }
@@ -125,7 +128,7 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Research/Bitcoin fundamentals/Knowledge sources.md"
+                "file": "Research/Trade Pipelines/new concepts/concept locking script 1.canvas"
               }
             }
           }
@@ -148,8 +151,8 @@
   },
   "active": "bdb9fd88a01a8909",
   "lastOpenFiles": [
-    "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
     "Research/Trade Pipelines/new concepts/concept pipeline 1.canvas",
+    "Research/Trade Pipelines/new concepts/concept locking script 1.canvas",
     "Research/Bitcoin fundamentals/Knowledge sources.md",
     "assets/ptlc2.png",
     "assets/ptlc.png",

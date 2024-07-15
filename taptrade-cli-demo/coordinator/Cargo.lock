@@ -484,6 +484,7 @@ dependencies = [
  "rand",
  "reqwest",
  "serde",
+ "sha2",
  "sqlx",
  "tokio",
  "tower",
