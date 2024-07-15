@@ -41,7 +41,7 @@ impl BondTx for Transaction {
 
 	fn bond_output_sum(&self, bond_address: &str) -> Result<u64> {
 		let bond_script = Address::from_str(bond_address)?
-			.require_network(Network::Signet)?
+			.require_network(Network::Regtest)?
 			.script_pubkey();
 
 		for output in self.output.iter() {

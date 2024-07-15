@@ -4,8 +4,30 @@ services:
     container_name: bitcoin
     ports:
       - 8332:8332
+    networks:
+      - bitcoin
     volumes:
       - bitcoin:/home/bitcoin/.bitcoin
+  
+  fulcrum:
+    build: ./fulcrum
+    container_name: fulcrum
+    ports:
+      - 5321:5321
+    volumes:
+      - fulcrum-volume:/home/fulcrum/fulcrum_data
+    networks:
+      - bitcoin
+    restart: always
+    depends_on:
+      bitcoin:
+        condition: service_started
+
 
 volumes:
   bitcoin:
+  fulcrum-volume:
+
+networks:
+  bitcoin:
+    driver: bridge

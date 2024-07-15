@@ -27,7 +27,7 @@ pub struct TradingWallet {
 
 pub fn get_wallet_xprv(xprv_input: Option<String>) -> Result<ExtendedPrivKey> {
 	let xprv: ExtendedPrivKey;
-	let network: Network = Network::Signet;
+	let network: Network = Network::Regtest;
 
 	if let Some(xprv_i) = xprv_input {
 		xprv = ExtendedPrivKey::from_str(&xprv_i)?;
@@ -45,7 +45,7 @@ impl TradingWallet {
 		let wallet = Wallet::new(
 			Bip86(trader_config.wallet_xprv, KeychainKind::External),
 			Some(Bip86(trader_config.wallet_xprv, KeychainKind::Internal)),
-			bitcoin::Network::Signet,
+			bitcoin::Network::Regtest,
 			MemoryDatabase::default(), // non-permanent storage
 		)?;
 

@@ -33,7 +33,7 @@ impl Bond {
 		debug!("Assembling bond transaction");
 		// parse bond locking address as Address struct and verify network is testnet
 		let address: Address =
-			Address::from_str(&bond_target.bond_address)?.require_network(Network::Signet)?;
+			Address::from_str(&bond_target.bond_address)?.require_network(Network::Regtest)?;
 
 		// build bond locking transaction. Use coin selection to add at least enough outputs
 		// to have the full trading sum as change as evidence for the coordinator that the maker owns
@@ -84,7 +84,7 @@ mod tests {
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Network::Signet,
+			Network::Regtest,
 			MemoryDatabase::default(),
 		)
 		.unwrap();

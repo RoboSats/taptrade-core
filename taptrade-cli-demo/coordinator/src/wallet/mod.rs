@@ -40,7 +40,7 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 		auth: Auth::Cookie {
 			file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
 		},
-		network: bdk::bitcoin::Network::Signet,
+		network: bdk::bitcoin::Network::Regtest,
 		wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		sync_params: None,
 	};
@@ -51,7 +51,7 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	let wallet = Wallet::new(
 		Bip86(wallet_xprv, KeychainKind::External),
 		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-		bitcoin::Network::Signet,
+		bitcoin::Network::Regtest,
 		sled_db,
 	)?;
 
@@ -276,7 +276,7 @@ mod tests {
 			auth: Auth::Cookie {
 				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH").unwrap().into(),
 			},
-			network: bdk::bitcoin::Network::Signet,
+			network: bdk::bitcoin::Network::Regtest,
 			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME").unwrap(),
 			sync_params: None,
 		};
@@ -287,7 +287,7 @@ mod tests {
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Network::Signet,
+			Network::Regtest,
 			MemoryDatabase::new(),
 		)
 		.unwrap();
