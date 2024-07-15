@@ -16,7 +16,7 @@ else
 fi
 
 # Generate initial blocks
-bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -generate 101
+bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -rpcwallet="coordinator_wallet" -generate 101
 
 # Generate a block every 300 seconds
 while true; do
