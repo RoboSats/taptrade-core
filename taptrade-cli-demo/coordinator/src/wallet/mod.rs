@@ -108,61 +108,61 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		{
 			let wallet = self.wallet.lock().await;
-			for bond in *bonds {
-				let input_sum: u64;
+			// for bond in *bonds {
+			// 	let input_sum: u64;
 
-				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
-				debug!("Validating bond in validate_bonds()");
-				// we need to test this with signed and invalid/unsigned transactions
-				// checks signatures and inputs
-				if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
-					invalid_bonds.push((bond.clone(), anyhow!(e)));
-					continue;
-				}
+			// 	let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
+			// 	debug!("Validating bond in validate_bonds()");
+			// 	// we need to test this with signed and invalid/unsigned transactions
+			// 	// checks signatures and inputs
+			// 	if let Err(e) = verify_tx(&tx, &*wallet.database(), blockchain) {
+			// 		invalid_bonds.push((bond.clone(), anyhow!(e)));
+			// 		continue;
+			// 	}
 
-				// check if the tx has the correct input amounts (have to be >= trading amount)
-				input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
-					Ok(amount) => {
-						if amount < bond.requirements.min_input_sum_sat {
-							invalid_bonds.push((
-								bond.clone(),
-								anyhow!("Bond input sum too small: {}", amount),
-							));
-							continue;
-						}
-						amount
-					}
-					Err(e) => {
-						return Err(anyhow!(e));
-					}
-				};
-				// check if bond output to us is big enough
-				match tx.bond_output_sum(&bond.requirements.bond_address) {
-					Ok(amount) => {
-						if amount < bond.requirements.locking_amount_sat {
-							invalid_bonds.push((
-								bond.clone(),
-								anyhow!("Bond output sum too small: {}", amount),
-							));
-							continue;
-						}
-						amount
-					}
-					Err(e) => {
-						return Err(anyhow!(e));
-					}
-				};
-				if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
-					invalid_bonds.push((
-						bond.clone(),
-						anyhow!(
-							"Bond fee rate too low: {}",
-							(input_sum - tx.all_output_sum()) / tx.vsize() as u64
-						),
-					));
-					continue;
-				}
-			}
+			// 	// check if the tx has the correct input amounts (have to be >= trading amount)
+			// 	input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
+			// 		Ok(amount) => {
+			// 			if amount < bond.requirements.min_input_sum_sat {
+			// 				invalid_bonds.push((
+			// 					bond.clone(),
+			// 					anyhow!("Bond input sum too small: {}", amount),
+			// 				));
+			// 				continue;
+			// 			}
+			// 			amount
+			// 		}
+			// 		Err(e) => {
+			// 			return Err(anyhow!(e));
+			// 		}
+			// 	};
+			// 	// check if bond output to us is big enough
+			// 	match tx.bond_output_sum(&bond.requirements.bond_address) {
+			// 		Ok(amount) => {
+			// 			if amount < bond.requirements.locking_amount_sat {
+			// 				invalid_bonds.push((
+			// 					bond.clone(),
+			// 					anyhow!("Bond output sum too small: {}", amount),
+			// 				));
+			// 				continue;
+			// 			}
+			// 			amount
+			// 		}
+			// 		Err(e) => {
+			// 			return Err(anyhow!(e));
+			// 		}
+			// 	};
+			// 	if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
+			// 		invalid_bonds.push((
+			// 			bond.clone(),
+			// 			anyhow!(
+			// 				"Bond fee rate too low: {}",
+			// 				(input_sum - tx.all_output_sum()) / tx.vsize() as u64
+			// 			),
+			// 		));
+			// 		continue;
+			// 	}
+			// }
 		}
 		// let invalid_bonds = Arc::new(invalid_bonds);
 		// let json_rpc_client = self.json_rpc_client.clone();
