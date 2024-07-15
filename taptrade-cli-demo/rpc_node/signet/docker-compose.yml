@@ -1,0 +1,10 @@
+services:
+  bitcoin:
+    container_name: bitcoin
+    image: dobtc/bitcoin
+    ports:
+      - 8332:8332
+    volumes:
+      - ./bitcoin.conf:/home/bitcoin/.bitcoin/bitcoin.conf
+      - ./data/:/home/bitcoin/.bitcoin
+

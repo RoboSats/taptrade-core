@@ -33,7 +33,7 @@ impl Bond {
 		debug!("Assembling bond transaction");
 		// parse bond locking address as Address struct and verify network is testnet
 		let address: Address =
-			Address::from_str(&bond_target.bond_address)?.require_network(Network::Testnet)?;
+			Address::from_str(&bond_target.bond_address)?.require_network(Network::Signet)?;
 
 		// build bond locking transaction. Use coin selection to add at least enough outputs
 		// to have the full trading sum as change as evidence for the coordinator that the maker owns
@@ -53,10 +53,10 @@ impl Bond {
 			builder.finish()?
 		};
 		debug!("Signing bond transaction.");
-		// let finalized = wallet.sign(&mut psbt, SignOptions::default())?;  // deactivated to test bond validation
-		// if !finalized {
-		// 	return Err(anyhow!("Transaction could not be finalized"));
-		// };
+		let finalized = wallet.sign(&mut psbt, SignOptions::default())?; // deactivated to test bond validation
+		if !finalized {
+			return Err(anyhow!("Transaction could not be finalized"));
+		};
 		Ok(psbt)
 	}
 }
@@ -84,7 +84,7 @@ mod tests {
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Network::Testnet,
+			Network::Signet,
 			MemoryDatabase::default(),
 		)
 		.unwrap();

@@ -40,7 +40,7 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 		auth: Auth::Cookie {
 			file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
 		},
-		network: bdk::bitcoin::Network::Testnet,
+		network: bdk::bitcoin::Network::Signet,
 		wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		sync_params: None,
 	};
@@ -51,13 +51,13 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	let wallet = Wallet::new(
 		Bip86(wallet_xprv, KeychainKind::External),
 		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-		bitcoin::Network::Testnet,
+		bitcoin::Network::Signet,
 		sled_db,
 	)?;
 
-	wallet
-		.sync(&backend, SyncOptions::default())
-		.context("Connection to electrum server failed.")?; // we could also use Esplora to make this async
+	// wallet
+	// 	.sync(&backend, SyncOptions::default())
+	// 	.context("Connection to electrum server failed.")?; // we could also use Esplora to make this async
 	dbg!(wallet.get_balance()?);
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),
@@ -266,7 +266,7 @@ mod tests {
 			auth: Auth::Cookie {
 				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH").unwrap().into(),
 			},
-			network: bdk::bitcoin::Network::Testnet,
+			network: bdk::bitcoin::Network::Signet,
 			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME").unwrap(),
 			sync_params: None,
 		};
@@ -277,7 +277,7 @@ mod tests {
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Network::Testnet,
+			Network::Signet,
 			MemoryDatabase::new(),
 		)
 		.unwrap();

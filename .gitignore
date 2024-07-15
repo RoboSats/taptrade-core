@@ -3,3 +3,6 @@ taptrade-cli-demo/target
 taptrade-cli-demo/coordinator/target
 taptrade-cli-demo/coordinator/dbs/*
 taptrade-cli-demo/trader/target
+taptrade-cli-demo/rpc_node/testnet4/testnet4node
+taptrade-cli-demo/rpc_node/testnet3/data
+taptrade-cli-demo/rpc_node/signet/data
