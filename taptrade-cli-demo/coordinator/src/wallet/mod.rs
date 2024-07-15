@@ -215,12 +215,22 @@ fn test_mempool_accept_bonds(
 ) -> Result<HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)>> {
 	let mut invalid_bonds: HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)> = HashMap::new();
 
-	let raw_bonds: Vec<String> = bonds
+	let raw_bonds: Vec<Vec<String>> = bonds
 		.iter()
-		.map(|bond| bond.bond_tx_hex.clone().raw_hex()) // Assuming `raw_hex()` returns a String or &str
+		.map(|bond| bond.bond_tx_hex.clone().raw_hex())
+		.collect::<Vec<String>>()
+		.chunks(25) // Assuming `raw_hex()` returns a String or &str
+		.map(|chunk| chunk.to_vec())
 		.collect();
 
-	let test_mempool_accept_res = json_rpc_client.deref().test_mempool_accept(&raw_bonds)?;
+	let mut test_mempool_accept_res = Vec::new();
+	for raw_bonds_subvec in raw_bonds {
+		test_mempool_accept_res.extend(
+			json_rpc_client
+				.deref()
+				.test_mempool_accept(&raw_bonds_subvec)?,
+		);
+	}
 
 	for res in test_mempool_accept_res {
 		if !res.allowed {

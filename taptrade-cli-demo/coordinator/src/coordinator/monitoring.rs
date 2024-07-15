@@ -49,8 +49,13 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 	let coordinator_wallet = Arc::clone(&coordinator.coordinator_wallet);
 
 	loop {
+		// sleep for a while
+		tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 		// fetch all bonds
 		let bonds = Arc::new(coordinator_db.fetch_all_bonds().await?);
+		if bonds.is_empty() {
+			continue;
+		}
 		let validation_results = coordinator_wallet
 			.validate_bonds(Arc::clone(&bonds))
 			.await?;
@@ -73,8 +78,6 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 				_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
 			}
 		}
-		// sleep for a while
-		tokio::time::sleep(tokio::time::Duration::from_secs(15)).await;
 	}
 }
 
