@@ -1,0 +1,11 @@
+services:
+  bitcoin:
+    build: ./data
+    container_name: bitcoin
+    ports:
+      - 8332:8332
+    volumes:
+      - bitcoin:/home/bitcoin/.bitcoin
+
+volumes:
+  bitcoin:
