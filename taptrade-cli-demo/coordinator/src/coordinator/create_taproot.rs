@@ -18,19 +18,16 @@ use bdk::template::Bip86;
 use bdk::wallet::AddressIndex;
 use bdk::{sled, SignOptions};
 use bdk::{FeeRate, KeychainKind, SyncOptions, Wallet};
-use bitcoin::Address;
 use std::collections::BTreeMap;
-use std::env;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 use log::debug;
-use bdk::bitcoin::{PublicKey, ScriptBuf};
 use log::info;
 // use bdk::miniscript::DummyKey;
 use bdk::miniscript::Tap;
-use bitcoin::Network;
-
-
+// use crate::coordinator::create_taproot::Network;
+use bdk::bitcoin::network::constants::Network;
+use bdk::bitcoin::Address;
 
 
 /// The main function in this module is `combine_and_broadcast`, which combines the PSBTs
@@ -177,8 +174,8 @@ pub fn init_coordinator_wallet(wallet_xprv: &str) -> Result<CoordinatorWallet<sl
 }
 /// the provided keys, and `create_psbt`, which creates a PSBT from the descriptor
 /// Figure out how to put UTXO's
-// pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
-pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn std::error::Error>>{
+// pub async fn fund_psbt(descriptor: Descriptor<String>)-> Result<(PartiallySignedTransaction), Box<dyn std::error::Error>> {
+pub async fn fund_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn std::error::Error>>{
     // println!("Hello create_psbt");
     // let coordinator_wallet= init_coordinator_wallet("xprv9xom13daMHDPvuivoBnceYvuhPHS6EHZZcND9nN3qvnRw8xM8Jrr24KHnARuReaX1G7PAyYxvkqTRdfhjC9MvQFPbQCXfJwiDiEfbFNSWd4");
     let wallet_result = Wallet::new(
@@ -198,31 +195,16 @@ pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn st
             println!("Error creating wallet: {:?}", e);
         }
     }
-
-
-    // let utxos = wallet.list_unspent()?;
-     // Create a transaction to spend from the Taproot address
-    // let recipient_address = "tb1q..."; // Replace with actual recipient address
-    // let amount = 5000; // Amount in satoshis
-    // let mut tx_builder = wallet.build_tx();
-    // for utxo in utxos {
-    //     tx_builder.add_utxo(utxo.outpoint)?;
-    // }
-    // tx_builder
-    //     .set_recipients(vec![(recipient_address.parse()?, amount)])
-    //     .enable_rbf();
-
-    // let (mut psbt, _tx_details) = tx_builder.finish()?;
-    // wallet.sign(&mut psbt, None)?;
-    // wallet.broadcast(&psbt)?;
-
-
-
-    
-    
-	// // Step 3: Deposit funds
+    // // Step 3: Deposit funds
 	// // Use some testnet faucet, such as https://bitcoinfaucet.uo1.net/send.php
 	// // https://coinfaucet.eu/en/btc-testnet4/
+    Ok(())
+	
+}
+
+    
+    
+	
 
 	// // // Step 4: Print balance
 	// let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
@@ -232,7 +214,7 @@ pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn st
 	// let maker_utxos = vec![/* UTXO details here */];
 	// let taker_utxos = vec![/* UTXO details here */];
 
-	// // // Recipient address (where funds will be sent)
+	// // Recipient address (where funds will be sent)
     //  let address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
 
     // // let address = get_address_from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
@@ -250,30 +232,77 @@ pub async fn create_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn st
     // let (psbt, tx_details) = tx_builder.finish()?;
     // debug!("PSBT: {:?}", psbt);
     // Ok(psbt)
-    Ok(())
-	
-}
+    
+fn taker_unresponsive_psbt(
+	taker_address: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
+	// If taker is unresponsive, coordinator signs using alternative path
+	let taker_responsive = false; // Assume taker is unresponsive
+	if !taker_responsive {
+        let wallet_result = Wallet::new(
+            "tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum",
+            None,
+            bdk::bitcoin::Network::Testnet,
+            MemoryDatabase::new()
+        );
 
+        match wallet_result {
+            Ok(wallet) => {
+                // Recipient address (where funds will be sent)
+                // let unchecked_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
+                let unchecked_address = Address::from_str(taker_address)?;
+
+
+                // Ensure the address is valid for the correct network (testnet in this case)
+                let address = unchecked_address.require_network(Network::Testnet)?;
+                
+                let mut tx_builder= wallet.build_tx();
+                tx_builder
+                    .drain_wallet()
+                    // .add_recipient((address.script_pubkey()), 10_000)
+                    .drain_to(address.script_pubkey())
+                    .fee_rate(FeeRate::from_sat_per_vb(3.0))
+                    .policy_path(BTreeMap::new(), KeychainKind::External);
+
+                let (psbt, tx_details) = tx_builder.finish()?;
+                debug!("PSBT: {:?}", psbt);
+                // Ok(psbt)
+                }
+            Err(e) => {
+                println!("Error creating wallet: {:?}", e);
+            }
+        }
+        }
+        Ok(())
+    }
 /// The `taker_unresponsive` function handles the case when the taker is unresponsive and
 /// the coordinator needs to sign the PSBT using an alternative path.
 // TODO: Figure out how to use UTXO's
 // fn taker_unresponsive(
 // 	psbt: PartiallySignedTransaction,
 // 	wallet: Wallet<MemoryDatabase>,
-// 	maker_utxos: Vec<UTXO>,
-// 	taker_utxos: Vec<UTXO>,
+// 	// maker_utxos: Vec<UTXO>,
+// 	// taker_utxos: Vec<UTXO>,
 // 	recipient_address: Address,
 // ) -> Result<(), Box<dyn std::error::Error>> {
 // 	// If taker is unresponsive, coordinator signs using alternative path
 // 	let taker_responsive = false; // Assume taker is unresponsive
 // 	if !taker_responsive {
-//             let mut wallet = Wallet::new(
-//             // TODO: insert your descriptor here
-//             "tr(youshouldputyourdescriptorhere)",
+//         let wallet_result = Wallet::new(
+//             "tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum",
 //             None,
-//             Network::Testnet,
+//             bdk::bitcoin::Network::Testnet,
 //             MemoryDatabase::new()
-//         )?;
+//         );
+
+//         match wallet_result {
+//             Ok(wallet) => {
+                
+//                 }
+//             Err(e) => {
+//                 println!("Error creating wallet: {:?}", e);
+//             }
+//         }
 // 		 // // Step 2: Add the BDK signer
 //         let mut private_key_str = String::new();
 //         File::open("key.txt")?.read_to_string(&mut private_key_str)?;
@@ -306,12 +335,12 @@ mod tests {
     use bdk::sled;
 
     #[tokio::test]
-    async fn test_create_psbt()-> Result<(), Error> {
+    async fn test_fund_psbt()-> Result<(), Error> {
         let result = create_descriptor().await;
         match &result{
             Ok(descriptor) => {
                 // println!("{}", descriptor);
-                let result = create_psbt(descriptor.clone()).await;
+                let result = fund_psbt(descriptor.clone()).await;
 
             },
             Err(e) => println!("Error: {}", e),
