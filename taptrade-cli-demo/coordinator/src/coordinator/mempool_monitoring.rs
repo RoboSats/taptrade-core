@@ -1,17 +1,16 @@
 use super::*;
 use anyhow::Ok;
 use bdk::bitcoin::consensus::encode::deserialize;
-use bdk::bitcoin::Transaction;
+use bdk::bitcoin::{OutPoint, Transaction};
 use bdk::bitcoin::{TxIn, Txid};
 use bdk::bitcoincore_rpc::{Client, RpcApi};
-use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::ops::Deref;
 use std::sync::RwLock;
 
 struct Mempool {
 	transactions: Arc<RwLock<HashMap<Txid, Vec<TxIn>>>>,
-	utxo_set: Arc<RwLock<HashSet<TxIn>>>,
+	utxo_set: Arc<RwLock<HashSet<OutPoint>>>,
 	json_rpc_client: Arc<Client>,
 }
 
@@ -75,7 +74,7 @@ fn run_mempool(mempool: Arc<Mempool>) {
 		utxo_set.clear();
 		for (_, inputs) in mempool_state.iter() {
 			for input in inputs {
-				utxo_set.insert(input.clone());
+				utxo_set.insert(input.previous_output);
 			}
 		}
 	}
@@ -97,16 +96,18 @@ impl MempoolHandler {
 		&self,
 		bonds: &Vec<MonitoringBond>,
 	) -> Result<HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)>> {
+		debug!("Looking up mempool inputs for bonds");
 		let mut bonds_to_punish: HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)> = HashMap::new();
 		let utxo_set = self
 			.mempool
 			.utxo_set
 			.read()
 			.expect("Error locking utxo_set read mutex");
+		debug!("Mempool utxo_set: {:?}", utxo_set);
 		for bond in bonds {
 			let bond_tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
 			for input in bond_tx.input {
-				if utxo_set.contains(&input) {
+				if utxo_set.contains(&input.previous_output) {
 					bonds_to_punish.insert(bond.id()?, (bond.clone(), anyhow!("Input in mempool")));
 					break;
 				}

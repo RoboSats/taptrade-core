@@ -47,13 +47,13 @@ impl Bond {
 
 			builder
 				.add_recipient(address.script_pubkey(), bond_target.locking_amount_sat)
-				.do_not_spend_change() // reconsider if we need this?
+				// .do_not_spend_change() // reconsider if we need this?
 				.fee_rate(FeeRate::from_sat_per_vb(201.0));
 
 			builder.finish()?
 		};
 		debug!("Signing bond transaction.");
-		let finalized = wallet.sign(&mut psbt, SignOptions::default())?; // deactivated to test bond validation
+		let finalized = wallet.sign(&mut psbt, SignOptions::default())?; // deactivate to test bond validation
 		if !finalized {
 			return Err(anyhow!("Transaction could not be finalized"));
 		};

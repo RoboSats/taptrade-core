@@ -30,8 +30,9 @@ impl MonitoringBond {
 		Ok(sha256(&hex::decode(&self.bond_tx_hex)?))
 	}
 
-	async fn remove_from_db_tables(&self, db: Arc<CoordinatorDB>) -> Result<()> {
+	async fn remove_from_db_tables(&self, db: &Arc<CoordinatorDB>) -> Result<()> {
 		// remove bond from db
+		debug!("Removing violating bond from db tables");
 		db.remove_violating_bond(self)
 			.await
 			.context("Error removing violating bond from db")?;
@@ -51,7 +52,7 @@ impl MonitoringBond {
 			.publish_bond_tx_hex(&self.bond_tx_hex)?; // can be made async with esplora backend if we figure out the compilation error of bdk
 
 		// remove offer from db/orderbook
-		self.remove_from_db_tables(coordinator.coordinator_db.clone())
+		self.remove_from_db_tables(&coordinator.coordinator_db)
 			.await?;
 		Ok(())
 	}
@@ -81,11 +82,11 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 				.as_str()
 			{
 				"1" => {
-					dbg!("Punishing trader for bond violation: {:?}", error);
+					warn!("Punishing trader for bond violation: {:?}", error);
 					bond.punish(&coordinator).await?;
 				}
 				"0" => {
-					dbg!("Punishment disabled, ignoring bond violation: {:?}", error);
+					warn!("Punishment disabled, ignoring bond violation: {:?}", error);
 					continue;
 				}
 				_ => Err(anyhow!("Invalid PUNISHMENT_ENABLED env var"))?,
