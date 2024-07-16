@@ -4,6 +4,7 @@
 // Also needs to implement punishment logic in case a fraud is detected.
 use super::*;
 use anyhow::Context;
+use mempool_monitoring::MempoolHandler;
 use sha2::{Digest, Sha256};
 
 #[derive(Debug, Clone, PartialEq)]

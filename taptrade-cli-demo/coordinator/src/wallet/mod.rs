@@ -10,8 +10,9 @@ use bdk::{
 	sled::{self, Tree},
 	template::Bip86,
 	wallet::verify::*,
-	KeychainKind, SyncOptions, Wallet,
+	KeychainKind, Wallet,
 };
+use coordinator::mempool_monitoring::MempoolHandler;
 use std::{collections::HashMap, str::FromStr};
 use std::{fmt, ops::Deref};
 use utils::*;
@@ -22,6 +23,7 @@ pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 	pub wallet: Arc<Mutex<Wallet<D>>>,
 	pub backend: Arc<RpcBlockchain>,
 	pub json_rpc_client: Arc<bdk::bitcoincore_rpc::Client>,
+	pub mempool: Arc<MempoolHandler>,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -31,7 +33,7 @@ pub struct BondRequirements {
 	pub min_input_sum_sat: u64,
 }
 
-pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
+pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	let wallet_xprv = ExtendedPrivKey::from_str(
 		&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 	)?;
@@ -44,7 +46,10 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 		wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		sync_params: None,
 	};
-	let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into())?;
+	let json_rpc_client = Arc::new(Client::new(
+		&rpc_config.url,
+		rpc_config.auth.clone().into(),
+	)?);
 	let backend = RpcBlockchain::from_config(&rpc_config)?;
 	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
 	let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
@@ -55,6 +60,9 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 		sled_db,
 	)?;
 
+	let json_rpc_client_clone = Arc::clone(&json_rpc_client);
+	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
+
 	// wallet
 	// 	.sync(&backend, SyncOptions::default())
 	// 	.context("Connection to blockchain server failed.")?; // we could also use Esplora to make this async
@@ -62,7 +70,8 @@ pub fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),
 		backend: Arc::new(backend),
-		json_rpc_client: Arc::new(json_rpc_client),
+		json_rpc_client: json_rpc_client,
+		mempool: Arc::new(mempool),
 	})
 }
 
@@ -176,11 +185,15 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		// now test all bonds with bitcoin core rpc testmempoolaccept
 		let json_rpc_client = self.json_rpc_client.clone();
-		let mempool_accept_future =
-			tokio::task::spawn_blocking(move || test_mempool_accept_bonds(json_rpc_client, bonds));
+		let bonds_clone = Arc::clone(&bonds);
+		let mempool_accept_future = tokio::task::spawn_blocking(move || {
+			test_mempool_accept_bonds(json_rpc_client, bonds_clone)
+		});
 		let invalid_bonds_testmempoolaccept = mempool_accept_future.await??;
 		invalid_bonds.extend(invalid_bonds_testmempoolaccept.into_iter());
 
+		let mempool_bonds = self.mempool.lookup_mempool_inputs(&bonds).await?;
+		invalid_bonds.extend(mempool_bonds.into_iter());
 		debug!("validate_bond_tx_hex(): Bond validation done.");
 		Ok(invalid_bonds)
 	}

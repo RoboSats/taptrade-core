@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
 	// Initialize the database pool
 	let coordinator = Arc::new(Coordinator {
 		coordinator_db: Arc::new(CoordinatorDB::init().await?),
-		coordinator_wallet: Arc::new(init_coordinator_wallet()?),
+		coordinator_wallet: Arc::new(init_coordinator_wallet().await?),
 	});
 
 	// begin monitoring bonds
