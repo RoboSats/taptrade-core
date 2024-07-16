@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 
 use super::*;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
-use std::{collections::HashMap, env};
+use std::env;
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorDB {
@@ -430,52 +430,82 @@ impl CoordinatorDB {
 			bonds.push(bond);
 		}
 
-		let mut rows_taken = sqlx::query(
-			"SELECT offer_id, robohash_maker, robohash_taker,
-			bond_address_maker, bond_address_taker, bond_amount_sat, amount_sat, bond_tx_hex_maker, bond_tx_hex_taker
-			FROM taken_offers",
-		)
-		.fetch(&*self.db_pool);
+		// we shouldn't need this as bonds will be locked onchain when trade is taken and we should
+		// move to taken_offers only once everything is confirmed
+		// let mut rows_taken = sqlx::query(
+		// 	"SELECT offer_id, robohash_maker, robohash_taker,
+		// 	bond_address_maker, bond_address_taker, bond_amount_sat, amount_sat, bond_tx_hex_maker, bond_tx_hex_taker
+		// 	FROM taken_offers",
+		// )
+		// .fetch(&*self.db_pool);
 
-		while let Some(row) = rows_taken.next().await {
-			let row = row?;
+		// while let Some(row) = rows_taken.next().await {
+		// 	let row = row?;
 
-			let robohash_maker: Vec<u8> = row.get("robohash_maker");
-			let robohash_taker: Vec<u8> = row.get("robohash_taker");
-			let locking_amount_sat = row.get::<i64, _>("bond_amount_sat") as u64;
-			let min_input_sum_sat = row.get::<i64, _>("amount_sat") as u64;
-			let trade_id_hex: String = row.get("offer_id");
+		// 	let robohash_maker: Vec<u8> = row.get("robohash_maker");
+		// 	let robohash_taker: Vec<u8> = row.get("robohash_taker");
+		// 	let locking_amount_sat = row.get::<i64, _>("bond_amount_sat") as u64;
+		// 	let min_input_sum_sat = row.get::<i64, _>("amount_sat") as u64;
+		// 	let trade_id_hex: String = row.get("offer_id");
 
-			let requirements_maker = BondRequirements {
-				bond_address: row.get("bond_address_maker"),
-				locking_amount_sat,
-				min_input_sum_sat,
-			};
+		// 	let requirements_maker = BondRequirements {
+		// 		bond_address: row.get("bond_address_maker"),
+		// 		locking_amount_sat,
+		// 		min_input_sum_sat,
+		// 	};
 
-			let bond_maker = MonitoringBond {
-				bond_tx_hex: row.get("bond_tx_hex_maker"),
-				robot: robohash_maker,
-				trade_id_hex: trade_id_hex.clone(),
-				requirements: requirements_maker,
-				table: Table::ActiveTrades,
-			};
-			bonds.push(bond_maker);
+		// 	let bond_maker = MonitoringBond {
+		// 		bond_tx_hex: row.get("bond_tx_hex_maker"),
+		// 		robot: robohash_maker,
+		// 		trade_id_hex: trade_id_hex.clone(),
+		// 		requirements: requirements_maker,
+		// 		table: Table::ActiveTrades,
+		// 	};
+		// 	bonds.push(bond_maker);
 
-			let requirements_maker = BondRequirements {
-				bond_address: row.get("bond_address_taker"),
-				locking_amount_sat,
-				min_input_sum_sat,
-			};
+		// 	let requirements_maker = BondRequirements {
+		// 		bond_address: row.get("bond_address_taker"),
+		// 		locking_amount_sat,
+		// 		min_input_sum_sat,
+		// 	};
 
-			let bond_taker = MonitoringBond {
-				bond_tx_hex: row.get("bond_tx_hex_taker"),
-				trade_id_hex,
-				robot: robohash_taker,
-				requirements: requirements_maker,
-				table: Table::ActiveTrades,
-			};
-			bonds.push(bond_taker);
-		}
+		// 	let bond_taker = MonitoringBond {
+		// 		bond_tx_hex: row.get("bond_tx_hex_taker"),
+		// 		trade_id_hex,
+		// 		robot: robohash_taker,
+		// 		requirements: requirements_maker,
+		// 		table: Table::ActiveTrades,
+		// 	};
+		// 	bonds.push(bond_taker);
+		// }
 		Ok(bonds)
+	}
+
+	pub async fn remove_violating_bond(&self, bond: &MonitoringBond) -> Result<()> {
+		if bond.table == Table::Orderbook {
+			sqlx::query("DELETE FROM active_maker_offers WHERE offer_id = ?")
+				.bind(&bond.trade_id_hex)
+				.execute(&*self.db_pool)
+				.await?;
+			debug!("Removed violating bond offer from orderbook");
+		} else {
+			return Err(anyhow!(
+				"Invalid table type when trying to remove violating bond from db"
+			));
+		}
+
+		// we shouldn't need this as bonds will be locked onchain when trade is taken and we should
+		// move to taken_offers only once everything is confirmed
+		// } else if bond.table == Table::ActiveTrades {
+		// 	sqlx::query("DELETE FROM taken_offers WHERE offer_id = ?")
+		// 		.bind(bond.trade_id_hex)
+		// 		.execute(&*self.db_pool)
+		// 		.await?;
+
+		// sqlx::query("DELETE FROM active_maker_offers WHERE offer_id = ?")
+		// 	.bind(trade_id_hex)
+		// 	.execute(&*self.db_pool)
+		// 	.await?;
+		Ok(())
 	}
 }

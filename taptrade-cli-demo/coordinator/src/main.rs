@@ -13,7 +13,7 @@ use dotenv::dotenv;
 use log::{debug, error, info, warn};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
-use tokio::{sync::Mutex, task::spawn_blocking};
+use tokio::sync::Mutex;
 use wallet::*;
 
 pub struct Coordinator {

@@ -3,9 +3,10 @@
 // prevent querying the db all the time.
 // Also needs to implement punishment logic in case a fraud is detected.
 use super::*;
+use anyhow::Context;
 use sha2::{Digest, Sha256};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Table {
 	Orderbook,
 	ActiveTrades,
@@ -28,6 +29,14 @@ impl MonitoringBond {
 		Ok(sha256(&hex::decode(&self.bond_tx_hex)?))
 	}
 
+	async fn remove_from_db_tables(&self, db: Arc<CoordinatorDB>) -> Result<()> {
+		// remove bond from db
+		db.remove_violating_bond(self)
+			.await
+			.context("Error removing violating bond from db")?;
+		Ok(())
+	}
+
 	// the current implementation only publishes the bond and removes the offer from the db
 	// in a more advanced implementation we could increase the transaction fee (cpfp) and
 	// continue monitoring the bond transaction until a confirmation happens for maximum pain
@@ -35,11 +44,14 @@ impl MonitoringBond {
 	// we could directly forward bond sats to the other parties payout address in case it is a taken trade
 	async fn punish(&self, coordinator: &Coordinator) -> Result<()> {
 		// publish bond
+		debug!("Publishing violating bond tx: {}", self.bond_tx_hex);
 		coordinator
 			.coordinator_wallet
 			.publish_bond_tx_hex(&self.bond_tx_hex)?; // can be made async with esplora backend if we figure out the compilation error of bdk
 
 		// remove offer from db/orderbook
+		self.remove_from_db_tables(coordinator.coordinator_db.clone())
+			.await?;
 		Ok(())
 	}
 }
