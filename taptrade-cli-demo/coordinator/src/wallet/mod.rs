@@ -61,6 +61,8 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 		&rpc_config.url,
 		rpc_config.auth.clone().into(),
 	)?);
+	let json_rpc_client_clone = Arc::clone(&json_rpc_client);
+	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
 	let backend = RpcBlockchain::from_config(&rpc_config)?;
 	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
 	let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
@@ -70,9 +72,6 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 		bitcoin::Network::Regtest,
 		sled_db,
 	)?;
-
-	let json_rpc_client_clone = Arc::clone(&json_rpc_client);
-	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
 
 	wallet
 		.sync(&backend, SyncOptions::default())
@@ -220,7 +219,6 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 }
 
 fn search_monitoring_bond_by_txid(
-	// this should not happen often, so the inefficiency is acceptable
 	monitoring_bonds: &Vec<MonitoringBond>,
 	txid: &str,
 ) -> Result<MonitoringBond> {
@@ -304,7 +302,8 @@ mod tests {
 			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME").unwrap(),
 			sync_params: None,
 		};
-		let json_rpc_client = Client::new(&rpc_config.url, rpc_config.auth.clone().into()).unwrap();
+		let json_rpc_client =
+			Arc::new(Client::new(&rpc_config.url, rpc_config.auth.clone().into()).unwrap());
 		let backend = RpcBlockchain::from_config(&rpc_config).unwrap();
 
 		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
@@ -320,7 +319,8 @@ mod tests {
 		CoordinatorWallet::<MemoryDatabase> {
 			wallet: Arc::new(Mutex::new(wallet)),
 			backend: Arc::new(backend),
-			json_rpc_client: Arc::new(json_rpc_client),
+			json_rpc_client: Arc::clone(&json_rpc_client),
+			mempool: Arc::new(MempoolHandler::new(json_rpc_client).await),
 		}
 	}
 
