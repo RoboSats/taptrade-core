@@ -28,7 +28,7 @@ fn run_mempool(mempool: Arc<Mempool>) {
 	loop {
 		// sleep for a while
 		std::thread::sleep(std::time::Duration::from_secs(15));
-		debug!("Fetching mempool");
+		trace!("Fetching mempool");
 		let mempool_txs = match mempool.json_rpc_client.deref().get_raw_mempool() {
 			std::result::Result::Ok(mempool_txs) => mempool_txs,
 			Err(e) => {

@@ -10,7 +10,7 @@ use coordinator::monitoring::monitor_bonds;
 use coordinator::monitoring::*;
 use database::CoordinatorDB;
 use dotenv::dotenv;
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::{env, sync::Arc};
 use tokio::sync::Mutex;

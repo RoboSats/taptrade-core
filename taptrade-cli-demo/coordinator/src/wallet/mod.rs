@@ -4,13 +4,16 @@ mod utils;
 use super::*;
 use anyhow::Context;
 use bdk::{
-	bitcoin::{self, bip32::ExtendedPrivKey, consensus::encode::deserialize, Transaction},
+	bitcoin::{
+		self, bip32::ExtendedPrivKey, consensus::encode::deserialize, key::secp256k1,
+		Network::Regtest, Transaction,
+	},
 	bitcoincore_rpc::{Client, RawTx, RpcApi},
 	blockchain::{rpc::Auth, Blockchain, ConfigurableBlockchain, RpcBlockchain, RpcConfig},
 	sled::{self, Tree},
 	template::Bip86,
 	wallet::verify::*,
-	KeychainKind, Wallet,
+	KeychainKind, SyncOptions, Wallet,
 };
 use coordinator::mempool_monitoring::MempoolHandler;
 use std::{collections::HashMap, str::FromStr};
@@ -37,13 +40,21 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 	let wallet_xprv = ExtendedPrivKey::from_str(
 		&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 	)?;
+	let secp_context = secp256k1::Secp256k1::new();
 	let rpc_config = RpcConfig {
 		url: env::var("BITCOIN_RPC_ADDRESS_PORT")?.to_string(),
-		auth: Auth::Cookie {
-			file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH")?.into(),
+		auth: Auth::UserPass {
+			username: env::var("BITCOIN_RPC_USER")?,
+			password: env::var("BITCOIN_RPC_PASSWORD")?,
 		},
-		network: bdk::bitcoin::Network::Regtest,
-		wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		network: Regtest,
+		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		wallet_name: bdk::wallet::wallet_name_from_descriptor(
+			Bip86(wallet_xprv, KeychainKind::External),
+			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
+			Regtest,
+			&secp_context,
+		)?,
 		sync_params: None,
 	};
 	let json_rpc_client = Arc::new(Client::new(
@@ -63,9 +74,9 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 	let json_rpc_client_clone = Arc::clone(&json_rpc_client);
 	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
 
-	// wallet
-	// 	.sync(&backend, SyncOptions::default())
-	// 	.context("Connection to blockchain server failed.")?; // we could also use Esplora to make this async
+	wallet
+		.sync(&backend, SyncOptions::default())
+		.context("Connection to blockchain server failed.")?; // we could also use Esplora to make this async
 	dbg!(wallet.get_balance()?);
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),

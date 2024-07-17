@@ -81,6 +81,7 @@ impl OfferPsbtRequest {
 			.send()?
 			.json::<OfferTakenResponse>()?;
 
+		debug!("Trader received escrow psbt");
 		let psbt_bytes = hex::decode(res.trade_psbt_hex_to_sign)?;
 		let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
 		Ok(psbt)

@@ -2,6 +2,7 @@ pub mod bond;
 pub mod musig2;
 pub mod wallet_utils;
 
+use super::*;
 use crate::{cli::TraderSettings, communication::api::BondRequirementResponse};
 use anyhow::{anyhow, Result};
 use bdk::{
@@ -73,7 +74,7 @@ impl TradingWallet {
 	// taker input should be the same as in the previous bond transaction.
 	// input amount should be the bond amount when buying,
 	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-		dbg!("IMPLEMENT TAKER PSBT VALIDATION!");
+		error!("IMPLEMENT TAKER PSBT VALIDATION!");
 		// tbd once the trade psbt is implemented on coordinator side
 		Ok(self)
 	}
@@ -86,9 +87,11 @@ impl TradingWallet {
 		Ok(self)
 	}
 
+	// validate input amount, escrow output
 	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-		dbg!("IMPLEMENT MAKER PSBT VALIDATION!");
+		error!("IMPLEMENT MAKER PSBT VALIDATION!");
 		// tbd once the trade psbt is implemented on coordinator side
+
 		Ok(self)
 	}
 }
