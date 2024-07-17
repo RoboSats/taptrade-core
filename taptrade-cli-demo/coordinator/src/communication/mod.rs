@@ -179,6 +179,11 @@ async fn submit_escrow_psbt(
 	Json(payload): Json<PsbtSubmissionRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
+
+	// check if psbt is correct, valid and signed
+	// publish psbt if it is correct
+	// return 200 if everything is correct
+	// return 400 if something is wrong
 }
 
 /// Will get polled by the traders once they submitted their PSBT part. The coorinator will return status code 200 once he received both PSBTs and they got mined,
@@ -192,6 +197,12 @@ async fn poll_escrow_confirmation(
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
+	// let escrow_tx_txid = database.fetch_escrow_txid(&payload.order_id_hex).await?;
+	// if wallet.is_tx_confirmed(&escrow_tx_txid).await {
+	// 	Ok(StatusCode::OK.into_response())
+	// } else {
+	// 	Ok(StatusCode::ACCEPTED.into_response())
+	// } else if not found in database or not published (invalid request) return 404
 }
 
 async fn submit_obligation_confirmation(

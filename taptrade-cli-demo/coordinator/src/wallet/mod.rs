@@ -287,35 +287,46 @@ impl fmt::Debug for CoordinatorWallet<Tree> {
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
 	use super::*;
 	use bdk::bitcoin::Network;
 	use bdk::database::MemoryDatabase;
 	use bdk::{blockchain::RpcBlockchain, Wallet};
 	async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 		dotenv().ok();
+		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
+		let secp_context = secp256k1::Secp256k1::new();
 		let rpc_config = RpcConfig {
 			url: env::var("BITCOIN_RPC_ADDRESS_PORT").unwrap().to_string(),
-			auth: Auth::Cookie {
-				file: env::var("BITCOIN_RPC_COOKIE_FILE_PATH").unwrap().into(),
+			auth: Auth::UserPass {
+				username: env::var("BITCOIN_RPC_USER").unwrap(),
+				password: env::var("BITCOIN_RPC_PASSWORD").unwrap(),
 			},
-			network: bdk::bitcoin::Network::Regtest,
-			wallet_name: env::var("BITCOIN_RPC_WALLET_NAME").unwrap(),
+			network: Regtest,
+			// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+			wallet_name: bdk::wallet::wallet_name_from_descriptor(
+				Bip86(wallet_xprv, KeychainKind::External),
+				Some(Bip86(wallet_xprv, KeychainKind::Internal)),
+				Network::Testnet,
+				&secp_context,
+			)
+			.unwrap(),
 			sync_params: None,
 		};
 		let json_rpc_client =
 			Arc::new(Client::new(&rpc_config.url, rpc_config.auth.clone().into()).unwrap());
 		let backend = RpcBlockchain::from_config(&rpc_config).unwrap();
 
-		let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
 		let wallet = Wallet::new(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Network::Regtest,
+			Network::Testnet,
 			MemoryDatabase::new(),
 		)
 		.unwrap();
 		wallet.sync(&backend, SyncOptions::default()).unwrap();
-
+		tokio::time::sleep(Duration::from_secs(16)).await; // fetch the mempool
 		CoordinatorWallet::<MemoryDatabase> {
 			wallet: Arc::new(Mutex::new(wallet)),
 			backend: Arc::new(backend),
@@ -324,6 +335,7 @@ mod tests {
 		}
 	}
 
+	// the transactions are testnet4 transactions, so run a testnet4 rpc node as backend
 	#[tokio::test]
 	async fn test_transaction_without_signature() {
 		let test_wallet = new_test_wallet("tprv8ZgxMBicQKsPdHuCSjhQuSZP1h6ZTeiRqREYS5guGPdtL7D1uNLpnJmb2oJep99Esq1NbNZKVJBNnD2ZhuXSK7G5eFmmcx73gsoa65e2U32").await;

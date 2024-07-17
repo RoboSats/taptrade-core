@@ -1,3 +1,6 @@
+// Obsolete trough usage of gettxspendingprevout, unfortunately bitcoincore_rpc does not support it yet
+// doing upstream PR with gettxspendingprevout would make it possible to get rid of this internal mempool state
+
 use super::*;
 use anyhow::Ok;
 use bdk::bitcoin::consensus::encode::deserialize;

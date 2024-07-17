@@ -87,7 +87,7 @@ impl TradingWallet {
 		Ok(self)
 	}
 
-	// validate input amount, escrow output
+	// validate amounts, escrow output
 	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
 		error!("IMPLEMENT MAKER PSBT VALIDATION!");
 		// tbd once the trade psbt is implemented on coordinator side
