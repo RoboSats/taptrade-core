@@ -138,12 +138,14 @@ async fn submit_taker_bond(
 	panic!("Trade contract PSBT not implemented!");
 	let trade_contract_psbt_taker = "".to_string(); // implement psbt
 	let trade_contract_psbt_maker = "".to_string(); // implement psbt
+	let escrow_tx_txid: String = "".to_string(); // implement txid of psbt
 
 	database
 		.add_taker_info_and_move_table(
 			&payload,
 			&trade_contract_psbt_maker,
 			&trade_contract_psbt_taker,
+			escrow_tx_txid,
 		)
 		.await?;
 	Ok(Json(OfferTakenResponse {

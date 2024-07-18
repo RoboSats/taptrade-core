@@ -8,6 +8,7 @@ use bdk::sled;
 use communication::{api::*, api_server};
 use coordinator::monitoring::monitor_bonds;
 use coordinator::monitoring::*;
+use coordinator::tx_confirmation_monitoring::update_transaction_confirmations;
 use database::CoordinatorDB;
 use dotenv::dotenv;
 use log::{debug, error, info, trace, warn};
@@ -47,6 +48,8 @@ async fn main() -> Result<()> {
 			}
 		}
 	});
+	let coordinator_ref = Arc::clone(&coordinator);
+	tokio::spawn(async move { update_transaction_confirmations(coordinator_ref).await });
 	// Start the API server
 	api_server(coordinator).await?;
 	Ok(())

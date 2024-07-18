@@ -52,7 +52,7 @@ fn bool_to_sql_int(flag: bool) -> Option<i64> {
 impl CoordinatorDB {
 	// will either create a new db or load existing one. Will create according tables in new db
 	pub async fn init() -> Result<Self> {
-		dbg!(env::var("DATABASE_PATH")?);
+		debug!("coordinator db path: {}", env::var("DATABASE_PATH")?);
 		let db_path =
 			env::var("DATABASE_PATH").context("Parsing DATABASE_PATH from .env failed")?;
 
@@ -121,8 +121,10 @@ impl CoordinatorDB {
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
 				musig_pubkey_hex_taker TEXT NOT NULL,
 				escrow_psbt_hex_maker TEXT,
-				escrow_psbt_hex_taker TEXT
-			)",
+				escrow_psbt_hex_taker TEXT,
+				escrow_psbt_txid TEXT,
+				escrow_psbt_is_confirmed INTEGER
+			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
 		.await?;
@@ -335,6 +337,7 @@ impl CoordinatorDB {
 		trade_and_taker_info: &OfferPsbtRequest,
 		trade_contract_psbt_maker: &String,
 		trade_contract_psbt_taker: &String,
+		trade_tx_txid: String,
 	) -> Result<()> {
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
@@ -345,9 +348,9 @@ impl CoordinatorDB {
 		sqlx::query(
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
-						bond_tx_hex_taker, payout_address_maker, payout_address_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						bond_tx_hex_taker, payout_address_maker, payout_address_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -369,6 +372,8 @@ impl CoordinatorDB {
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
 			.bind(trade_contract_psbt_maker.clone())
 			.bind(trade_contract_psbt_taker.clone())
+			.bind(trade_tx_txid)
+			.bind(0)
 			.execute(&*self.db_pool)
 			.await?;
 
@@ -506,6 +511,32 @@ impl CoordinatorDB {
 		// 	.bind(trade_id_hex)
 		// 	.execute(&*self.db_pool)
 		// 	.await?;
+		Ok(())
+	}
+
+	pub async fn fetch_unconfirmed_bond_txids(&self) -> Result<Vec<String>> {
+		let mut txids = Vec::new();
+		let mut rows = sqlx::query(
+			"SELECT escrow_psbt_txid FROM taken_offers WHERE escrow_psbt_is_confirmed = 0",
+		)
+		.fetch(&*self.db_pool);
+		while let Some(row) = rows.next().await {
+			let row = row?;
+			let txid: String = row.get("escrow_psbt_txid");
+			txids.push(txid);
+		}
+		Ok(txids)
+	}
+
+	pub async fn confirm_bond_txids(&self, confirmed_txids: Vec<String>) -> Result<()> {
+		for txid in confirmed_txids {
+			sqlx::query(
+				"UPDATE taken_offers SET escrow_psbt_is_confirmed = 1 WHERE escrow_psbt_txid = ?",
+			)
+			.bind(txid)
+			.execute(&*self.db_pool)
+			.await?;
+		}
 		Ok(())
 	}
 }
