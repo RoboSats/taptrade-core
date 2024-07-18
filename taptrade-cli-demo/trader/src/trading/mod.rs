@@ -50,7 +50,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		info!("Waiting for other party to confirm the trade.");
 		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	} else {
-		error!("Trade failed.");
+		error!("Trade failed. Initiating escrow mode.");
 		panic!("Escrow to be implemented!");
 	}
 	Ok(())

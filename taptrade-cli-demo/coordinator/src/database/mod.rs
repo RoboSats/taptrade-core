@@ -123,7 +123,9 @@ impl CoordinatorDB {
 				escrow_psbt_hex_maker TEXT,
 				escrow_psbt_hex_taker TEXT,
 				escrow_psbt_txid TEXT,
-				escrow_psbt_is_confirmed INTEGER
+				escrow_psbt_is_confirmed INTEGER,
+				maker_happy INTEGER,
+				taker_happy INTEGER
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -537,6 +539,74 @@ impl CoordinatorDB {
 			.execute(&*self.db_pool)
 			.await?;
 		}
+		Ok(())
+	}
+
+	pub async fn get_txid_confirmation_status(&self, txid: &String) -> Result<bool> {
+		let status = sqlx::query(
+			"SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE escrow_psbt_txid = ?",
+		)
+		.bind(txid)
+		.fetch_one(&*self.db_pool)
+		.await?;
+		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
+	}
+
+	pub async fn is_valid_robohash_in_table(
+		&self,
+		robohash_hex: &String,
+		offer_id: &String,
+	) -> Result<bool> {
+		let robohash = hex::decode(robohash_hex)?;
+		let robohash = sqlx::query(
+			"SELECT 1 FROM taken_offers WHERE (robohash_maker = ? OR robohash_taker = ?) AND offer_id = ?",
+		)
+		.bind(&robohash)
+		.bind(&robohash)
+		.bind(offer_id)
+		.fetch_optional(&*self.db_pool)
+		.await?;
+		Ok(robohash.is_some())
+	}
+
+	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &String) -> Result<bool> {
+		let status =
+			sqlx::query("SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE offer_id = ?")
+				.bind(offer_id)
+				.fetch_one(&*self.db_pool)
+				.await?;
+		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
+	}
+
+	pub async fn set_trader_happy_true(&self, offer_id: &String, robohash: &String) -> Result<()> {
+		let robohash_bytes = hex::decode(robohash)?;
+
+		// First, check if the robohash matches the maker or taker
+		let row = sqlx::query(
+			"SELECT robohash_maker, robohash_taker FROM taken_offers WHERE offer_id = ?",
+		)
+		.bind(offer_id)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		let is_maker = row.get::<Vec<u8>, _>("robohash_maker") == robohash_bytes;
+		let is_taker = row.get::<Vec<u8>, _>("robohash_taker") == robohash_bytes;
+
+		if !is_maker && !is_taker {
+			return Err(anyhow::anyhow!("Robohash does not match maker or taker"));
+		}
+
+		let query = if is_maker {
+			"UPDATE taken_offers SET maker_happy = 1 WHERE offer_id = ?"
+		} else {
+			"UPDATE taken_offers SET taker_happy = 1 WHERE offer_id = ?"
+		};
+
+		sqlx::query(query)
+			.bind(offer_id)
+			.execute(&*self.db_pool)
+			.await?;
+
 		Ok(())
 	}
 }

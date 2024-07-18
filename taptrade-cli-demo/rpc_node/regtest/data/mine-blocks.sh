@@ -13,10 +13,9 @@ if echo "$WALLETS" | grep -q "coordinator_wallet"; then
 else
     echo "Wallet does not exist. Creating wallet..."
     bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" createwallet "coordinator_wallet"
+    # Generate initial blocks
+    bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -rpcwallet="coordinator_wallet" -generate 101
 fi
-
-# Generate initial blocks
-bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -rpcwallet="coordinator_wallet" -generate 101
 
 # Generate a block every 120 seconds
 while true; do

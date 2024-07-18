@@ -190,27 +190,55 @@ async fn submit_escrow_psbt(
 
 /// Will get polled by the traders once they submitted their PSBT part. The coorinator will return status code 200 once he received both PSBTs and they got mined,
 /// then the traders will know it is secure to begin with the fiat exchange and can continue with the trade (exchange information in the chat and transfer fiat).
-/// We can implement this once the PSBT is done.
 /// In theory this polling mechanism could also be replaced by the traders scanning the blockchain themself so they could also see once the tx is confirmed.
-/// We have to see what makes more sense later, but maybe this would be more elegant. TBD.
 async fn poll_escrow_confirmation(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	panic!("implement")
-	// let escrow_tx_txid = database.fetch_escrow_txid(&payload.order_id_hex).await?;
-	// if wallet.is_tx_confirmed(&escrow_tx_txid).await {
-	// 	Ok(StatusCode::OK.into_response())
-	// } else {
-	// 	Ok(StatusCode::ACCEPTED.into_response())
-	// } else if not found in database or not published (invalid request) return 404
+	if !database
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.order_id_hex)
+		.await?
+	{
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	}
+	if database
+		.fetch_escrow_tx_confirmation_status(&payload.order_id_hex)
+		.await?
+	{
+		return Ok(StatusCode::OK.into_response());
+	} else {
+		return Ok(StatusCode::ACCEPTED.into_response());
+	}
 }
 
 async fn submit_obligation_confirmation(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
 	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
+) -> Result<Response, AppError> {
+	// sanity check if offer is in table and if the escrow tx is confirmed
+	if !database
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.order_id_hex)
+		.await? || !database
+		.fetch_escrow_tx_confirmation_status(&payload.order_id_hex)
+		.await?
+	{
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	}
+	database
+		.set_trader_happy_true(&payload.order_id_hex, &payload.robohash_hex)
+		.await?;
+	Ok(StatusCode::OK.into_response())
+}
+
+// or
+
+// gets called if one of the traders wants to initiate escrow (e.g. claiming they didn't receive the fiat)
+// before timeout ends
+async fn request_escrow(
+	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
+	Json(payload): Json<String>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
 }
@@ -248,6 +276,7 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 			"/submit-obligation-confirmation",
 			post(submit_obligation_confirmation),
 		)
+		.route("/request-escrow", post(request_escrow))
 		.route("/poll-final-payout", post(poll_final_payout))
 		.layer(Extension(database))
 		.layer(Extension(wallet));
