@@ -160,7 +160,7 @@ async fn request_offer_status_maker(
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	let offer = database
-		.fetch_taken_offer_maker(&payload.order_id_hex, &payload.robohash_hex)
+		.fetch_taken_offer_maker(&payload.offer_id_hex, &payload.robohash_hex)
 		.await?;
 	match offer {
 		Some(offer) => Ok(Json(OfferTakenResponse {
@@ -196,13 +196,13 @@ async fn poll_escrow_confirmation(
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.order_id_hex)
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
 		.await?
 	{
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
 	if database
-		.fetch_escrow_tx_confirmation_status(&payload.order_id_hex)
+		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
 		.await?
 	{
 		return Ok(StatusCode::OK.into_response());
@@ -213,20 +213,19 @@ async fn poll_escrow_confirmation(
 
 async fn submit_obligation_confirmation(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
 	// sanity check if offer is in table and if the escrow tx is confirmed
 	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.order_id_hex)
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
 		.await? || !database
-		.fetch_escrow_tx_confirmation_status(&payload.order_id_hex)
+		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
 		.await?
 	{
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
 	database
-		.set_trader_happy_field(&payload.order_id_hex, &payload.robohash_hex, true)
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, true)
 		.await?;
 	Ok(StatusCode::OK.into_response())
 }
@@ -271,15 +270,44 @@ async fn poll_final_payout(
 	{
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
-	// check if both traders are happy
-	// assemble payout psbt and return to them for signing
 
+	let trader_happiness = database
+		.fetch_trader_happiness(&payload.offer_id_hex)
+		.await?;
+	if trader_happiness.maker_happy.is_some_and(|x| x == true)
+		&& trader_happiness.taker_happy.is_some_and(|x| x == true)
+	{
+		panic!("Implement wallet.assemble_keyspend_payout_psbt()");
+	// let payout_keyspend_psbt_hex = wallet
+	// 	.assemble_keyspend_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex)
+	// 	.await
+	// 	.context("Error assembling payout PSBT")?;
+	// return Ok(String::from(payout_keyspend_psbt_hex).into_response());
+	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
+		&& !trader_happiness.escrow_ongoing
+	{
+		return Ok(StatusCode::ACCEPTED.into_response());
+	}
 	// if one of them is not happy
 	// open escrow cli on coordinator to decide who will win (chat/dispute is out of scope for this demo)
 	// once decided who will win assemble the correct payout psbt and return it to the according trader
 	// the other trader gets a error code/ end of trade code
-
-	panic!("implement")
+	// escrow winner has to be set true with a cli input of the coordinator. This could be an api
+	// endpoint for the admin UI frontend in the future
+	if let Some(escrow_winner) = database.fetch_escrow_result(&payload.offer_id_hex).await? {
+		if escrow_winner == payload.robohash_hex {
+			panic!("Implement wallet.assemble_script_payout_psbt()");
+		// let script_payout_psbt_hex = wallet
+		// 	.assemble_script_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex, is_maker_bool)
+		// 	.await
+		// 	.context("Error assembling payout PSBT")?;
+		// return Ok(String::from(payout_keyspend_psbt_hex).into_response());
+		} else {
+			return Ok(StatusCode::GONE.into_response()); // this will be returned to the losing trader
+		}
+	} else {
+		return Ok(StatusCode::PROCESSING.into_response()); // this will be returned if the coordinator hasn't decided yet
+	}
 }
 
 async fn test_api() -> &'static str {

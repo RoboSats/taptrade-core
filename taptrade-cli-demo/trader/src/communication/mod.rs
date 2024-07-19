@@ -15,7 +15,7 @@ use bdk::{
 	wallet::AddressInfo,
 };
 use serde::{Deserialize, Serialize};
-use std::{str::FromStr, thread::sleep, time::Duration};
+use std::{f32::consts::E, str::FromStr, thread::sleep, time::Duration};
 
 impl BondRequirementResponse {
 	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
@@ -257,13 +257,20 @@ impl IsOfferReadyRequest {
 				.send()?;
 			if res.status() == 200 {
 				// good case, psbt is returned
+				debug!("Payout psbt received. Signing...");
 				break;
-			} else if res.status() == 204 {
+			} else if res.status() == 202 {
 				// still waiting, retry
 				continue;
-			} else if res.status() == 201 {
+			} else if res.status() == 102 {
 				// other party initiated escrow
-				return Ok(None);
+				debug!("Other party initiated escrow. Waiting for coordinator to finalize.");
+				continue;
+			} else if res.status() != 410 {
+				return Err(anyhow!(
+					"We lost the escrow, your bond is gone: {}",
+					res.status()
+				));
 			} else {
 				// unintended response
 				return Err(anyhow!(

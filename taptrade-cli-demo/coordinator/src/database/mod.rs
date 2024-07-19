@@ -40,6 +40,12 @@ struct AwaitingTakerOffer {
 	musig_pubkey_hex_maker: String,
 }
 
+pub struct TraderHappiness {
+	pub maker_happy: Option<bool>,
+	pub taker_happy: Option<bool>,
+	pub escrow_ongoing: bool,
+}
+
 fn bool_to_sql_int(flag: bool) -> Option<i64> {
 	if flag {
 		Some(1)
@@ -126,6 +132,8 @@ impl CoordinatorDB {
 				escrow_psbt_is_confirmed INTEGER,
 				maker_happy INTEGER,
 				taker_happy INTEGER,
+				escrow_ongoing INTEGER NOT NULL,
+				escrow_winner_robohash TEXT
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -351,8 +359,8 @@ impl CoordinatorDB {
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed, escrow_ongoing)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -375,6 +383,7 @@ impl CoordinatorDB {
 			.bind(trade_contract_psbt_maker.clone())
 			.bind(trade_contract_psbt_taker.clone())
 			.bind(trade_tx_txid)
+			.bind(0)
 			.bind(0)
 			.execute(&*self.db_pool)
 			.await?;
@@ -613,6 +622,44 @@ impl CoordinatorDB {
 			.execute(&*self.db_pool)
 			.await?;
 
+		if !is_happy {
+			sqlx::query("UPDATE taken_offers SET escrow_ongoing = 1 WHERE offer_id = ?")
+				.bind(offer_id)
+				.execute(&*self.db_pool)
+				.await?;
+		}
+
 		Ok(())
+	}
+
+	pub async fn fetch_trader_happiness(&self, offer_id: &String) -> Result<TraderHappiness> {
+		let row = sqlx::query(
+			"SELECT maker_happy, taker_happy, escrow_ongoing FROM taken_offers WHERE offer_id = ?",
+		)
+		.bind(offer_id)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		let maker_happy: Option<i64> = row.try_get::<Option<i64>, _>("maker_happy")?;
+		let taker_happy: Option<i64> = row.try_get::<Option<i64>, _>("taker_happy")?;
+		let escrow_ongoing: i64 = row.try_get::<i64, _>("escrow_ongoing")?;
+
+		Ok(TraderHappiness {
+			maker_happy: maker_happy.map(|v| v != 0),
+			taker_happy: taker_happy.map(|v| v != 0),
+			escrow_ongoing: escrow_ongoing != 0,
+		})
+	}
+
+	pub async fn fetch_escrow_result(&self, offer_id: &String) -> Result<Option<String>> {
+		let row = sqlx::query("SELECT escrow_winner_robohash FROM taken_offers WHERE offer_id = ?")
+			.bind(offer_id)
+			.fetch_one(&*self.db_pool)
+			.await?;
+
+		let winner_robohash: Option<String> =
+			row.try_get::<Option<String>, _>("escrow_winner_robohash")?;
+
+		Ok(winner_robohash)
 	}
 }
