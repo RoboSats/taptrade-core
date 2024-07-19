@@ -9,7 +9,7 @@ use crate::{
 	communication::api::{
 		BondRequirementResponse, BondSubmissionRequest, IsOfferReadyRequest, OfferTakenRequest,
 		OfferTakenResponse, PsbtSubmissionRequest, PublicOffer, PublicOffers,
-		TradeObligationsSatisfied,
+		TradeObligationsSatisfied, TradeObligationsUnsatisfied,
 	},
 	wallet::{
 		bond::Bond,
@@ -51,7 +51,8 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	} else {
 		error!("Trade failed. Initiating escrow mode.");
-		panic!("Escrow to be implemented!");
+		TradeObligationsUnsatisfied::request_escrow(&offer.offer_id_hex, maker_config)?;
+		let escrow_payout_script_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	}
 	Ok(())
 }

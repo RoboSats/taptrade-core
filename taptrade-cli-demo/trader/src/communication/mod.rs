@@ -278,3 +278,28 @@ impl IsOfferReadyRequest {
 		Ok(Some(final_psbt))
 	}
 }
+
+impl TradeObligationsUnsatisfied {
+	pub fn request_escrow(offer_id_hex: &String, trader_config: &TraderSettings) -> Result<()> {
+		let request = TradeObligationsUnsatisfied {
+			robohash_hex: trader_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer_id_hex.clone(),
+		};
+
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				trader_config.coordinator_endpoint, "/request-escrow"
+			))
+			.json(&request)
+			.send()?;
+		if res.status() != 200 {
+			return Err(anyhow!(
+				"Submitting trade obligations unsatisfied failed. Status: {}",
+				res.status()
+			));
+		}
+		Ok(())
+	}
+}

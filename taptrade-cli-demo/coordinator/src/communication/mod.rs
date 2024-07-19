@@ -226,7 +226,7 @@ async fn submit_obligation_confirmation(
 		return Ok(StatusCode::NOT_FOUND.into_response());
 	}
 	database
-		.set_trader_happy_true(&payload.order_id_hex, &payload.robohash_hex)
+		.set_trader_happy_field(&payload.order_id_hex, &payload.robohash_hex, true)
 		.await?;
 	Ok(StatusCode::OK.into_response())
 }
@@ -237,10 +237,21 @@ async fn submit_obligation_confirmation(
 // before timeout ends
 async fn request_escrow(
 	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
-	Json(payload): Json<String>,
+	Json(payload): Json<TradeObligationsUnsatisfied>,
 ) -> Result<Response, AppError> {
-	panic!("implement")
+	if !database
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
+		.await? || !database
+		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
+		.await?
+	{
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	}
+	database
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, false)
+		.await?;
+
+	Ok(StatusCode::OK.into_response())
 }
 
 /// Is supposed to get polled by the traders once they clicked on "i sent the fiat" or "i received the fiat".
@@ -252,6 +263,22 @@ async fn poll_final_payout(
 	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
+	if !database
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
+		.await? || !database
+		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
+		.await?
+	{
+		return Ok(StatusCode::NOT_FOUND.into_response());
+	}
+	// check if both traders are happy
+	// assemble payout psbt and return to them for signing
+
+	// if one of them is not happy
+	// open escrow cli on coordinator to decide who will win (chat/dispute is out of scope for this demo)
+	// once decided who will win assemble the correct payout psbt and return it to the according trader
+	// the other trader gets a error code/ end of trade code
+
 	panic!("implement")
 }
 

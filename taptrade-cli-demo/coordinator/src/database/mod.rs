@@ -125,7 +125,7 @@ impl CoordinatorDB {
 				escrow_psbt_txid TEXT,
 				escrow_psbt_is_confirmed INTEGER,
 				maker_happy INTEGER,
-				taker_happy INTEGER
+				taker_happy INTEGER,
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -578,7 +578,12 @@ impl CoordinatorDB {
 		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
 	}
 
-	pub async fn set_trader_happy_true(&self, offer_id: &String, robohash: &String) -> Result<()> {
+	pub async fn set_trader_happy_field(
+		&self,
+		offer_id: &String,
+		robohash: &String,
+		is_happy: bool,
+	) -> Result<()> {
 		let robohash_bytes = hex::decode(robohash)?;
 
 		// First, check if the robohash matches the maker or taker
@@ -597,12 +602,13 @@ impl CoordinatorDB {
 		}
 
 		let query = if is_maker {
-			"UPDATE taken_offers SET maker_happy = 1 WHERE offer_id = ?"
+			"UPDATE taken_offers SET maker_happy = ? WHERE offer_id = ?"
 		} else {
-			"UPDATE taken_offers SET taker_happy = 1 WHERE offer_id = ?"
+			"UPDATE taken_offers SET taker_happy = ? WHERE offer_id = ?"
 		};
 
 		sqlx::query(query)
+			.bind(bool_to_sql_int(is_happy))
 			.bind(offer_id)
 			.execute(&*self.db_pool)
 			.await?;

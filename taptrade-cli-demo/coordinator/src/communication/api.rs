@@ -71,7 +71,7 @@ pub struct OfferPsbtRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OfferTakenRequest {
 	pub robohash_hex: String,
-	pub order_id_hex: String,
+	pub offer_id_hex: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -79,4 +79,10 @@ pub struct PsbtSubmissionRequest {
 	pub signed_psbt_hex: String,
 	pub offer_id_hex: String,
 	pub robohash_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TradeObligationsUnsatisfied {
+	pub robohash_hex: String,
+	pub offer_id_hex: String,
 }
