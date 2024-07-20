@@ -28,6 +28,7 @@ use bdk::miniscript::Tap;
 // use crate::coordinator::create_taproot::Network;
 use bdk::bitcoin::network::constants::Network;
 use bdk::bitcoin::Address;
+use serde_json::to_string_pretty;
 
 
 /// The main function in this module is `combine_and_broadcast`, which combines the PSBTs
@@ -187,13 +188,13 @@ pub async fn fund_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn std:
 
     match wallet_result {
         Ok(wallet) => {
-            let electrum_url = "ssl://electrum.blockstream.info:60002";
-            let client = Client::new(electrum_url)?;
-            let blockchain = ElectrumBlockchain::from(client);
+                let electrum_url = "ssl://electrum.blockstream.info:60002";
+                let client = Client::new(electrum_url)?;
+                let blockchain = ElectrumBlockchain::from(client);
 
-            // Sync the wallet with the blockchain
-            wallet.sync(&blockchain, Default::default())?;
-            
+                // Sync the wallet with the blockchain
+                wallet.sync(&blockchain, Default::default())?;
+
             let new_address = wallet.get_address(AddressIndex::New).unwrap();
             println!("New wallet receiving address: {}", new_address);
             // New wallet receiving address: tb1pwqvyjf2sl4znw4w8naajgl4utaxezkr06gynvzjkuesplw28qk4q4a9hl7
@@ -218,37 +219,6 @@ pub async fn fund_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn std:
 	
 }
 
-    
-    
-	
-
-	// // // Step 4: Print balance
-	// let blockchain = EsploraBlockchain::new("https://blockstream.info/testnet/api", 20);
-	// wallet.sync(&blockchain, SyncOptions::default())?;
-	// info!("{:#?}", wallet.get_balance()?);
-
-	// let maker_utxos = vec![/* UTXO details here */];
-	// let taker_utxos = vec![/* UTXO details here */];
-
-	// // Recipient address (where funds will be sent)
-    //  let address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
-
-    // // let address = get_address_from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
-    // // let address_str = "tb1qqw8ledhkhezru0rwj7acpker8srtcs28sng0d6";
-    
-    // let mut tx_builder = wallet.build_tx();
-    // tx_builder
-    //     .add_utxos(&maker_utxos)?
-    //     .add_utxos(&taker_utxos)?
-    //     .drain_wallet()
-	// 	.drain_to(ScriptBuf::from(address.script_pubkey().to_owned()))
-    //     .fee_rate(FeeRate::from_sat_per_vb(3.0))
-    //     .policy_path(BTreeMap::new(), KeychainKind::External);
-
-    // let (psbt, tx_details) = tx_builder.finish()?;
-    // debug!("PSBT: {:?}", psbt);
-    // Ok(psbt)
-    
 fn taker_unresponsive_psbt(
 	taker_address: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
@@ -264,13 +234,42 @@ fn taker_unresponsive_psbt(
 
         match wallet_result {
             Ok(wallet) => {
-                // Recipient address (where funds will be sent)
-                // let unchecked_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
-                let unchecked_address = Address::from_str(taker_address)?;
+                let electrum_url = "ssl://electrum.blockstream.info:60002";
+                let client = Client::new(electrum_url)?;
+                let blockchain = ElectrumBlockchain::from(client);
 
+                // Sync the wallet with the blockchain
+                wallet.sync(&blockchain, Default::default())?;
+                    // Recipient address (where funds will be sent)
+                    match wallet.get_balance() {
+                    Ok(balance) => {
+                        println!("Wallet balance: {}", balance);
+                    }
+                    Err(e) => {
+                        println!("Error fetching wallet balance: {:?}", e);
+                    }
+                }
+                // let unchecked_address = Address::from_str("tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt")?;
+                let unchecked_address = Address::from_str(taker_address).map_err(|e| {
+                    println!("Error parsing address: {:?}", e);
+                    e
+                })?;
 
                 // Ensure the address is valid for the correct network (testnet in this case)
-                let address = unchecked_address.require_network(Network::Testnet)?;
+                let address = unchecked_address.require_network(Network::Testnet).map_err(|e| {
+                    println!("Error validating network: {:?}", e);
+                    e
+                })?;
+                
+                // We need to specify with which policy funds will be spent. Our current wallet contains 3
+                // policies: the key path spend, and two leaves in the script path spend.
+                let wallet_policy = wallet.policies(KeychainKind::External)?.unwrap();
+                let mut path = BTreeMap::new();
+                // We need to use the first leaf of the script path spend, hence the second policy
+                // If you're not sure what's happening here, no worries, this is bit tricky :)
+                // You can learn more here: https://docs.rs/bdk/latest/bdk/wallet/tx_builder/struct.TxBuilder.html#method.policy_path
+                path.insert(wallet_policy.id, vec![1]);
+
                 
                 let mut tx_builder= wallet.build_tx();
                 tx_builder
@@ -278,10 +277,14 @@ fn taker_unresponsive_psbt(
                     // .add_recipient((address.script_pubkey()), 10_000)
                     .drain_to(address.script_pubkey())
                     .fee_rate(FeeRate::from_sat_per_vb(3.0))
-                    .policy_path(BTreeMap::new(), KeychainKind::External);
+                    .policy_path(path, KeychainKind::External);
 
                 let (psbt, tx_details) = tx_builder.finish()?;
-                debug!("PSBT: {:?}", psbt);
+                // debug!("PSBT: {:?}", psbt);
+                // println!("psbt is {:?}", psbt);
+                let json = to_string_pretty(&psbt).unwrap();
+                println!("psbt is {}", json);
+
                 // Ok(psbt)
                 }
             Err(e) => {
@@ -356,7 +359,8 @@ mod tests {
         match &result{
             Ok(descriptor) => {
                 // println!("{}", descriptor);
-                let result = fund_psbt(descriptor.clone()).await;
+                let _ = fund_psbt(descriptor.clone()).await;
+                let _ = taker_unresponsive_psbt("tb1qqw8ledhkhezru0rwj7acpker8srtcs28sng0d6");
 
             },
             Err(e) => println!("Error: {}", e),
