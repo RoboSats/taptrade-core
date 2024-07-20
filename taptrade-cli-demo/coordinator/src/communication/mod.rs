@@ -5,14 +5,12 @@ use self::api::*;
 use self::utils::*;
 use super::*;
 use crate::wallet::*;
-use anyhow::Context;
 use axum::{
 	http::StatusCode,
 	response::{IntoResponse, Response},
 	routing::{get, post},
 	Extension, Json, Router,
 };
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
@@ -22,152 +20,97 @@ use tokio::net::TcpListener;
 //
 /// Handler function to process the received data
 async fn receive_order(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
-	Json(order): Json<OrderRequest>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
+	Json(offer): Json<OfferRequest>,
 ) -> Result<Response, AppError> {
-	debug!("{:#?}", &order);
-	if order.sanity_check().is_err() {
-		warn!("Received order failed sanity check");
-		return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+	if let Err(_) = offer.validate() {
+		return Ok(StatusCode::BAD_REQUEST.into_response());
+	} else {
+		let bond_requirements = process_order(coordinator, &offer).await?;
+		return Ok(Json(bond_requirements).into_response());
 	}
-	let bond_requirements = BondRequirementResponse {
-		bond_address: wallet.get_new_address().await?,
-		locking_amount_sat: order.amount_satoshi * order.bond_ratio as u64 / 100,
-	};
-	// insert offer into sql database
-	database
-		.insert_new_maker_request(&order, &bond_requirements)
-		.await?;
-	debug!("Coordinator received new offer: {:?}", order);
-	Ok(Json(bond_requirements).into_response())
 }
 
 /// receives the maker bond, verifies it and moves to offer to the active table (orderbook)
 async fn submit_maker_bond(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<BondSubmissionRequest>,
 ) -> Result<Response, AppError> {
 	debug!("\n\nReceived maker bond: {:?}", payload);
-	let bond_requirements = if let Ok(requirements) = database
-		.fetch_bond_requirements(&payload.robohash_hex)
-		.await
-	{
-		requirements
-	} else {
-		return Ok(StatusCode::NOT_FOUND.into_response());
-	};
 
-	match wallet
-		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
-		.await
-	{
-		Ok(()) => (),
-		Err(e) => {
-			error!("{}", e);
+	match handle_maker_bond(&payload, coordinator).await {
+		Ok(offer_activated_response) => Ok(Json(offer_activated_response).into_response()),
+		Err(BondError::BondNotFound) => {
+			info!("Bond requirements not found in database");
+			return Ok(StatusCode::NOT_FOUND.into_response());
+		}
+		Err(BondError::InvalidBond(e)) => {
+			warn!("Invalid bond submission: {e}");
 			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
 		}
-	}
-	debug!("\nBond validation successful");
-	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
-														 // create address for taker bond
-	let new_taker_bond_address = wallet.get_new_address().await.context(format!(
-		"Error generating taker bond address for offer id: {}",
-		offer_id_hex
-	))?;
-	// insert bond into sql database and move offer to different table
-	let bond_locked_until_timestamp = match database
-		.move_offer_to_active(&payload, &offer_id_hex, new_taker_bond_address)
-		.await
-	{
-		Ok(timestamp) => timestamp,
-		Err(e) => {
-			debug!("Error in validate_bond_tx_hex: {}", e);
+		Err(BondError::CoordinatorError(e)) => {
+			error!("Coordinator error on bond submission: {e}");
 			return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
 		}
-	};
-
-	// Create the JSON response
-	Ok(Json(OrderActivatedResponse {
-		bond_locked_until_timestamp,
-		offer_id_hex,
-	})
-	.into_response())
+	}
 }
 
 /// returns available offers from the active table (orderbook)
 async fn fetch_available_offers(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OffersRequest>,
 ) -> Result<Response, AppError> {
-	let offers: Option<Vec<PublicOffer>> = database.fetch_suitable_offers(&payload).await?;
-	if offers.is_none() {
-		return Ok(StatusCode::NO_CONTENT.into_response());
+	debug!("\n\nReceived offer request: {:?}", payload);
+
+	match get_public_offers(&payload, coordinator).await {
+		Ok(offers) => Ok(Json(offers).into_response()),
+		Err(FetchOffersError::NoOffersAvailable) => Ok(StatusCode::NO_CONTENT.into_response()),
+		Err(FetchOffersError::DatabaseError(e)) => {
+			error!("Database error fetching offers: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
-	Ok(Json(PublicOffers { offers }).into_response())
 }
 
 /// receives the taker bond for a given offer, verifies it, creates escrow transaction psbt
 /// and moves the offer to the taken table. Will return the trade contract psbt for the taker to sign.
 async fn submit_taker_bond(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferPsbtRequest>,
 ) -> Result<Response, AppError> {
-	let bond_requirements = database
-		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
-		.await;
-	match bond_requirements {
-		Ok(bond_requirements) => {
-			match wallet
-				.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
-				.await
-			{
-				Ok(()) => (),
-				Err(e) => {
-					warn!("{}", e);
-					return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
-				}
-			}
+	debug!("\n\nReceived taker bond: {:?}", payload);
+
+	match handle_taker_bond(&payload, coordinator).await {
+		Ok(offer_taken_response) => Ok(Json(offer_taken_response).into_response()),
+		Err(BondError::BondNotFound) => {
+			info!("Bond requirements not found in database");
+			return Ok(StatusCode::NOT_FOUND.into_response());
 		}
-		Err(_) => return Ok(StatusCode::NOT_FOUND.into_response()),
+		Err(BondError::InvalidBond(e)) => {
+			warn!("Invalid bond submission: {e}");
+			return Ok(StatusCode::NOT_ACCEPTABLE.into_response());
+		}
+		Err(BondError::CoordinatorError(e)) => {
+			error!("Coordinator error on bond submission: {e}");
+			return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
+		}
 	}
-	debug!("\nTaker bond validation successful");
-
-	panic!("Trade contract PSBT not implemented!");
-	let trade_contract_psbt_taker = "".to_string(); // implement psbt
-	let trade_contract_psbt_maker = "".to_string(); // implement psbt
-	let escrow_tx_txid: String = "".to_string(); // implement txid of psbt
-
-	database
-		.add_taker_info_and_move_table(
-			&payload,
-			&trade_contract_psbt_maker,
-			&trade_contract_psbt_taker,
-			escrow_tx_txid,
-		)
-		.await?;
-	Ok(Json(OfferTakenResponse {
-		trade_psbt_hex_to_sign: trade_contract_psbt_taker,
-	})
-	.into_response())
 }
 
 /// gets polled by the maker and returns the escrow psbt in case the offer has been taken
 async fn request_offer_status_maker(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	let offer = database
-		.fetch_taken_offer_maker(&payload.offer_id_hex, &payload.robohash_hex)
-		.await?;
-	match offer {
-		Some(offer) => Ok(Json(OfferTakenResponse {
-			trade_psbt_hex_to_sign: offer,
-		})
-		.into_response()),
-		None => Ok(StatusCode::NO_CONTENT.into_response()),
+	debug!("\n\nReceived offer status request: {:?}", payload);
+
+	match get_offer_status_maker(&payload, coordinator).await {
+		Ok(offer_taken_response) => Ok(Json(offer_taken_response).into_response()),
+		Err(FetchOffersError::NoOffersAvailable) => Ok(StatusCode::NO_CONTENT.into_response()),
+		Err(FetchOffersError::DatabaseError(e)) => {
+			error!("Database error fetching offers: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
 }
 
@@ -176,8 +119,7 @@ async fn request_offer_status_maker(
 /// coordinator then has to check if their signatures are valid and everything else is according to the agreed upon contract.
 /// Once the coordinator has received both partitial signed PSBTs he can assemble them together to a transaction and publish it to the bitcoin network.
 async fn submit_escrow_psbt(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<PsbtSubmissionRequest>,
 ) -> Result<Response, AppError> {
 	panic!("implement")
@@ -192,22 +134,20 @@ async fn submit_escrow_psbt(
 /// then the traders will know it is secure to begin with the fiat exchange and can continue with the trade (exchange information in the chat and transfer fiat).
 /// In theory this polling mechanism could also be replaced by the traders scanning the blockchain themself so they could also see once the tx is confirmed.
 async fn poll_escrow_confirmation(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
-		.await?
-	{
-		return Ok(StatusCode::NOT_FOUND.into_response());
-	}
-	if database
-		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
-		.await?
-	{
-		return Ok(StatusCode::OK.into_response());
-	} else {
-		return Ok(StatusCode::ACCEPTED.into_response());
+	match fetch_escrow_confirmation_status(&payload, coordinator).await {
+		Ok(true) => Ok(StatusCode::OK.into_response()),
+		Ok(false) => Ok(StatusCode::ACCEPTED.into_response()),
+		Err(FetchEscrowConfirmationError::NotFoundError) => {
+			info!("Escrow confirmation check transaction not found");
+			Ok(StatusCode::NOT_FOUND.into_response())
+		}
+		Err(FetchEscrowConfirmationError::DatabaseError(e)) => {
+			error!("Database error fetching escrow confirmation: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
 }
 
@@ -315,9 +255,6 @@ async fn test_api() -> &'static str {
 }
 
 pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
-	let database = Arc::clone(&coordinator.coordinator_db);
-	let wallet = Arc::clone(&coordinator.coordinator_wallet);
-
 	let app = Router::new()
 		.route("/test", get(test_api))
 		.route("/create-offer", post(receive_order))
@@ -333,8 +270,7 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 		)
 		.route("/request-escrow", post(request_escrow))
 		.route("/poll-final-payout", post(poll_final_payout))
-		.layer(Extension(database))
-		.layer(Extension(wallet));
+		.layer(Extension(coordinator));
 	// add other routes here
 
 	let port: u16 = env::var("PORT")
@@ -351,7 +287,8 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 // ANYHOW ERROR HANDLING
 // --------------
 // Make our own error that wraps `anyhow::Error`.
-struct AppError(anyhow::Error);
+#[derive(Debug)]
+pub struct AppError(anyhow::Error);
 
 // Tell axum how to convert `AppError` into a response.
 impl IntoResponse for AppError {

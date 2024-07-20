@@ -29,7 +29,7 @@ async fn test_insert_new_maker_request() -> Result<()> {
 	let database = create_coordinator().await?;
 
 	// Create a sample order request and bond requirement response
-	let order_request = OrderRequest {
+	let order_request = OfferRequest {
 		robohash_hex: "a3f1f1f0e2f3f4f5".to_string(),
 		is_buy_order: true,
 		amount_satoshi: 1000,

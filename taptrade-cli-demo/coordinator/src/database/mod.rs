@@ -147,7 +147,7 @@ impl CoordinatorDB {
 
 	pub async fn insert_new_maker_request(
 		&self,
-		order: &OrderRequest,
+		order: &OfferRequest,
 		bond_requirements: &BondRequirementResponse,
 	) -> Result<()> {
 		sqlx::query(
