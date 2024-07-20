@@ -187,9 +187,25 @@ pub async fn fund_psbt(descriptor: Descriptor<String>)-> Result<(), Box<dyn std:
 
     match wallet_result {
         Ok(wallet) => {
+            let electrum_url = "ssl://electrum.blockstream.info:60002";
+            let client = Client::new(electrum_url)?;
+            let blockchain = ElectrumBlockchain::from(client);
+
+            // Sync the wallet with the blockchain
+            wallet.sync(&blockchain, Default::default())?;
+            
             let new_address = wallet.get_address(AddressIndex::New).unwrap();
             println!("New wallet receiving address: {}", new_address);
             // New wallet receiving address: tb1pwqvyjf2sl4znw4w8naajgl4utaxezkr06gynvzjkuesplw28qk4q4a9hl7
+            // Fetch and print the wallet balance
+            match wallet.get_balance() {
+                Ok(balance) => {
+                    println!("Wallet balance: {}", balance);
+                }
+                Err(e) => {
+                    println!("Error fetching wallet balance: {:?}", e);
+                }
+            }
         }
         Err(e) => {
             println!("Error creating wallet: {:?}", e);
@@ -383,6 +399,7 @@ mod tests {
         Ok(())
         // tr(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082,{and_v(v:pk(02fa55532a5ddc036db99412d050d11bf5ce4c78b9816adc3974a3c23e2a876dfe),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082)),and_v(v:pk(0219e6db0b79f8e7ee9c5fa4e77ac77e942ec3248c1a2e94c8d5ea230b13d849f0),pk(0209d4277f677aeaeeb6d3da1d66ba0dfabf296bf1609c505ad1f4cf50a870d082))})#0du8cgum
     }
+
     
     // #[tokio::test]
     // async fn test_combine_and_broadcast() {
