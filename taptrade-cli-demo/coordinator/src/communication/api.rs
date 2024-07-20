@@ -1,17 +1,20 @@
 use super::*;
 
 // Receiving this struct as input to the server
-#[derive(Deserialize, Serialize, Debug)]
-pub struct OrderRequest {
-	pub robohash_hex: String,   // identifier of the trader
-	pub amount_satoshi: u64,    // amount in satoshi to buy or sell
-	pub is_buy_order: bool,     // true if buy, false if sell
-	pub bond_ratio: u8,         // [2, 50]% of trading amount
+#[derive(Deserialize, Serialize, Debug, Validate)]
+pub struct OfferRequest {
+	pub robohash_hex: String, // identifier of the trader
+	#[validate(range(min = 10000, max = 20000000))]
+	pub amount_satoshi: u64, // amount in satoshi to buy or sell
+	pub is_buy_order: bool,   // true if buy, false if sell
+	#[validate(range(min = 2, max = 50))]
+	pub bond_ratio: u8, // [2, 50]% of trading amount
+	#[validate(custom(function = "validate_timestamp"))]
 	pub offer_duration_ts: u64, // unix timestamp how long the offer should stay available
 }
 
 // Define a struct representing your response data
-#[derive(Serialize, PartialEq, Debug)]
+#[derive(Serialize, PartialEq, Debug, Validate)]
 pub struct BondRequirementResponse {
 	pub bond_address: String,
 	pub locking_amount_sat: u64, // min amount of the bond output in sat
@@ -30,7 +33,7 @@ pub struct BondSubmissionRequest {
 
 // Response after step2 if offer creation was successful and the offer is now online in the orderbook
 #[derive(Serialize)]
-pub struct OrderActivatedResponse {
+pub struct OfferActivatedResponse {
 	pub offer_id_hex: String,
 	pub bond_locked_until_timestamp: u64, // unix timestamp. Do not touch bond till then unless offer gets taken.
 }
