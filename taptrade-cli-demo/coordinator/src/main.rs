@@ -5,7 +5,7 @@ mod wallet;
 
 use anyhow::{anyhow, Result};
 use bdk::sled;
-use communication::{api::*, api_server, *};
+use communication::{api::*, api_server, handler_errors::*, *};
 use coordinator::tx_confirmation_monitoring::update_transaction_confirmations;
 use coordinator::{monitoring::*, *};
 use database::CoordinatorDB;
@@ -32,6 +32,7 @@ async fn main() -> Result<()> {
 		.init();
 	dotenv().ok();
 	debug!("Starting coordinator");
+
 	// Initialize the database pool
 	let coordinator = Arc::new(Coordinator {
 		coordinator_db: Arc::new(CoordinatorDB::init().await?),
@@ -49,8 +50,11 @@ async fn main() -> Result<()> {
 			}
 		}
 	});
+
+	// begin monitoring escrow transactions confirmations
 	let coordinator_ref = Arc::clone(&coordinator);
 	tokio::spawn(async move { update_transaction_confirmations(coordinator_ref).await });
+
 	// Start the API server
 	api_server(coordinator).await?;
 	Ok(())

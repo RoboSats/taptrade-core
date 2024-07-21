@@ -7,23 +7,11 @@ pub mod utils;
 use self::utils::*;
 use super::*;
 
-#[derive(Debug)]
-pub enum BondError {
-	InvalidBond(String),
-	BondNotFound,
-	CoordinatorError(String),
-}
-
-#[derive(Debug)]
-pub enum FetchOffersError {
-	NoOffersAvailable,
-	DatabaseError(String),
-}
-
-#[derive(Debug)]
-pub enum FetchEscrowConfirmationError {
-	NotFoundError,
-	DatabaseError(String),
+pub enum PayoutProcessingResult {
+	ReadyPSBT(String),
+	NotReady,
+	LostEscrow,
+	DecidingEscrow,
 }
 
 pub async fn process_order(
@@ -223,5 +211,107 @@ pub async fn fetch_escrow_confirmation_status(
 		Ok(true)
 	} else {
 		Err(FetchEscrowConfirmationError::NotFoundError)
+	}
+}
+
+pub async fn handle_obligation_confirmation(
+	payload: &OfferTakenRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	if let Err(e) =
+		check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await
+	{
+		return Err(e);
+	}
+	if let Err(e) = database
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, true)
+		.await
+	{
+		return Err(RequestError::DatabaseError(e.to_string()));
+	}
+	Ok(())
+}
+
+pub async fn initiate_escrow(
+	payload: &TradeObligationsUnsatisfied,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	if let Err(e) =
+		check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await
+	{
+		return Err(e);
+	}
+
+	if let Err(e) = database
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, false)
+		.await
+	{
+		return Err(RequestError::DatabaseError(e.to_string()));
+	}
+
+	Ok(())
+}
+
+pub async fn handle_final_payout(
+	payload: &OfferTakenRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<PayoutProcessingResult, RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	if let Err(e) =
+		check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await
+	{
+		return Err(e);
+	}
+
+	let trader_happiness = match database.fetch_trader_happiness(&payload.offer_id_hex).await {
+		Ok(happiness) => happiness,
+		Err(e) => return Err(RequestError::DatabaseError(e.to_string())),
+	};
+
+	if trader_happiness.maker_happy.is_some_and(|x| x == true)
+		&& trader_happiness.taker_happy.is_some_and(|x| x == true)
+	{
+		panic!("Implement wallet.assemble_keyspend_payout_psbt()");
+	// let payout_keyspend_psbt_hex = wallet
+	// 	.assemble_keyspend_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex)
+	// 	.await
+	// 	.context("Error assembling payout PSBT")?;
+	// return Ok(PayoutProcessingResult::ReadyPSBT(payout_keyspend_psbt_hex));
+	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
+		&& !trader_happiness.escrow_ongoing
+	{
+		return Ok(PayoutProcessingResult::NotReady);
+	}
+	// if one of them is not happy
+	// open escrow cli on coordinator to decide who will win (chat/dispute is out of scope for this demo)
+	// once decided who will win assemble the correct payout psbt and return it to the according trader
+	// the other trader gets a error code/ end of trade code
+	// escrow winner has to be set true with a cli input of the coordinator. This could be an api
+	// endpoint for the admin UI frontend in the future
+	let potential_escrow_winner = match database.fetch_escrow_result(&payload.offer_id_hex).await {
+		Ok(escrow_winner) => escrow_winner,
+		Err(e) => return Err(RequestError::DatabaseError(e.to_string())),
+	};
+
+	if let Some(escrow_winner) = potential_escrow_winner {
+		if escrow_winner == payload.robohash_hex {
+			panic!("Implement wallet.assemble_script_payout_psbt()");
+		// let script_payout_psbt_hex = wallet
+		// 	.assemble_script_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex, is_maker_bool)
+		// 	.await
+		// 	.context("Error assembling payout PSBT")?;
+		// return Ok(PayoutProcessingResult::ReadyPSBT(script_payout_psbt_hex));
+		} else {
+			// this will be returned to the losing trader
+			return Ok(PayoutProcessingResult::LostEscrow);
+		}
+	} else {
+		// this will be returned if the coordinator hasn't decided yet
+		return Ok(PayoutProcessingResult::DecidingEscrow);
 	}
 }

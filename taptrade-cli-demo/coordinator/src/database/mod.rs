@@ -218,7 +218,7 @@ impl CoordinatorDB {
 	pub async fn move_offer_to_active(
 		&self,
 		data: &BondSubmissionRequest,
-		offer_id: &String,
+		offer_id: &str,
 		taker_bond_address: String,
 	) -> Result<u64> {
 		let remaining_offer_information = self
@@ -291,7 +291,7 @@ impl CoordinatorDB {
 
 	pub async fn fetch_taker_bond_requirements(
 		&self,
-		offer_id_hex: &String,
+		offer_id_hex: &str,
 	) -> Result<BondRequirements> {
 		let taker_bond_requirements = sqlx::query(
 			"SELECT taker_bond_address, bond_amount_sat, amount_sat FROM active_maker_offers WHERE offer_id = ?",
@@ -345,8 +345,8 @@ impl CoordinatorDB {
 	pub async fn add_taker_info_and_move_table(
 		&self,
 		trade_and_taker_info: &OfferPsbtRequest,
-		trade_contract_psbt_maker: &String,
-		trade_contract_psbt_taker: &String,
+		trade_contract_psbt_maker: &str,
+		trade_contract_psbt_taker: &str,
 		trade_tx_txid: String,
 	) -> Result<()> {
 		let public_offer = self
@@ -393,8 +393,8 @@ impl CoordinatorDB {
 
 	pub async fn fetch_taken_offer_maker(
 		&self,
-		offer_id_hex: &String,
-		robohash_hex_maker: &String,
+		offer_id_hex: &str,
+		robohash_hex_maker: &str,
 	) -> Result<Option<String>> {
 		let offer = sqlx::query(
 			"SELECT escrow_psbt_hex_maker, robohash_maker FROM taken_offers WHERE offer_id = ?",
@@ -563,8 +563,8 @@ impl CoordinatorDB {
 
 	pub async fn is_valid_robohash_in_table(
 		&self,
-		robohash_hex: &String,
-		offer_id: &String,
+		robohash_hex: &str,
+		offer_id: &str,
 	) -> Result<bool> {
 		let robohash = hex::decode(robohash_hex)?;
 		let robohash = sqlx::query(
@@ -578,7 +578,7 @@ impl CoordinatorDB {
 		Ok(robohash.is_some())
 	}
 
-	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &String) -> Result<bool> {
+	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &str) -> Result<bool> {
 		let status =
 			sqlx::query("SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE offer_id = ?")
 				.bind(offer_id)
@@ -589,8 +589,8 @@ impl CoordinatorDB {
 
 	pub async fn set_trader_happy_field(
 		&self,
-		offer_id: &String,
-		robohash: &String,
+		offer_id: &str,
+		robohash: &str,
 		is_happy: bool,
 	) -> Result<()> {
 		let robohash_bytes = hex::decode(robohash)?;
@@ -632,7 +632,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	pub async fn fetch_trader_happiness(&self, offer_id: &String) -> Result<TraderHappiness> {
+	pub async fn fetch_trader_happiness(&self, offer_id: &str) -> Result<TraderHappiness> {
 		let row = sqlx::query(
 			"SELECT maker_happy, taker_happy, escrow_ongoing FROM taken_offers WHERE offer_id = ?",
 		)
@@ -651,7 +651,7 @@ impl CoordinatorDB {
 		})
 	}
 
-	pub async fn fetch_escrow_result(&self, offer_id: &String) -> Result<Option<String>> {
+	pub async fn fetch_escrow_result(&self, offer_id: &str) -> Result<Option<String>> {
 		let row = sqlx::query("SELECT escrow_winner_robohash FROM taken_offers WHERE offer_id = ?")
 			.bind(offer_id)
 			.fetch_one(&*self.db_pool)

@@ -1,10 +1,9 @@
 pub mod api;
+pub mod handler_errors;
 mod utils;
 
-use self::api::*;
 use self::utils::*;
 use super::*;
-use crate::wallet::*;
 use axum::{
 	http::StatusCode,
 	response::{IntoResponse, Response},
@@ -152,22 +151,24 @@ async fn poll_escrow_confirmation(
 }
 
 async fn submit_obligation_confirmation(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	// sanity check if offer is in table and if the escrow tx is confirmed
-	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
-		.await? || !database
-		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
-		.await?
-	{
-		return Ok(StatusCode::NOT_FOUND.into_response());
+	match handle_obligation_confirmation(&payload, coordinator).await {
+		Ok(_) => Ok(StatusCode::OK.into_response()),
+		Err(RequestError::NotFoundError) => {
+			info!("Offer for obligation confirmation not found");
+			Ok(StatusCode::NOT_FOUND.into_response())
+		}
+		Err(RequestError::NotConfirmedError) => {
+			info!("Offer for obligation confirmation not confirmed");
+			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
+		}
+		Err(RequestError::DatabaseError(e)) => {
+			error!("Database error fetching obligation confirmation: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
-	database
-		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, true)
-		.await?;
-	Ok(StatusCode::OK.into_response())
 }
 
 // or
@@ -175,22 +176,24 @@ async fn submit_obligation_confirmation(
 // gets called if one of the traders wants to initiate escrow (e.g. claiming they didn't receive the fiat)
 // before timeout ends
 async fn request_escrow(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<TradeObligationsUnsatisfied>,
 ) -> Result<Response, AppError> {
-	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
-		.await? || !database
-		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
-		.await?
-	{
-		return Ok(StatusCode::NOT_FOUND.into_response());
+	match initiate_escrow(&payload, coordinator).await {
+		Ok(_) => Ok(StatusCode::OK.into_response()),
+		Err(RequestError::NotConfirmedError) => {
+			info!("Offer tx for escrow initiation not confirmed");
+			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
+		}
+		Err(RequestError::NotFoundError) => {
+			info!("Offer for escrow initiation not found");
+			Ok(StatusCode::NOT_FOUND.into_response())
+		}
+		Err(RequestError::DatabaseError(e)) => {
+			error!("Database error fetching obligation confirmation: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
-	database
-		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, false)
-		.await?;
-
-	Ok(StatusCode::OK.into_response())
 }
 
 /// Is supposed to get polled by the traders once they clicked on "i sent the fiat" or "i received the fiat".
@@ -198,55 +201,26 @@ async fn request_escrow(
 /// If one of them is not happy and initiating escrow (e.g. claiming they didn't receive the fiat) then this
 /// endpoint can return 201 and the escrow mediation logic will get executed (tbd).
 async fn poll_final_payout(
-	Extension(database): Extension<Arc<CoordinatorDB>>,
-	Extension(wallet): Extension<Arc<CoordinatorWallet<sled::Tree>>>,
+	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	if !database
-		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
-		.await? || !database
-		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
-		.await?
-	{
-		return Ok(StatusCode::NOT_FOUND.into_response());
-	}
-
-	let trader_happiness = database
-		.fetch_trader_happiness(&payload.offer_id_hex)
-		.await?;
-	if trader_happiness.maker_happy.is_some_and(|x| x == true)
-		&& trader_happiness.taker_happy.is_some_and(|x| x == true)
-	{
-		panic!("Implement wallet.assemble_keyspend_payout_psbt()");
-	// let payout_keyspend_psbt_hex = wallet
-	// 	.assemble_keyspend_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex)
-	// 	.await
-	// 	.context("Error assembling payout PSBT")?;
-	// return Ok(String::from(payout_keyspend_psbt_hex).into_response());
-	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
-		&& !trader_happiness.escrow_ongoing
-	{
-		return Ok(StatusCode::ACCEPTED.into_response());
-	}
-	// if one of them is not happy
-	// open escrow cli on coordinator to decide who will win (chat/dispute is out of scope for this demo)
-	// once decided who will win assemble the correct payout psbt and return it to the according trader
-	// the other trader gets a error code/ end of trade code
-	// escrow winner has to be set true with a cli input of the coordinator. This could be an api
-	// endpoint for the admin UI frontend in the future
-	if let Some(escrow_winner) = database.fetch_escrow_result(&payload.offer_id_hex).await? {
-		if escrow_winner == payload.robohash_hex {
-			panic!("Implement wallet.assemble_script_payout_psbt()");
-		// let script_payout_psbt_hex = wallet
-		// 	.assemble_script_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex, is_maker_bool)
-		// 	.await
-		// 	.context("Error assembling payout PSBT")?;
-		// return Ok(String::from(payout_keyspend_psbt_hex).into_response());
-		} else {
-			return Ok(StatusCode::GONE.into_response()); // this will be returned to the losing trader
+	match handle_final_payout(&payload, coordinator).await {
+		Ok(PayoutProcessingResult::NotReady) => Ok(StatusCode::ACCEPTED.into_response()),
+		Ok(PayoutProcessingResult::LostEscrow) => Ok(StatusCode::GONE.into_response()),
+		Ok(PayoutProcessingResult::ReadyPSBT(psbt)) => Ok(psbt.into_response()),
+		Ok(PayoutProcessingResult::DecidingEscrow) => Ok(StatusCode::PROCESSING.into_response()),
+		Err(RequestError::NotConfirmedError) => {
+			info!("Offer tx for final payout not confirmed");
+			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
 		}
-	} else {
-		return Ok(StatusCode::PROCESSING.into_response()); // this will be returned if the coordinator hasn't decided yet
+		Err(RequestError::NotFoundError) => {
+			info!("Offer for final payout not found");
+			Ok(StatusCode::NOT_FOUND.into_response())
+		}
+		Err(RequestError::DatabaseError(e)) => {
+			error!("Database error fetching final payout: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
 }
 
