@@ -1,5 +1,13 @@
 use super::*;
 
+#[derive(Debug)]
+pub enum PayoutProcessingResult {
+	ReadyPSBT(String),
+	NotReady,
+	LostEscrow,
+	DecidingEscrow,
+}
+
 pub fn generate_random_order_id(len: usize) -> String {
 	// Generate `len` random bytes
 	let bytes: Vec<u8> = rand::thread_rng()
@@ -8,8 +16,7 @@ pub fn generate_random_order_id(len: usize) -> String {
 		.collect();
 
 	// Convert bytes to hex string
-	let hex_string = hex::encode(bytes);
-	hex_string
+	hex::encode(bytes)
 }
 
 pub async fn check_offer_and_confirmation(
@@ -22,9 +29,9 @@ pub async fn check_offer_and_confirmation(
 		.is_valid_robohash_in_table(robohash_hex, offer_id_hex)
 		.await
 	{
-		Ok(false) => return Err(RequestError::NotFoundError),
+		Ok(false) => return Err(RequestError::NotFound),
 		Ok(true) => (),
-		Err(e) => return Err(RequestError::DatabaseError(e.to_string())),
+		Err(e) => return Err(RequestError::Database(e.to_string())),
 	};
 
 	// sanity check if the escrow tx is confirmed
@@ -32,8 +39,8 @@ pub async fn check_offer_and_confirmation(
 		.fetch_escrow_tx_confirmation_status(offer_id_hex)
 		.await
 	{
-		Ok(false) => return Err(RequestError::NotConfirmedError),
+		Ok(false) => Err(RequestError::NotConfirmed),
 		Ok(true) => Ok(()),
-		Err(e) => return Err(RequestError::DatabaseError(e.to_string())),
+		Err(e) => Err(RequestError::Database(e.to_string())),
 	}
 }

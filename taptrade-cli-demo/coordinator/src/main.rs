@@ -5,15 +5,20 @@ mod wallet;
 
 use anyhow::{anyhow, Result};
 use bdk::sled;
-use communication::{api::*, api_server, handler_errors::*, *};
-use coordinator::tx_confirmation_monitoring::update_transaction_confirmations;
-use coordinator::{monitoring::*, *};
+use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
+use coordinator::{
+	coordinator_utils::*, monitoring::*,
+	tx_confirmation_monitoring::update_transaction_confirmations, *,
+};
 use database::CoordinatorDB;
 use dotenv::dotenv;
 use log::{debug, error, info, trace, warn};
 use rand::Rng;
-use std::time::{SystemTime, UNIX_EPOCH};
-use std::{env, sync::Arc};
+use std::{
+	env,
+	sync::Arc,
+	time::{SystemTime, UNIX_EPOCH},
+};
 use tokio::sync::Mutex;
 use validator::{Validate, ValidationError};
 use wallet::*;

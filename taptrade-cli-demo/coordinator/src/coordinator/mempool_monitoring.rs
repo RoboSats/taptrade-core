@@ -50,7 +50,7 @@ fn run_mempool(mempool: Arc<Mempool>) {
 				let tx = match mempool
 					.json_rpc_client
 					.deref()
-					.get_raw_transaction(&txid, None)
+					.get_raw_transaction(txid, None)
 				{
 					std::result::Result::Ok(tx) => tx,
 					Err(e) => {

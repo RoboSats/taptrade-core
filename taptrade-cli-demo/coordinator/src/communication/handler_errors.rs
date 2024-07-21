@@ -8,18 +8,18 @@ pub enum BondError {
 #[derive(Debug)]
 pub enum FetchOffersError {
 	NoOffersAvailable,
-	DatabaseError(String),
+	Database(String),
 }
 
 #[derive(Debug)]
 pub enum FetchEscrowConfirmationError {
-	NotFoundError,
-	DatabaseError(String),
+	NotFound,
+	Database(String),
 }
 
 #[derive(Debug)]
 pub enum RequestError {
-	DatabaseError(String),
-	NotConfirmedError,
-	NotFoundError,
+	Database(String),
+	NotConfirmed,
+	NotFound,
 }
