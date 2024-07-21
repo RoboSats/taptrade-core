@@ -7,7 +7,7 @@ use anyhow::{anyhow, Result};
 use bdk::sled;
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
-	coordinator_utils::*, monitoring::*,
+	bond_monitoring::*, coordinator_utils::*,
 	tx_confirmation_monitoring::update_transaction_confirmations, *,
 };
 use database::CoordinatorDB;

@@ -1,7 +1,7 @@
+pub mod bond_monitoring;
 pub mod coordinator_utils;
 pub mod create_taproot;
 pub mod mempool_monitoring;
-pub mod monitoring;
 pub mod tx_confirmation_monitoring;
 
 use self::coordinator_utils::*;
