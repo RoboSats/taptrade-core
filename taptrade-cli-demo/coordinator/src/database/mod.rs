@@ -1,4 +1,5 @@
-pub mod db_tests;
+#[cfg(test)]
+mod db_tests;
 
 use anyhow::Context;
 use futures_util::StreamExt;
@@ -36,6 +37,7 @@ struct AwaitingTakerOffer {
 	bond_amount_sat: i64,
 	bond_tx_hex_maker: String,
 	payout_address_maker: String,
+	taproot_pubkey_hex_maker: String,
 	musig_pub_nonce_hex_maker: String,
 	musig_pubkey_hex_maker: String,
 }
@@ -98,6 +100,7 @@ impl CoordinatorDB {
 				bond_amount_sat INTEGER NOT NULL,
 				bond_tx_hex TEXT NOT NULL,
 				payout_address TEXT NOT NULL,
+				taproot_pubkey_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex TEXT NOT NULL,
 				musig_pubkey_hex TEXT NOT NULL,
 				taker_bond_address TEXT
@@ -121,7 +124,9 @@ impl CoordinatorDB {
 				bond_tx_hex_maker TEXT NOT NULL,
 				bond_tx_hex_taker TEXT NOT NULL,
 				payout_address_maker TEXT NOT NULL,
+				taproot_pubkey_hex_maker TEXT NOT NULL,
 				payout_address_taker TEXT NOT NULL,
+				taproot_pubkey_hex_taker TEXT NOT NULL,
 				musig_pub_nonce_hex_maker TEXT NOT NULL,
 				musig_pubkey_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
@@ -133,7 +138,8 @@ impl CoordinatorDB {
 				maker_happy INTEGER,
 				taker_happy INTEGER,
 				escrow_ongoing INTEGER NOT NULL,
-				escrow_winner_robohash TEXT
+				escrow_winner_robohash TEXT,
+				escrow_taproot_pk_coordinator TEXT
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -231,8 +237,8 @@ impl CoordinatorDB {
 		);
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
-					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(offer_id)
 		.bind(hex::decode(&data.robohash_hex)?)
@@ -244,6 +250,7 @@ impl CoordinatorDB {
 		.bind(remaining_offer_information.bond_amount_sat as i64)
 		.bind(data.signed_bond_hex.clone())
 		.bind(data.payout_address.clone())
+		.bind(data.taproot_pubkey_hex.clone())
 		.bind(data.musig_pub_nonce_hex.clone())
 		.bind(data.musig_pubkey_hex.clone())
 		.bind(taker_bond_address)
@@ -312,8 +319,8 @@ impl CoordinatorDB {
 		&self,
 		offer_id_hex: &str,
 	) -> Result<AwaitingTakerOffer> {
-		let fetched_values = sqlx::query_as::<_, (Vec<u8>, i32, i64, i32, i64, String, i64, String, String, String, String)> (
-			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address,
+		let fetched_values = sqlx::query_as::<_, (Vec<u8>, i32, i64, i32, i64, String, i64, String, String, String, String, String)> (
+			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, taproot_pubkey_hex_maker,
 			musig_pub_nonce_hex, musig_pubkey_hex FROM active_maker_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
@@ -337,8 +344,9 @@ impl CoordinatorDB {
 			bond_amount_sat: fetched_values.6,
 			bond_tx_hex_maker: fetched_values.7,
 			payout_address_maker: fetched_values.8,
-			musig_pub_nonce_hex_maker: fetched_values.9,
-			musig_pubkey_hex_maker: fetched_values.10,
+			taproot_pubkey_hex_maker: fetched_values.9,
+			musig_pub_nonce_hex_maker: fetched_values.10,
+			musig_pubkey_hex_maker: fetched_values.11,
 		})
 	}
 
@@ -348,6 +356,7 @@ impl CoordinatorDB {
 		trade_contract_psbt_maker: &str,
 		trade_contract_psbt_taker: &str,
 		trade_tx_txid: String,
+		escrow_taproot_pk_coordinator: String,
 	) -> Result<()> {
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
@@ -358,9 +367,10 @@ impl CoordinatorDB {
 		sqlx::query(
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
-						bond_tx_hex_taker, payout_address_maker, payout_address_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed, escrow_ongoing)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed, escrow_ongoing,
+						escrow_taproot_pk_coordinator)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -376,6 +386,8 @@ impl CoordinatorDB {
 			.bind(trade_and_taker_info.trade_data.signed_bond_hex.clone())
 			.bind(public_offer.payout_address_maker)
 			.bind(trade_and_taker_info.trade_data.payout_address.clone())
+			.bind(public_offer.taproot_pubkey_hex_maker)
+			.bind(trade_and_taker_info.trade_data.taproot_pubkey_hex.clone())
 			.bind(public_offer.musig_pub_nonce_hex_maker)
 			.bind(public_offer.musig_pubkey_hex_maker)
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
@@ -385,6 +397,7 @@ impl CoordinatorDB {
 			.bind(trade_tx_txid)
 			.bind(0)
 			.bind(0)
+			.bind(escrow_taproot_pk_coordinator)
 			.execute(&*self.db_pool)
 			.await?;
 
@@ -661,5 +674,27 @@ impl CoordinatorDB {
 			row.try_get::<Option<String>, _>("escrow_winner_robohash")?;
 
 		Ok(winner_robohash)
+	}
+
+	pub async fn fetch_escrow_tx_payout_data(
+		&self,
+		offer_id: &str,
+	) -> Result<EscrowPsbtConstructionData> {
+		let row = sqlx::query("SELECT taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pubkey_hex_maker, musig_pubkey_hex_taker FROM taken_offers WHERE offer_id = ?")
+			.bind(offer_id)
+			.fetch_one(&*self.db_pool)
+			.await?;
+
+		let taproot_pubkey_hex_maker: String = row.get("taproot_pubkey_hex_maker");
+		let taproot_pubkey_hex_taker: String = row.get("taproot_pubkey_hex_taker");
+		let musig_pubkey_hex_maker: String = row.get("musig_pubkey_hex_maker");
+		let musig_pubkey_hex_taker: String = row.get("musig_pubkey_hex_taker");
+
+		Ok(EscrowPsbtConstructionData {
+			taproot_pubkey_hex_maker,
+			taproot_pubkey_hex_taker,
+			musig_pubkey_hex_maker,
+			musig_pubkey_hex_taker,
+		})
 	}
 }

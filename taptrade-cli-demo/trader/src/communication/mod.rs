@@ -9,7 +9,7 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use api::*;
-use bdk::bitcoin::consensus::encode::serialize_hex;
+use bdk::bitcoin::{consensus::encode::serialize_hex, key::XOnlyPublicKey};
 use bdk::{
 	bitcoin::{consensus::Encodable, psbt::PartiallySignedTransaction},
 	wallet::AddressInfo,
@@ -71,10 +71,12 @@ impl BondSubmissionRequest {
 		payout_address: &AddressInfo,
 		musig_data: &mut MuSigData,
 		trader_config: &TraderSettings,
+		taproot_pubkey: &XOnlyPublicKey,
 	) -> Result<BondSubmissionRequest> {
 		let signed_bond_hex = serialize_hex(&bond.to_owned().extract_tx());
 		let musig_pub_nonce_hex = hex::encode(musig_data.nonce.get_pub_for_sharing()?.serialize());
 		let musig_pubkey_hex = hex::encode(musig_data.public_key.0.serialize());
+		let taproot_pubkey_hex = hex::encode(taproot_pubkey.serialize());
 
 		let request = BondSubmissionRequest {
 			robohash_hex: trader_config.robosats_robohash_hex.clone(),
@@ -82,6 +84,7 @@ impl BondSubmissionRequest {
 			payout_address: payout_address.address.to_string(),
 			musig_pub_nonce_hex,
 			musig_pubkey_hex,
+			taproot_pubkey_hex,
 		};
 		Ok(request)
 	}
@@ -92,8 +95,15 @@ impl BondSubmissionRequest {
 		musig_data: &mut MuSigData,
 		payout_address: &AddressInfo,
 		trader_setup: &TraderSettings,
+		taproot_pubkey: &XOnlyPublicKey,
 	) -> Result<OrderActivatedResponse> {
-		let request = Self::prepare_bond_request(bond, payout_address, musig_data, trader_setup)?;
+		let request = Self::prepare_bond_request(
+			bond,
+			payout_address,
+			musig_data,
+			trader_setup,
+			taproot_pubkey,
+		)?;
 		let client = reqwest::blocking::Client::new();
 		let res = client
 			.post(format!(

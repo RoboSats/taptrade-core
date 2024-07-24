@@ -133,17 +133,23 @@ pub async fn handle_taker_bond(
 	}
 	debug!("\nTaker bond validation successful");
 
-	panic!("Trade contract PSBT not implemented!");
-	let trade_contract_psbt_taker = "".to_string(); // implement psbt
-	let trade_contract_psbt_maker = "".to_string(); // implement psbt
-	let escrow_tx_txid: String = "".to_string(); // implement txid of psbt
+	let escrow_psbt_data = match wallet
+		.assemble_escrow_psbt(database, &payload.offer.offer_id_hex)
+		.await
+	{
+		Ok(escrow_psbt_data) => escrow_psbt_data,
+		Err(e) => {
+			return Err(BondError::CoordinatorError(e.to_string()));
+		}
+	};
 
 	if let Err(e) = database
 		.add_taker_info_and_move_table(
 			payload,
-			&trade_contract_psbt_maker,
-			&trade_contract_psbt_taker,
-			escrow_tx_txid,
+			&escrow_psbt_data.escrow_psbt_hex_maker,
+			&escrow_psbt_data.escrow_psbt_hex_taker,
+			escrow_psbt_data.escrow_psbt_txid,
+			escrow_psbt_data.coordinator_escrow_pk,
 		)
 		.await
 	{
@@ -151,7 +157,7 @@ pub async fn handle_taker_bond(
 	}
 
 	Ok(OfferTakenResponse {
-		trade_psbt_hex_to_sign: trade_contract_psbt_taker,
+		trade_psbt_hex_to_sign: escrow_psbt_data.escrow_psbt_hex_taker,
 	})
 }
 

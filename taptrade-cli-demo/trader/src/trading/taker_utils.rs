@@ -27,6 +27,7 @@ impl ActiveOffer {
 			&payout_address,
 			&mut musig_data,
 			taker_config,
+			&trading_wallet.taproot_pubkey,
 		)?;
 		let mut escrow_contract_psbt =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;

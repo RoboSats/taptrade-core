@@ -209,6 +209,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base16ct"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+
+[[package]]
 name = "base58ck"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -464,6 +470,7 @@ dependencies = [
  "hex",
  "log",
  "miniscript 12.0.0",
+ "musig2",
  "rand",
  "reqwest",
  "serde",
@@ -1377,6 +1384,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "musig2"
+version = "0.0.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bed08befaac75bfb31ca5e87678c4e8490bcd21d0c98ccb4f12f4065a7567e83"
+dependencies = [
+ "base16ct",
+ "hmac",
+ "once_cell",
+ "secp",
+ "secp256k1 0.28.2",
+ "sha2",
+ "subtle",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1993,6 +2015,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "secp"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c4754628ff9006f80c6abd1cd1e88c5ca6f5a60eab151ad2e16268aab3514d0"
+dependencies = [
+ "base16ct",
+ "once_cell",
+ "secp256k1 0.28.2",
+ "subtle",
+]
+
+[[package]]
 name = "secp256k1"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2002,6 +2036,15 @@ dependencies = [
  "rand",
  "secp256k1-sys 0.8.1",
  "serde",
+]
+
+[[package]]
+name = "secp256k1"
+version = "0.28.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d24b59d129cdadea20aea4fb2352fa053712e5d713eee47d700cd4b2bc002f10"
+dependencies = [
+ "secp256k1-sys 0.9.2",
 ]
 
 [[package]]
@@ -2019,6 +2062,15 @@ name = "secp256k1-sys"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70a129b9e9efbfb223753b9163c4ab3b13cff7fd9c7f010fbac25ab4099fa07e"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "secp256k1-sys"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e5d1746aae42c19d583c3c1a8c646bfad910498e2051c551a7f2e3c0c9fbb7eb"
 dependencies = [
  "cc",
 ]

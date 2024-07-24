@@ -16,6 +16,7 @@ impl ActiveOffer {
 			&mut musig_data,
 			&payout_address,
 			maker_config,
+			&trading_wallet.taproot_pubkey,
 		)?;
 		Ok(ActiveOffer {
 			offer_id_hex: submission_result.offer_id_hex,

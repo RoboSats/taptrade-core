@@ -27,6 +27,7 @@ pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
 	pub signed_bond_hex: String, // signed bond transaction, hex encoded
 	pub payout_address: String,  // does this make sense here?
+	pub taproot_pubkey_hex: String,
 	pub musig_pub_nonce_hex: String,
 	pub musig_pubkey_hex: String,
 }

@@ -6,7 +6,13 @@ use super::*;
 use crate::{cli::TraderSettings, communication::api::BondRequirementResponse};
 use anyhow::{anyhow, Result};
 use bdk::{
-	bitcoin::{self, bip32::ExtendedPrivKey, psbt::PartiallySignedTransaction, Network},
+	bitcoin::{
+		self,
+		bip32::ExtendedPrivKey,
+		key::{KeyPair, Secp256k1, XOnlyPublicKey},
+		psbt::PartiallySignedTransaction,
+		Network,
+	},
 	blockchain::ElectrumBlockchain,
 	database::MemoryDatabase,
 	electrum_client::Client,
@@ -24,6 +30,7 @@ use wallet_utils::get_seed;
 pub struct TradingWallet {
 	pub wallet: Wallet<MemoryDatabase>,
 	pub backend: ElectrumBlockchain,
+	pub taproot_pubkey: XOnlyPublicKey,
 }
 
 pub fn get_wallet_xprv(xprv_input: Option<String>) -> Result<ExtendedPrivKey> {
@@ -49,10 +56,18 @@ impl TradingWallet {
 			bitcoin::Network::Regtest,
 			MemoryDatabase::default(), // non-permanent storage
 		)?;
+		let taproot_pubkey = trader_config
+			.wallet_xprv
+			.to_keypair(&Secp256k1::new())
+			.x_only_public_key();
 
 		wallet.sync(&backend, SyncOptions::default())?;
 		dbg!("Balance: {} SAT", wallet.get_balance()?);
-		Ok(TradingWallet { wallet, backend })
+		Ok(TradingWallet {
+			wallet,
+			backend,
+			taproot_pubkey: taproot_pubkey.0,
+		})
 	}
 
 	// assemble bond and generate musig data for passed trade
