@@ -1,30 +1,11 @@
+pub mod bond_monitoring;
+pub mod coordinator_utils;
 pub mod create_taproot;
 pub mod mempool_monitoring;
-pub mod monitoring;
 pub mod tx_confirmation_monitoring;
-pub mod utils;
 
-use self::utils::*;
+use self::coordinator_utils::*;
 use super::*;
-
-#[derive(Debug)]
-pub enum BondError {
-	InvalidBond(String),
-	BondNotFound,
-	CoordinatorError(String),
-}
-
-#[derive(Debug)]
-pub enum FetchOffersError {
-	NoOffersAvailable,
-	DatabaseError(String),
-}
-
-#[derive(Debug)]
-pub enum FetchEscrowConfirmationError {
-	NotFoundError,
-	DatabaseError(String),
-}
 
 pub async fn process_order(
 	coordinator: Arc<Coordinator>,
@@ -89,7 +70,7 @@ pub async fn handle_maker_bond(
 	};
 	// insert bond into sql database and move offer to different table
 	let bond_locked_until_timestamp = match database
-		.move_offer_to_active(&payload, &offer_id_hex, new_taker_bond_address)
+		.move_offer_to_active(payload, &offer_id_hex, new_taker_bond_address)
 		.await
 	{
 		Ok(timestamp) => timestamp,
@@ -116,7 +97,7 @@ pub async fn get_public_offers(
 	let offers = match database.fetch_suitable_offers(request).await {
 		Ok(offers) => offers,
 		Err(e) => {
-			return Err(FetchOffersError::DatabaseError(e.to_string()));
+			return Err(FetchOffersError::Database(e.to_string()));
 		}
 	};
 	if offers.is_none() {
@@ -159,7 +140,7 @@ pub async fn handle_taker_bond(
 
 	if let Err(e) = database
 		.add_taker_info_and_move_table(
-			&payload,
+			payload,
 			&trade_contract_psbt_maker,
 			&trade_contract_psbt_taker,
 			escrow_tx_txid,
@@ -186,7 +167,7 @@ pub async fn get_offer_status_maker(
 	{
 		Ok(offer) => offer,
 		Err(e) => {
-			return Err(FetchOffersError::DatabaseError(e.to_string()));
+			return Err(FetchOffersError::Database(e.to_string()));
 		}
 	};
 	match offer {
@@ -207,9 +188,9 @@ pub async fn fetch_escrow_confirmation_status(
 		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
 		.await
 	{
-		Ok(false) => return Err(FetchEscrowConfirmationError::NotFoundError),
+		Ok(false) => return Err(FetchEscrowConfirmationError::NotFound),
 		Ok(true) => (),
-		Err(e) => return Err(FetchEscrowConfirmationError::DatabaseError(e.to_string())),
+		Err(e) => return Err(FetchEscrowConfirmationError::Database(e.to_string())),
 	}
 
 	if match database
@@ -217,11 +198,101 @@ pub async fn fetch_escrow_confirmation_status(
 		.await
 	{
 		Ok(status) => status,
-		Err(e) => return Err(FetchEscrowConfirmationError::DatabaseError(e.to_string())),
+		Err(e) => return Err(FetchEscrowConfirmationError::Database(e.to_string())),
 	} {
 		// rust smh
 		Ok(true)
 	} else {
-		Err(FetchEscrowConfirmationError::NotFoundError)
+		Err(FetchEscrowConfirmationError::NotFound)
+	}
+}
+
+pub async fn handle_obligation_confirmation(
+	payload: &OfferTakenRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
+	if let Err(e) = database
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, true)
+		.await
+	{
+		return Err(RequestError::Database(e.to_string()));
+	}
+	Ok(())
+}
+
+pub async fn initiate_escrow(
+	payload: &TradeObligationsUnsatisfied,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
+
+	if let Err(e) = database
+		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, false)
+		.await
+	{
+		return Err(RequestError::Database(e.to_string()));
+	}
+
+	Ok(())
+}
+
+pub async fn handle_final_payout(
+	payload: &OfferTakenRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<PayoutProcessingResult, RequestError> {
+	let database = &coordinator.coordinator_db;
+
+	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
+
+	let trader_happiness = match database.fetch_trader_happiness(&payload.offer_id_hex).await {
+		Ok(happiness) => happiness,
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	if trader_happiness.maker_happy.is_some_and(|x| x)
+		&& trader_happiness.taker_happy.is_some_and(|x| x)
+	{
+		panic!("Implement wallet.assemble_keyspend_payout_psbt()");
+	// let payout_keyspend_psbt_hex = wallet
+	// 	.assemble_keyspend_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex)
+	// 	.await
+	// 	.context("Error assembling payout PSBT")?;
+	// return Ok(PayoutProcessingResult::ReadyPSBT(payout_keyspend_psbt_hex));
+	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
+		&& !trader_happiness.escrow_ongoing
+	{
+		return Ok(PayoutProcessingResult::NotReady);
+	}
+	// if one of them is not happy
+	// open escrow cli on coordinator to decide who will win (chat/dispute is out of scope for this demo)
+	// once decided who will win assemble the correct payout psbt and return it to the according trader
+	// the other trader gets a error code/ end of trade code
+	// escrow winner has to be set true with a cli input of the coordinator. This could be an api
+	// endpoint for the admin UI frontend in the future
+	let potential_escrow_winner = match database.fetch_escrow_result(&payload.offer_id_hex).await {
+		Ok(escrow_winner) => escrow_winner,
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	if let Some(escrow_winner) = potential_escrow_winner {
+		if escrow_winner == payload.robohash_hex {
+			panic!("Implement wallet.assemble_script_payout_psbt()");
+		// let script_payout_psbt_hex = wallet
+		// 	.assemble_script_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex, is_maker_bool)
+		// 	.await
+		// 	.context("Error assembling payout PSBT")?;
+		// return Ok(PayoutProcessingResult::ReadyPSBT(script_payout_psbt_hex));
+		} else {
+			// this will be returned to the losing trader
+			Ok(PayoutProcessingResult::LostEscrow)
+		}
+	} else {
+		// this will be returned if the coordinator hasn't decided yet
+		Ok(PayoutProcessingResult::DecidingEscrow)
 	}
 }

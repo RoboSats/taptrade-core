@@ -80,7 +80,7 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),
 		backend: Arc::new(backend),
-		json_rpc_client: json_rpc_client,
+		json_rpc_client,
 		mempool: Arc::new(mempool),
 	})
 }
@@ -128,8 +128,6 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		{
 			let wallet = self.wallet.lock().await;
 			for bond in bonds.as_ref().iter() {
-				let input_sum: u64;
-
 				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
 				debug!("Validating bond in validate_bonds()");
 				// we need to test this with signed and invalid/unsigned transactions
@@ -140,7 +138,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				}
 
 				// check if the tx has the correct input amounts (have to be >= trading amount)
-				input_sum = match tx.input_sum(blockchain, &*wallet.database()) {
+				let input_sum: u64 = match tx.input_sum(blockchain, &*wallet.database()) {
 					Ok(amount) => {
 						if amount < bond.requirements.min_input_sum_sat {
 							invalid_bonds.insert(
