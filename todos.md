@@ -9,3 +9,4 @@ Thinks to improve when implementing the production ready library/coordinator:
 * use the same database as the existing (python) robosats coordinator instead of separate sqlite db?
 * share single db for coordinator and bdk wallet instead of sqlite + bdk k/v db?
 * add more test coverage
+* move as much logic as possible (without safety tradeoffs) to coordinator side to make client lean

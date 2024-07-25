@@ -133,11 +133,11 @@ pub async fn handle_taker_bond(
 	}
 	debug!("\nTaker bond validation successful");
 
-	let escrow_psbt_data = match wallet
-		.assemble_escrow_psbt(database, &payload.offer.offer_id_hex)
+	let escrow_output_data = match wallet
+		.get_escrow_psbt_outputs(database, &payload.offer.offer_id_hex)
 		.await
 	{
-		Ok(escrow_psbt_data) => escrow_psbt_data,
+		Ok(escrow_output_data) => escrow_output_data,
 		Err(e) => {
 			return Err(BondError::CoordinatorError(e.to_string()));
 		}
@@ -146,10 +146,9 @@ pub async fn handle_taker_bond(
 	if let Err(e) = database
 		.add_taker_info_and_move_table(
 			payload,
-			&escrow_psbt_data.escrow_psbt_hex_maker,
-			&escrow_psbt_data.escrow_psbt_hex_taker,
-			escrow_psbt_data.escrow_psbt_txid,
-			escrow_psbt_data.coordinator_escrow_pk,
+			&escrow_output_data.escrow_output_descriptor,
+			&escrow_output_data.escrow_tx_fee_address,
+			&escrow_output_data.coordinator_xonly_escrow_pk,
 		)
 		.await
 	{
@@ -157,7 +156,8 @@ pub async fn handle_taker_bond(
 	}
 
 	Ok(OfferTakenResponse {
-		trade_psbt_hex_to_sign: escrow_psbt_data.escrow_psbt_hex_taker,
+		escrow_output_descriptor: escrow_output_data.escrow_output_descriptor,
+		escrow_tx_fee_address: escrow_output_data.escrow_tx_fee_address,
 	})
 }
 
@@ -167,21 +167,22 @@ pub async fn get_offer_status_maker(
 ) -> Result<OfferTakenResponse, FetchOffersError> {
 	let database = &coordinator.coordinator_db;
 
-	let offer = match database
-		.fetch_taken_offer_maker(&payload.offer_id_hex, &payload.robohash_hex)
+	let (descriptor, fee_address) = match database
+		.fetch_escrow_output_information(&payload.offer_id_hex)
 		.await
 	{
-		Ok(offer) => offer,
+		Ok(Some(descriptor_and_fee_addr)) => (descriptor_and_fee_addr.0, descriptor_and_fee_addr.1),
+		Ok(None) => {
+			return Err(FetchOffersError::NoOffersAvailable);
+		}
 		Err(e) => {
 			return Err(FetchOffersError::Database(e.to_string()));
 		}
 	};
-	match offer {
-		Some(offer) => Ok(OfferTakenResponse {
-			trade_psbt_hex_to_sign: offer,
-		}),
-		None => Err(FetchOffersError::NoOffersAvailable),
-	}
+	Ok(OfferTakenResponse {
+		escrow_output_descriptor: descriptor,
+		escrow_tx_fee_address: fee_address,
+	})
 }
 
 pub async fn fetch_escrow_confirmation_status(

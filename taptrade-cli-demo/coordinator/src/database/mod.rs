@@ -353,10 +353,9 @@ impl CoordinatorDB {
 	pub async fn add_taker_info_and_move_table(
 		&self,
 		trade_and_taker_info: &OfferPsbtRequest,
-		trade_contract_psbt_maker: &str,
-		trade_contract_psbt_taker: &str,
-		trade_tx_txid: String,
-		escrow_taproot_pk_coordinator: String,
+		escrow_output_descriptor: &str,
+		escrow_tx_fee_address: &str,
+		escrow_taproot_pk_coordinator: &str,
 	) -> Result<()> {
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
@@ -368,9 +367,9 @@ impl CoordinatorDB {
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex_maker, escrow_psbt_hex_taker, escrow_psbt_txid, escrow_psbt_is_confirmed, escrow_ongoing,
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_output_descriptor, escrow_tx_fee_address, escrow_psbt_is_confirmed, escrow_ongoing,
 						escrow_taproot_pk_coordinator)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -392,9 +391,8 @@ impl CoordinatorDB {
 			.bind(public_offer.musig_pubkey_hex_maker)
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
-			.bind(trade_contract_psbt_maker)
-			.bind(trade_contract_psbt_taker)
-			.bind(trade_tx_txid)
+			.bind(escrow_output_descriptor)
+			.bind(escrow_tx_fee_address)
 			.bind(0)
 			.bind(0)
 			.bind(escrow_taproot_pk_coordinator)
@@ -404,13 +402,12 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	pub async fn fetch_taken_offer_maker(
+	pub async fn fetch_escrow_output_information(
 		&self,
 		offer_id_hex: &str,
-		robohash_hex_maker: &str,
-	) -> Result<Option<String>> {
+	) -> Result<Option<(String, String)>> {
 		let offer = sqlx::query(
-			"SELECT escrow_psbt_hex_maker, robohash_maker FROM taken_offers WHERE offer_id = ?",
+			"SELECT escrow_output_descriptor, escrow_tx_fee_address FROM taken_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
 		.fetch_optional(&*self.db_pool)
@@ -419,16 +416,9 @@ impl CoordinatorDB {
 			Some(offer) => offer,
 			None => return Ok(None),
 		};
-		match offer.try_get::<Vec<u8>, _>("robohash_maker") {
-			Ok(robohash) => {
-				if hex::encode(robohash) == *robohash_hex_maker {
-					Ok(offer.try_get("escrow_psbt_hex_maker")?)
-				} else {
-					Ok(None)
-				}
-			}
-			Err(_) => Ok(None),
-		}
+		let descriptor = offer.try_get::<String, _>("escrow_output_descriptor")?;
+		let fee_address = offer.try_get::<String, _>("escrow_tx_fee_address")?;
+		Ok(Some((descriptor, fee_address)))
 	}
 
 	// returns a hashmap of RoboHash, MonitoringBond for the monitoring loop

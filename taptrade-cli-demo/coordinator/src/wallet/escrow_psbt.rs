@@ -91,7 +91,17 @@ pub fn build_escrow_transaction_output_descriptor(
 	// Create the descriptor
 	let descriptor = Descriptor::new_tr(internal_agg_musig_key, Some(final_tap_tree))
 		.context("Error assembling escrow output descriptor")?;
+	descriptor.sanity_check()?;
 
-	debug!("Escrow descriptor: {}", descriptor.to_string());
+	debug!("Escrow descriptor: {}", descriptor);
 	Ok(descriptor.to_string())
+}
+
+pub fn assemble_escrow_psbts(
+	coordinator: &Coordinator,
+	escrow_data: &EscrowPsbtConstructionData,
+	coordinator_pk: &XOnlyPublicKey,
+) -> Result<()> {
+	panic!("Implement wallet.build_escrow_psbt()");
+	Ok(())
 }

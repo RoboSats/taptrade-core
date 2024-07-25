@@ -40,10 +40,9 @@ pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 
 #[derive(Debug)]
 pub struct EscrowPsbt {
-	pub escrow_psbt_hex_maker: String,
-	pub escrow_psbt_hex_taker: String,
-	pub escrow_psbt_txid: String,
-	pub coordinator_escrow_pk: String,
+	pub escrow_output_descriptor: String,
+	pub escrow_tx_fee_address: String,
+	pub coordinator_xonly_escrow_pk: String,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -232,23 +231,22 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(())
 	}
 
-	pub async fn assemble_escrow_psbt(
+	pub async fn get_escrow_psbt_outputs(
 		&self,
 		db: &Arc<CoordinatorDB>,
 		trade_id: &str,
 	) -> Result<EscrowPsbt> {
 		let escrow_pubkeys = db.fetch_escrow_tx_payout_data(trade_id).await?;
 		let coordinator_escrow_pk = self.get_coordinator_taproot_pk().await?;
-		let escrow_descriptor =
+		let escrow_output_descriptor =
 			build_escrow_transaction_output_descriptor(&escrow_pubkeys, &coordinator_escrow_pk)?;
+		let escrow_tx_fee_address = self.get_new_address().await?;
 
-		panic!("Dummy output");
-		// Ok(EscrowPsbt {
-		// 	escrow_psbt_hex_maker: String::new(),
-		// 	escrow_psbt_hex_taker: String::new(),
-		// 	escrow_psbt_txid: String::new(),
-		// 	coordinator_escrow_pk,
-		// })
+		Ok(EscrowPsbt {
+			escrow_output_descriptor,
+			escrow_tx_fee_address,
+			coordinator_xonly_escrow_pk: coordinator_escrow_pk.to_string(),
+		})
 	}
 
 	pub async fn get_coordinator_taproot_pk(&self) -> Result<XOnlyPublicKey> {
