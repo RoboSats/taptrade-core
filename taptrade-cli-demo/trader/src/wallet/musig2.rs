@@ -1,6 +1,7 @@
 use crate::wallet::bitcoin::key::{Parity, Secp256k1, XOnlyPublicKey};
 use crate::wallet::{wallet_utils::get_seed, KeychainKind};
 use anyhow::{anyhow, Error, Result};
+use bdk::bitcoin::secp256k1::PublicKey;
 use bdk::{
 	bitcoin::{
 		bip32::ExtendedPrivKey,
@@ -17,7 +18,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[derive(Debug)]
 pub struct MuSigData {
 	pub nonce: MusigNonce,
-	pub public_key: (XOnlyPublicKey, Parity),
+	pub public_key: PublicKey,
 	pub secret_key: SecretKey,
 }
 
@@ -71,7 +72,7 @@ impl MuSigData {
 
 		Ok(MuSigData {
 			nonce,
-			public_key: keypair.x_only_public_key(),
+			public_key: keypair.public_key(),
 			secret_key: keypair.secret_key(),
 		})
 	}

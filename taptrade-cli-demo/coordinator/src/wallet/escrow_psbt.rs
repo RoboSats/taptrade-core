@@ -7,11 +7,11 @@ use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
 
 #[derive(Debug)]
 pub struct EscrowPsbtConstructionData {
-	pub taproot_pubkey_hex_maker: String,
-	pub taproot_pubkey_hex_taker: String,
+	pub taproot_xonly_pubkey_hex_maker: String,
+	pub taproot_xonly_pubkey_hex_taker: String,
 	// pub taproot_pubkey_hex_coordinator: String,
-	pub musig_pubkey_hex_maker: String,
-	pub musig_pubkey_hex_taker: String,
+	pub musig_pubkey_compressed_hex_maker: String,
+	pub musig_pubkey_compressed_hex_taker: String,
 }
 
 fn aggregate_musig_pubkeys(maker_musig_pubkey: &str, taker_musig_pubkey: &str) -> Result<String> {
@@ -34,9 +34,9 @@ pub fn build_escrow_transaction_output_descriptor(
 	escrow_data: &EscrowPsbtConstructionData,
 	coordinator_pk: &XOnlyPublicKey,
 ) -> Result<String> {
-	let taproot_pubkey_hex_maker = escrow_data.taproot_pubkey_hex_maker.clone();
+	let taproot_pubkey_hex_maker = escrow_data.taproot_xonly_pubkey_hex_maker.clone();
 	let maker_pk = taproot_pubkey_hex_maker;
-	let taker_pk = escrow_data.taproot_pubkey_hex_taker.clone();
+	let taker_pk = escrow_data.taproot_xonly_pubkey_hex_taker.clone();
 	let coordinator_pk = hex::encode(coordinator_pk.serialize());
 
 	// let script_a = format!("and(and(after({}),{}),{})", "144", maker_pk, coordinator_pk);
@@ -84,8 +84,8 @@ pub fn build_escrow_transaction_output_descriptor(
 
 	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
 	let internal_agg_musig_key = aggregate_musig_pubkeys(
-		&escrow_data.musig_pubkey_hex_maker,
-		&escrow_data.musig_pubkey_hex_taker,
+		&escrow_data.musig_pubkey_compressed_hex_maker,
+		&escrow_data.musig_pubkey_compressed_hex_taker,
 	)?;
 
 	// Create the descriptor

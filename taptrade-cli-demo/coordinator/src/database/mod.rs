@@ -124,13 +124,13 @@ impl CoordinatorDB {
 				bond_tx_hex_maker TEXT NOT NULL,
 				bond_tx_hex_taker TEXT NOT NULL,
 				payout_address_maker TEXT NOT NULL,
-				taproot_pubkey_hex_maker TEXT NOT NULL,
+				taproot_xonly_pubkey_hex_maker TEXT NOT NULL,
 				payout_address_taker TEXT NOT NULL,
-				taproot_pubkey_hex_taker TEXT NOT NULL,
+				taproot_xonly_pubkey_hex_taker TEXT NOT NULL,
 				musig_pub_nonce_hex_maker TEXT NOT NULL,
-				musig_pubkey_hex_maker TEXT NOT NULL,
+				musig_pubkey_compressed_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
-				musig_pubkey_hex_taker TEXT NOT NULL,
+				musig_pubkey_compressed_hex_taker TEXT NOT NULL,
 				escrow_psbt_hex_maker TEXT,
 				escrow_psbt_hex_taker TEXT,
 				escrow_psbt_txid TEXT,
@@ -680,21 +680,23 @@ impl CoordinatorDB {
 		&self,
 		offer_id: &str,
 	) -> Result<EscrowPsbtConstructionData> {
-		let row = sqlx::query("SELECT taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pubkey_hex_maker, musig_pubkey_hex_taker FROM taken_offers WHERE offer_id = ?")
+		let row = sqlx::query("SELECT taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker FROM taken_offers WHERE offer_id = ?")
 			.bind(offer_id)
 			.fetch_one(&*self.db_pool)
 			.await?;
 
-		let taproot_pubkey_hex_maker: String = row.get("taproot_pubkey_hex_maker");
-		let taproot_pubkey_hex_taker: String = row.get("taproot_pubkey_hex_taker");
-		let musig_pubkey_hex_maker: String = row.get("musig_pubkey_hex_maker");
-		let musig_pubkey_hex_taker: String = row.get("musig_pubkey_hex_taker");
+		let taproot_xonly_pubkey_hex_maker: String = row.get("taproot_xonly_pubkey_hex_maker");
+		let taproot_xonly_pubkey_hex_taker: String = row.get("taproot_xonly_pubkey_hex_taker");
+		let musig_pubkey_compressed_hex_maker: String =
+			row.get("musig_pubkey_compressed_hex_maker");
+		let musig_pubkey_compressed_hex_taker: String =
+			row.get("musig_pubkey_compressed_hex_taker");
 
 		Ok(EscrowPsbtConstructionData {
-			taproot_pubkey_hex_maker,
-			taproot_pubkey_hex_taker,
-			musig_pubkey_hex_maker,
-			musig_pubkey_hex_taker,
+			taproot_xonly_pubkey_hex_maker,
+			taproot_xonly_pubkey_hex_taker,
+			musig_pubkey_compressed_hex_maker,
+			musig_pubkey_compressed_hex_taker,
 		})
 	}
 }
