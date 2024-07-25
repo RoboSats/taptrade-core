@@ -205,6 +205,7 @@ async fn test_move_offer_to_active() -> Result<()> {
 		payout_address: "1PayoutAddress".to_string(),
 		musig_pub_nonce_hex: "musigPubNonceHex".to_string(),
 		musig_pubkey_hex: "musigPubkeyHex".to_string(),
+		taproot_pubkey_hex: "taprootPubkeyHex".to_string(),
 	};
 
 	// Call the move_offer_to_active function

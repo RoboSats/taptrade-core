@@ -1,8 +1,10 @@
+use std::collections::btree_map::Range;
 use std::time::Duration;
 
 use super::*;
 use bdk::bitcoin::Network;
 use bdk::database::MemoryDatabase;
+use bdk::keys::GeneratableKey;
 use bdk::{blockchain::RpcBlockchain, Wallet};
 async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 	dotenv().ok();
@@ -162,4 +164,37 @@ async fn test_invalid_bond_tx_low_fee_rate() {
 		.unwrap_err()
 		.to_string()
 		.contains("Bond fee rate too low"));
+}
+
+#[test]
+fn test_build_escrow_transaction_output_descriptor() {
+	// let seed: [u8; 32] = [
+	// 	0x1b, 0x2d, 0x3d, 0x4d, 0x5d, 0x6d, 0x7d, 0x8d, 0x9d, 0xad, 0xbd, 0xcd, 0xdd, 0xed, 0xfd,
+	// 	0x0d, 0x1d, 0x2d, 0x3d, 0x4d, 0x5d, 0x6d, 0x8d, 0x8d, 0x9d, 0xbd, 0xbd, 0xcd, 0xdd, 0xed,
+	// 	0xfd, 0x0d,
+	// ];
+	// let xprv = ExtendedPrivKey::new_master(Network::Testnet, &seed).unwrap();
+	// let pubkey = xprv
+	// 	.to_keypair(&secp256k1::Secp256k1::new())
+	// 	.x_only_public_key()
+	// 	.0
+	// 	.to_string();
+	// dbg!(&pubkey);
+	let escrow_data = EscrowPsbtConstructionData {
+		taproot_pubkey_hex_maker:
+			"b709f64da734e04e35b129a65a7fae361cad8a9458d1abc4f0b45b7661a42fca".to_string(),
+		taproot_pubkey_hex_taker:
+			"4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d".to_string(),
+		musig_pubkey_hex_maker: "b943789a0c9a16e27d7a9d27077eacd0fc664f01ff795f64e0f5fd257b4019e9"
+			.to_string(),
+		musig_pubkey_hex_taker: "a2e78a076b9ecfec8a8eb71ad5f0f29592d1559424f35ac25a0130d1a2880733"
+			.to_string(),
+	};
+	let coordinator_pk = XOnlyPublicKey::from_str(
+		"d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5",
+	)
+	.unwrap();
+	let result = build_escrow_transaction_output_descriptor(&escrow_data, &coordinator_pk);
+	dbg!(&result);
+	assert!(result.is_ok());
 }

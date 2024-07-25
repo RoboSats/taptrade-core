@@ -15,9 +15,16 @@ pub struct EscrowPsbtConstructionData {
 }
 
 fn aggregate_musig_pubkeys(maker_musig_pubkey: &str, taker_musig_pubkey: &str) -> Result<String> {
-	let pubkeys: [MuSig2PubKey; 2] = [maker_musig_pubkey.parse()?, taker_musig_pubkey.parse()?];
+	let pubkeys: [MuSig2PubKey; 2] = [
+		maker_musig_pubkey
+			.parse()
+			.context("Error parsing musig pk 1")?,
+		taker_musig_pubkey
+			.parse()
+			.context("Error parsing musig pk 2")?,
+	];
 
-	let key_agg_ctx = KeyAggContext::new(pubkeys)?;
+	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;
 	let agg_pk: MuSig2PubKey = key_agg_ctx.aggregated_pubkey();
 
 	Ok(agg_pk.to_string())
@@ -39,15 +46,27 @@ pub fn build_escrow_transaction_output_descriptor(
 	// );
 	let script_c: String = format!("and(pk({}),pk({}))", maker_pk, coordinator_pk);
 	let script_d = format!("and(pk({}),pk({}))", taker_pk, coordinator_pk);
-	let script_e = format!("and({},after(12228))", maker_pk);
-	let script_f = format!("and_v(and_v(v:{},v:{}),after(2048))", maker_pk, taker_pk);
+	let script_e = format!("and(pk({}),after(12228))", maker_pk);
+	let script_f = format!("and(and(pk({}),pk({})),after(2048))", maker_pk, taker_pk);
 
 	// let compiled_a = Concrete::<String>::from_str(&script_a)?.compile::<Tap>()?;
 	// let compiled_b = Concrete::<String>::from_str(&script_b)?.compile()?;
-	let compiled_c = Concrete::<String>::from_str(&script_c)?.compile::<Tap>()?;
-	let compiled_d = Concrete::<String>::from_str(&script_d)?.compile::<Tap>()?;
-	let compiled_e = Concrete::<String>::from_str(&script_e)?.compile::<Tap>()?;
-	let compiled_f = Concrete::<String>::from_str(&script_f)?.compile::<Tap>()?;
+	let compiled_c = Concrete::<String>::from_str(&script_c)
+		.context("Failed to parse script_c")?
+		.compile::<Tap>()
+		.context("Failed to compile script_c")?;
+	let compiled_d = Concrete::<String>::from_str(&script_d)
+		.context("Failed to parse script_d")?
+		.compile::<Tap>()
+		.context("Failed to compile script_d")?;
+	let compiled_e = Concrete::<String>::from_str(&script_e)
+		.context("Failed to parse script_e")?
+		.compile::<Tap>()
+		.context("Failed to compile script_e")?;
+	let compiled_f = Concrete::<String>::from_str(&script_f)
+		.context("Failed to parse script_f")?
+		.compile::<Tap>()
+		.context("Failed to compile script_f")?;
 
 	// Create TapTree leaves
 	// let tap_leaf_a = TapTree::Leaf(Arc::new(compiled_a));
@@ -70,7 +89,8 @@ pub fn build_escrow_transaction_output_descriptor(
 	)?;
 
 	// Create the descriptor
-	let descriptor = Descriptor::new_tr(internal_agg_musig_key, Some(final_tap_tree))?;
+	let descriptor = Descriptor::new_tr(internal_agg_musig_key, Some(final_tap_tree))
+		.context("Error assembling escrow output descriptor")?;
 
 	debug!("Escrow descriptor: {}", descriptor.to_string());
 	Ok(descriptor.to_string())
