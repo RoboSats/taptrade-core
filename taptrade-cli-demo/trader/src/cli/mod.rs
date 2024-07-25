@@ -133,7 +133,7 @@ impl CliSettings {
 	}
 
 	fn load_from_env(filename: &str) -> Result<TraderSettings> {
-		dotenv::from_filename(filename)?;
+		dotenvy::from_filename(filename)?;
 		Ok(TraderSettings {
 			electrum_endpoint: env::var("ELECTRUM_ENDPOINT")?,
 			coordinator_endpoint: env::var("COORDINATOR_ENDPOINT")?,

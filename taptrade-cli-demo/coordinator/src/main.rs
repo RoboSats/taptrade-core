@@ -11,10 +11,10 @@ use coordinator::{
 	tx_confirmation_monitoring::update_transaction_confirmations, *,
 };
 use database::CoordinatorDB;
-use dotenv::dotenv;
+use dotenvy::dotenv;
 use log::{debug, error, info, trace, warn};
 use rand::Rng;
-use std::{
+use std::{g
 	env,
 	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},
