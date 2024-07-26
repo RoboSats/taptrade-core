@@ -30,10 +30,10 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
 	info!("Maker offer created: {:#?}", &offer);
 
-	let mut escrow_contract_psbt = offer.wait_until_taken(maker_config)?;
-	wallet
-		.validate_maker_psbt(&escrow_contract_psbt)?
-		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
+	let escrow_psbt_requirements = offer.wait_until_taken(maker_config)?;
+	let escrow_psbt = wallet.get_escrow_psbt(escrow_psbt_requirements, maker_config);
+	// .validate_maker_psbt(&escrow_contract_psbt)?
+	// .sign_escrow_psbt(&mut escrow_contract_psbt)?;
 
 	// submit signed escrow psbt back to coordinator
 	PsbtSubmissionRequest::submit_escrow_psbt(

@@ -3,7 +3,10 @@ pub mod musig2;
 pub mod wallet_utils;
 
 use super::*;
-use crate::{cli::TraderSettings, communication::api::BondRequirementResponse};
+use crate::{
+	cli::TraderSettings,
+	communication::api::{BondRequirementResponse, OfferTakenResponse},
+};
 use anyhow::{anyhow, Result};
 use bdk::{
 	bitcoin::{
@@ -85,6 +88,18 @@ impl TradingWallet {
 		Ok((bond, musig_data, payout_address))
 	}
 
+	pub async fn get_escrow_psbt(
+		&self,
+		escrow_psbt_requirements: OfferTakenResponse,
+		trader_config: &TraderSettings,
+	) -> Result<PartiallySignedTransaction> {
+		let fee_address = escrow_psbt_requirements.escrow_tx_fee_address;
+		let output_descriptor = escrow_psbt_requirements.escrow_output_descriptor;
+
+		self.wallet.sync(&self.backend, SyncOptions::default())?;
+		Ok(())
+	}
+
 	// validate that the taker psbt references the correct inputs and amounts
 	// taker input should be the same as in the previous bond transaction.
 	// input amount should be the bond amount when buying,
@@ -94,19 +109,19 @@ impl TradingWallet {
 		Ok(self)
 	}
 
-	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
-		let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;
-		if !finalized {
-			return Err(anyhow!("Signing of taker escrow psbt failed!"));
-		}
-		Ok(self)
-	}
+	// pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
+	// 	let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;
+	// 	if !finalized {
+	// 		return Err(anyhow!("Signing of taker escrow psbt failed!"));
+	// 	}
+	// 	Ok(self)
+	// }
 
 	// validate amounts, escrow output
-	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-		error!("IMPLEMENT MAKER PSBT VALIDATION!");
-		// tbd once the trade psbt is implemented on coordinator side
+	// pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+	// 	error!("IMPLEMENT MAKER PSBT VALIDATION!");
+	// 	// tbd once the trade psbt is implemented on coordinator side
 
-		Ok(self)
-	}
+	// 	Ok(self)
+	// }
 }
