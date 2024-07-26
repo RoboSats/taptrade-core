@@ -10,3 +10,4 @@ Thinks to improve when implementing the production ready library/coordinator:
 * share single db for coordinator and bdk wallet instead of sqlite + bdk k/v db?
 * add more test coverage
 * move as much logic as possible (without safety tradeoffs) to coordinator side to make client lean
+* update BDK to 1.0 once out of alpha

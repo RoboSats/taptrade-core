@@ -14,7 +14,7 @@ use database::CoordinatorDB;
 use dotenvy::dotenv;
 use log::{debug, error, info, trace, warn};
 use rand::Rng;
-use std::{g
+use std::{
 	env,
 	sync::Arc,
 	time::{SystemTime, UNIX_EPOCH},

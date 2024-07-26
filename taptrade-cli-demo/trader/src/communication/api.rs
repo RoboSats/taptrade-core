@@ -46,7 +46,8 @@ pub struct OfferTakenRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct OfferTakenResponse {
-	pub trade_psbt_hex_to_sign: String,
+	pub escrow_output_descriptor: String,
+	pub escrow_tx_fee_address: String,
 }
 
 // Taker structures //
