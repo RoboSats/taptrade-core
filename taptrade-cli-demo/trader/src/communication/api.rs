@@ -48,6 +48,9 @@ pub struct OfferTakenRequest {
 pub struct OfferTakenResponse {
 	pub escrow_output_descriptor: String,
 	pub escrow_tx_fee_address: String,
+	pub escrow_amount_maker_sat: u64,
+	pub escrow_amount_taker_sat: u64,
+	pub escrow_fee_sat_per_participant: u64,
 }
 
 // Taker structures //

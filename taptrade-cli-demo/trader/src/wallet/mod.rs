@@ -14,16 +14,16 @@ use bdk::{
 		bip32::ExtendedPrivKey,
 		key::{KeyPair, Secp256k1, XOnlyPublicKey},
 		psbt::PartiallySignedTransaction,
-		Network,
+		Address, Network,
 	},
 	blockchain::ElectrumBlockchain,
-	database::MemoryDatabase,
+	database::{Database, MemoryDatabase},
 	electrum_client::Client,
 	keys::DescriptorPublicKey,
-	miniscript::Descriptor,
+	miniscript::{descriptor::Tr, Descriptor},
 	template::{Bip86, DescriptorTemplate},
-	wallet::AddressInfo,
-	KeychainKind, SignOptions, SyncOptions, Wallet,
+	wallet::{AddressIndex, AddressInfo},
+	FeeRate, KeychainKind, SignOptions, SyncOptions, Wallet,
 };
 use bond::Bond;
 use musig2::MuSigData;
@@ -92,12 +92,33 @@ impl TradingWallet {
 		&self,
 		escrow_psbt_requirements: OfferTakenResponse,
 		trader_config: &TraderSettings,
+		escrow_amount: u64,
+		coordinator_fee_amount: u64,
 	) -> Result<PartiallySignedTransaction> {
-		let fee_address = escrow_psbt_requirements.escrow_tx_fee_address;
-		let output_descriptor = escrow_psbt_requirements.escrow_output_descriptor;
-
+		let fee_output = Address::from_str(&escrow_psbt_requirements.escrow_tx_fee_address)?
+			.assume_checked()
+			.script_pubkey();
+		let escrow_output = {
+			let temp_wallet = Wallet::new(
+				&escrow_psbt_requirements.escrow_output_descriptor,
+				None,
+				Network::Regtest,
+				MemoryDatabase::new(),
+			)?;
+			temp_wallet.get_address(AddressIndex::New)?.script_pubkey()
+		};
 		self.wallet.sync(&self.backend, SyncOptions::default())?;
-		Ok(())
+		let (mut psbt, details) = {
+			let mut builder = self.wallet.build_tx();
+			builder
+				.add_recipient(escrow_output, escrow_amount)
+				.add_recipient(fee_output, coordinator_fee_amount)
+				.fee_rate(FeeRate::from_sat_per_vb(10.0));
+			builder.finish()?
+		};
+		debug!("Signing escrow psbt.");
+		self.wallet.sign(&mut psbt, SignOptions::default())?;
+		Ok(psbt)
 	}
 
 	// validate that the taker psbt references the correct inputs and amounts
