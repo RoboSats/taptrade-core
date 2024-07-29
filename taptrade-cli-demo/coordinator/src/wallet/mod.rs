@@ -36,6 +36,7 @@ pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 	pub backend: Arc<RpcBlockchain>,
 	pub json_rpc_client: Arc<bdk::bitcoincore_rpc::Client>,
 	pub mempool: Arc<MempoolHandler>,
+	pub coordinator_feerate: f64,
 }
 
 #[derive(Debug)]
@@ -43,6 +44,9 @@ pub struct EscrowPsbt {
 	pub escrow_output_descriptor: String,
 	pub escrow_tx_fee_address: String,
 	pub coordinator_xonly_escrow_pk: String,
+	pub escrow_amount_maker_sat: u64,
+	pub escrow_amount_taker_sat: u64,
+	pub escrow_fee_sat_per_participant: u64,
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -98,6 +102,7 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 		backend: Arc::new(backend),
 		json_rpc_client,
 		mempool: Arc::new(mempool),
+		coordinator_feerate: env::var("COORDINATOR_FEERATE")?.parse::<f64>()?,
 	})
 }
 
@@ -241,11 +246,17 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		let escrow_output_descriptor =
 			build_escrow_transaction_output_descriptor(&escrow_pubkeys, &coordinator_escrow_pk)?;
 		let escrow_tx_fee_address = self.get_new_address().await?;
+		let (escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_sat_per_participant) = db
+			.get_escrow_tx_amounts(trade_id, self.coordinator_feerate)
+			.await?;
 
 		Ok(EscrowPsbt {
 			escrow_output_descriptor,
 			escrow_tx_fee_address,
 			coordinator_xonly_escrow_pk: coordinator_escrow_pk.to_string(),
+			escrow_amount_maker_sat,
+			escrow_amount_taker_sat,
+			escrow_fee_sat_per_participant,
 		})
 	}
 

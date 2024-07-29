@@ -144,12 +144,7 @@ pub async fn handle_taker_bond(
 	};
 
 	if let Err(e) = database
-		.add_taker_info_and_move_table(
-			payload,
-			&escrow_output_data.escrow_output_descriptor,
-			&escrow_output_data.escrow_tx_fee_address,
-			&escrow_output_data.coordinator_xonly_escrow_pk,
-		)
+		.add_taker_info_and_move_table(payload, &escrow_output_data)
 		.await
 	{
 		return Err(BondError::CoordinatorError(e.to_string()));
@@ -158,6 +153,9 @@ pub async fn handle_taker_bond(
 	Ok(OfferTakenResponse {
 		escrow_output_descriptor: escrow_output_data.escrow_output_descriptor,
 		escrow_tx_fee_address: escrow_output_data.escrow_tx_fee_address,
+		escrow_amount_maker_sat: escrow_output_data.escrow_amount_maker_sat,
+		escrow_amount_taker_sat: escrow_output_data.escrow_amount_taker_sat,
+		escrow_fee_sat_per_participant: escrow_output_data.escrow_fee_sat_per_participant,
 	})
 }
 
@@ -167,11 +165,18 @@ pub async fn get_offer_status_maker(
 ) -> Result<OfferTakenResponse, FetchOffersError> {
 	let database = &coordinator.coordinator_db;
 
-	let (descriptor, fee_address) = match database
+	let EscrowPsbt {
+		escrow_output_descriptor,
+		escrow_tx_fee_address,
+		escrow_amount_maker_sat,
+		escrow_amount_taker_sat,
+		escrow_fee_sat_per_participant,
+		..
+	} = match database
 		.fetch_escrow_output_information(&payload.offer_id_hex)
 		.await
 	{
-		Ok(Some(descriptor_and_fee_addr)) => (descriptor_and_fee_addr.0, descriptor_and_fee_addr.1),
+		Ok(Some(escrow_psbt_data)) => escrow_psbt_data,
 		Ok(None) => {
 			return Err(FetchOffersError::NoOffersAvailable);
 		}
@@ -180,8 +185,11 @@ pub async fn get_offer_status_maker(
 		}
 	};
 	Ok(OfferTakenResponse {
-		escrow_output_descriptor: descriptor,
-		escrow_tx_fee_address: fee_address,
+		escrow_output_descriptor,
+		escrow_tx_fee_address,
+		escrow_amount_maker_sat,
+		escrow_amount_taker_sat,
+		escrow_fee_sat_per_participant,
 	})
 }
 

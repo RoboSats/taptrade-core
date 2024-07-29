@@ -29,13 +29,12 @@ impl ActiveOffer {
 			taker_config,
 			&trading_wallet.taproot_pubkey,
 		)?;
-		let mut escrow_contract_psbt =
+		let escrow_contract_requirements =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;
 
 		// now we have to verify, sign and submit the escrow psbt again
-		trading_wallet
-			.validate_taker_psbt(&escrow_contract_psbt)?
-			.sign_escrow_psbt(&mut escrow_contract_psbt)?;
+		let escrow_contract_psbt =
+			trading_wallet.get_escrow_psbt(escrow_contract_requirements, taker_config)?;
 
 		// submit signed escrow psbt back to coordinator
 		PsbtSubmissionRequest::submit_escrow_psbt(

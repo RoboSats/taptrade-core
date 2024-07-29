@@ -139,7 +139,11 @@ impl CoordinatorDB {
 				taker_happy INTEGER,
 				escrow_ongoing INTEGER NOT NULL,
 				escrow_winner_robohash TEXT,
-				escrow_taproot_pk_coordinator TEXT
+				escrow_taproot_pk_coordinator TEXT,
+				escrow_amount_maker_sat INTEGER,
+				escrow_amount_taker_sat INTEGER,
+				escrow_fee_per_participant INTEGER,
+				escrow_output_descriptor TEXT
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -353,9 +357,7 @@ impl CoordinatorDB {
 	pub async fn add_taker_info_and_move_table(
 		&self,
 		trade_and_taker_info: &OfferPsbtRequest,
-		escrow_output_descriptor: &str,
-		escrow_tx_fee_address: &str,
-		escrow_taproot_pk_coordinator: &str,
+		escrow_tx_data: &EscrowPsbt,
 	) -> Result<()> {
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
@@ -368,8 +370,8 @@ impl CoordinatorDB {
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
 						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_output_descriptor, escrow_tx_fee_address, escrow_psbt_is_confirmed, escrow_ongoing,
-						escrow_taproot_pk_coordinator)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -391,11 +393,14 @@ impl CoordinatorDB {
 			.bind(public_offer.musig_pubkey_hex_maker)
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
-			.bind(escrow_output_descriptor)
-			.bind(escrow_tx_fee_address)
+			.bind(&escrow_tx_data.escrow_output_descriptor)
+			.bind(&escrow_tx_data.escrow_tx_fee_address)
 			.bind(0)
 			.bind(0)
-			.bind(escrow_taproot_pk_coordinator)
+			.bind(&escrow_tx_data.coordinator_xonly_escrow_pk)
+			.bind(escrow_tx_data.escrow_amount_maker_sat as i64)
+			.bind(escrow_tx_data.escrow_amount_taker_sat as i64)
+			.bind(escrow_tx_data.escrow_fee_sat_per_participant as i64)
 			.execute(&*self.db_pool)
 			.await?;
 
@@ -405,9 +410,11 @@ impl CoordinatorDB {
 	pub async fn fetch_escrow_output_information(
 		&self,
 		offer_id_hex: &str,
-	) -> Result<Option<(String, String)>> {
+	) -> Result<Option<EscrowPsbt>> {
 		let offer = sqlx::query(
-			"SELECT escrow_output_descriptor, escrow_tx_fee_address FROM taken_offers WHERE offer_id = ?",
+			"SELECT escrow_output_descriptor, escrow_tx_fee_address, escrow_amount_maker_sat, 
+			escrow_amount_taker_sat, escrow_fee_per_participant, escrow_taproot_pk_coordinator 
+			FROM taken_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
 		.fetch_optional(&*self.db_pool)
@@ -416,9 +423,23 @@ impl CoordinatorDB {
 			Some(offer) => offer,
 			None => return Ok(None),
 		};
-		let descriptor = offer.try_get::<String, _>("escrow_output_descriptor")?;
-		let fee_address = offer.try_get::<String, _>("escrow_tx_fee_address")?;
-		Ok(Some((descriptor, fee_address)))
+		let escrow_output_descriptor = offer.try_get::<String, _>("escrow_output_descriptor")?;
+		let escrow_tx_fee_address = offer.try_get::<String, _>("escrow_tx_fee_address")?;
+		let escrow_amount_maker_sat = offer.try_get::<i64, _>("escrow_amount_maker_sat")? as u64;
+		let escrow_amount_taker_sat = offer.try_get::<i64, _>("escrow_amount_taker_sat")? as u64;
+		let escrow_fee_sat_per_participant =
+			offer.try_get::<i64, _>("escrow_fee_per_participant")? as u64;
+		let coordinator_xonly_escrow_pk =
+			offer.try_get::<String, _>("escrow_taproot_pk_coordinator")?;
+
+		Ok(Some(EscrowPsbt {
+			escrow_output_descriptor,
+			escrow_tx_fee_address,
+			coordinator_xonly_escrow_pk,
+			escrow_amount_maker_sat,
+			escrow_amount_taker_sat,
+			escrow_fee_sat_per_participant,
+		}))
 	}
 
 	// returns a hashmap of RoboHash, MonitoringBond for the monitoring loop
@@ -688,5 +709,33 @@ impl CoordinatorDB {
 			musig_pubkey_compressed_hex_maker,
 			musig_pubkey_compressed_hex_taker,
 		})
+	}
+
+	pub async fn get_escrow_tx_amounts(
+		&self,
+		trade_id: &str,
+		coordinator_feerate: f64,
+	) -> Result<(u64, u64, u64)> {
+		let row = sqlx::query(
+			"SELECT amount_sat, is_buy_order, bond_amount_sat FROM active_maker_offers WHERE offer_id = ?",
+		).bind(trade_id).fetch_one(&*self.db_pool).await?;
+
+		let amount_sat: u64 = row.get("amount_sat");
+		let is_buy_order: bool = 1 == row.get::<i64, _>("is_buy_order");
+		let bond_amount_sat: u64 = row.get("bond_amount_sat");
+
+		let escrow_fee_per_participant: u64 = (amount_sat as f64 * coordinator_feerate) as u64;
+
+		let (escrow_amount_maker_sat, escrow_amount_taker_sat) = if is_buy_order {
+			(amount_sat + bond_amount_sat, bond_amount_sat)
+		} else {
+			(bond_amount_sat, amount_sat + bond_amount_sat)
+		};
+
+		Ok((
+			escrow_amount_maker_sat,
+			escrow_amount_taker_sat,
+			escrow_fee_per_participant,
+		))
 	}
 }

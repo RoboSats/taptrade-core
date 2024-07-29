@@ -26,6 +26,7 @@ use bdk::{
 	FeeRate, KeychainKind, SignOptions, SyncOptions, Wallet,
 };
 use bond::Bond;
+use cli::OfferType;
 use musig2::MuSigData;
 use std::str::FromStr;
 use wallet_utils::get_seed;
@@ -88,12 +89,10 @@ impl TradingWallet {
 		Ok((bond, musig_data, payout_address))
 	}
 
-	pub async fn get_escrow_psbt(
+	pub fn get_escrow_psbt(
 		&self,
 		escrow_psbt_requirements: OfferTakenResponse,
 		trader_config: &TraderSettings,
-		escrow_amount: u64,
-		coordinator_fee_amount: u64,
 	) -> Result<PartiallySignedTransaction> {
 		let fee_output = Address::from_str(&escrow_psbt_requirements.escrow_tx_fee_address)?
 			.assume_checked()
@@ -108,11 +107,19 @@ impl TradingWallet {
 			temp_wallet.get_address(AddressIndex::New)?.script_pubkey()
 		};
 		self.wallet.sync(&self.backend, SyncOptions::default())?;
+
+		let escrow_amount_sat = match trader_config.trade_type {
+			OfferType::Buy(_) => escrow_psbt_requirements.escrow_amount_taker_sat,
+			OfferType::Sell(_) => escrow_psbt_requirements.escrow_amount_maker_sat,
+		};
 		let (mut psbt, details) = {
 			let mut builder = self.wallet.build_tx();
 			builder
-				.add_recipient(escrow_output, escrow_amount)
-				.add_recipient(fee_output, coordinator_fee_amount)
+				.add_recipient(escrow_output, escrow_amount_sat)
+				.add_recipient(
+					fee_output,
+					escrow_psbt_requirements.escrow_fee_sat_per_participant,
+				)
 				.fee_rate(FeeRate::from_sat_per_vb(10.0));
 			builder.finish()?
 		};
@@ -124,11 +131,11 @@ impl TradingWallet {
 	// validate that the taker psbt references the correct inputs and amounts
 	// taker input should be the same as in the previous bond transaction.
 	// input amount should be the bond amount when buying,
-	pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-		error!("IMPLEMENT TAKER PSBT VALIDATION!");
-		// tbd once the trade psbt is implemented on coordinator side
-		Ok(self)
-	}
+	// pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+	// 	error!("IMPLEMENT TAKER PSBT VALIDATION!");
+	// 	// tbd once the trade psbt is implemented on coordinator side
+	// 	Ok(self)
+	// }
 
 	// pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
 	// 	let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;

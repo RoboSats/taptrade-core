@@ -65,7 +65,7 @@ impl OfferPsbtRequest {
 		offer: &PublicOffer,
 		trade_data: BondSubmissionRequest,
 		taker_config: &TraderSettings,
-	) -> Result<PartiallySignedTransaction> {
+	) -> Result<OfferTakenResponse> {
 		let request = OfferPsbtRequest {
 			offer: offer.clone(),
 			trade_data,
@@ -82,8 +82,6 @@ impl OfferPsbtRequest {
 			.json::<OfferTakenResponse>()?;
 
 		debug!("Trader received escrow psbt");
-		let psbt_bytes = hex::decode(res.trade_psbt_hex_to_sign)?;
-		let psbt = PartiallySignedTransaction::deserialize(&psbt_bytes)?;
-		Ok(psbt)
+		Ok(res)
 	}
 }

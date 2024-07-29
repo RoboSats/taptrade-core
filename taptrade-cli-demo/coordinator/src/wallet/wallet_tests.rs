@@ -45,6 +45,7 @@ async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase>
 		backend: Arc::new(backend),
 		json_rpc_client: Arc::clone(&json_rpc_client),
 		mempool: Arc::new(MempoolHandler::new(json_rpc_client).await),
+		coordinator_feerate: env::var("COORDINATOR_FEERATE").unwrap().parse().unwrap(),
 	}
 }
 
