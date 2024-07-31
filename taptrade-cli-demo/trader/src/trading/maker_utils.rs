@@ -10,6 +10,10 @@ impl ActiveOffer {
 		debug!("Offer conditions fetched: {:#?}", &offer_conditions);
 		let (bond, mut musig_data, payout_address) =
 			trading_wallet.trade_onchain_assembly(&offer_conditions, maker_config)?;
+
+		let (psbt_inputs_hex_csv, escrow_change_address) =
+			trading_wallet.get_escrow_psbt_inputs()?;
+
 		let submission_result = BondSubmissionRequest::send_maker(
 			&maker_config.robosats_robohash_hex,
 			&bond,

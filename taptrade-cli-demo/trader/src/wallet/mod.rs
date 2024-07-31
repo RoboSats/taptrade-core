@@ -13,7 +13,7 @@ use bdk::{
 		self,
 		bip32::ExtendedPrivKey,
 		key::{KeyPair, Secp256k1, XOnlyPublicKey},
-		psbt::PartiallySignedTransaction,
+		psbt::{serialize, Input, PartiallySignedTransaction},
 		Address, Network,
 	},
 	blockchain::ElectrumBlockchain,
@@ -28,6 +28,7 @@ use bdk::{
 use bond::Bond;
 use cli::OfferType;
 use musig2::MuSigData;
+use serde::Serialize;
 use std::str::FromStr;
 use wallet_utils::get_seed;
 
@@ -89,43 +90,69 @@ impl TradingWallet {
 		Ok((bond, musig_data, payout_address))
 	}
 
-	pub fn get_escrow_psbt(
-		&self,
-		escrow_psbt_requirements: OfferTakenResponse,
-		trader_config: &TraderSettings,
-	) -> Result<PartiallySignedTransaction> {
-		let fee_output = Address::from_str(&escrow_psbt_requirements.escrow_tx_fee_address)?
-			.assume_checked()
-			.script_pubkey();
-		let escrow_output = {
-			let temp_wallet = Wallet::new(
-				&escrow_psbt_requirements.escrow_output_descriptor,
-				None,
-				Network::Regtest,
-				MemoryDatabase::new(),
-			)?;
-			temp_wallet.get_address(AddressIndex::New)?.script_pubkey()
-		};
-		self.wallet.sync(&self.backend, SyncOptions::default())?;
+	// pub fn get_escrow_psbt(
+	// 	&self,
+	// 	escrow_psbt_requirements: OfferTakenResponse,
+	// 	trader_config: &TraderSettings,
+	// ) -> Result<PartiallySignedTransaction> {
+	// 	let fee_output = Address::from_str(&escrow_psbt_requirements.escrow_tx_fee_address)?
+	// 		.assume_checked()
+	// 		.script_pubkey();
+	// 	let escrow_output = {
+	// 		let temp_wallet = Wallet::new(
+	// 			&escrow_psbt_requirements.escrow_output_descriptor,
+	// 			None,
+	// 			Network::Regtest,
+	// 			MemoryDatabase::new(),
+	// 		)?;
+	// 		temp_wallet.get_address(AddressIndex::New)?.script_pubkey()
+	// 	};
+	// 	self.wallet.sync(&self.backend, SyncOptions::default())?;
 
-		let escrow_amount_sat = match trader_config.trade_type {
-			OfferType::Buy(_) => escrow_psbt_requirements.escrow_amount_taker_sat,
-			OfferType::Sell(_) => escrow_psbt_requirements.escrow_amount_maker_sat,
-		};
-		let (mut psbt, details) = {
-			let mut builder = self.wallet.build_tx();
-			builder
-				.add_recipient(escrow_output, escrow_amount_sat)
-				.add_recipient(
-					fee_output,
-					escrow_psbt_requirements.escrow_fee_sat_per_participant,
-				)
-				.fee_rate(FeeRate::from_sat_per_vb(10.0));
-			builder.finish()?
-		};
-		debug!("Signing escrow psbt.");
-		self.wallet.sign(&mut psbt, SignOptions::default())?;
-		Ok(psbt)
+	// 	let escrow_amount_sat = match trader_config.trade_type {
+	// 		OfferType::Buy(_) => escrow_psbt_requirements.escrow_amount_taker_sat,
+	// 		OfferType::Sell(_) => escrow_psbt_requirements.escrow_amount_maker_sat,
+	// 	};
+	// 	let (mut psbt, details) = {
+	// 		let mut builder = self.wallet.build_tx();
+	// 		builder
+	// 			.add_recipient(escrow_output, escrow_amount_sat)
+	// 			.add_recipient(
+	// 				fee_output,
+	// 				escrow_psbt_requirements.escrow_fee_sat_per_participant,
+	// 			)
+	// 			.fee_rate(FeeRate::from_sat_per_vb(10.0));
+	// 		builder.finish()?
+	// 	};
+	// 	debug!("Signing escrow psbt.");
+	// 	self.wallet.sign(&mut psbt, SignOptions::default())?;
+	// 	Ok(psbt)
+	// }
+
+	/// returns suitable inputs (hex, csv serialized) and a change address for the assembly of the escrow psbt (coordinator side)
+	pub fn get_escrow_psbt_inputs(&self, mut amount_sat: i64) -> Result<(String, String)> {
+		let mut inputs: Vec<String> = Vec::new();
+
+		self.wallet.sync(&self.backend, SyncOptions::default())?;
+		let available_utxos = self.wallet.list_unspent()?;
+
+		// could use more advanced coin selection if neccessary
+		for utxo in available_utxos {
+			let psbt_input = self.wallet.get_psbt_input(utxo, None, false)?;
+			inputs.push(hex::encode(bincode::serialize(&psbt_input)?));
+			amount_sat -= utxo.txout.value as i64;
+			if amount_sat <= 0 {
+				break;
+			}
+		}
+		let serialized_inputs = inputs.join(",");
+
+		let change_address = self
+			.wallet
+			.get_address(AddressIndex::New)?
+			.address
+			.to_string();
+		Ok((serialized_inputs, change_address))
 	}
 
 	// validate that the taker psbt references the correct inputs and amounts

@@ -18,7 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::{f32::consts::E, str::FromStr, thread::sleep, time::Duration};
 
 impl BondRequirementResponse {
-	fn _format_request(trader_setup: &TraderSettings) -> OrderRequest {
+	fn _format_order_request(trader_setup: &TraderSettings) -> OrderRequest {
 		let amount: u64;
 		let is_buy_order = match &trader_setup.trade_type {
 			OfferType::Buy(val) => {
@@ -46,7 +46,7 @@ impl BondRequirementResponse {
 		let endpoint = format!("{}{}", trader_setup.coordinator_endpoint, "/create-offer");
 		let res = match client
 			.post(endpoint)
-			.json(&Self::_format_request(trader_setup))
+			.json(&Self::_format_order_request(trader_setup))
 			.send()
 		{
 			Ok(res) => res,

@@ -338,11 +338,7 @@ fn taker_unresponsive(
 
 				println!("here");
 
-				wallet.add_signer(
-					KeychainKind::External,
-					SignerOrdering(0), 
-					Arc::new(signer)
-				);
+				wallet.add_signer(KeychainKind::External, SignerOrdering(0), Arc::new(signer));
 
 				// // Step 3: Sign the transaction
 				// let mut psbt = PartiallySignedTransaction::from_str("TODO: paste the PSBT obtained in step 3 here")?;
@@ -445,11 +441,7 @@ fn coordinator_sign(
 				},
 			);
 
-			wallet.add_signer(
-				KeychainKind::External, 
-				SignerOrdering(0), 
-				Arc::new(signer)
-			);
+			wallet.add_signer(KeychainKind::External, SignerOrdering(0), Arc::new(signer));
 			// Print the PSBT before signing
 			println!("PSBT before signing: {:?}", psbt);
 			for (i, input) in (0_u32..).zip(psbt.inputs.iter()) {
@@ -468,12 +460,11 @@ fn coordinator_sign(
 				Ok(_) => {
 					println!("Successfully signed PSBT.");
 					println!("Final PSBT: {:?}", psbt);
-				},
+				}
 				Err(e) => {
 					println!("Error signing PSBT: {:?}", e);
 				}
 			}
-			
 		}
 		Err(e) => {
 			println!("Error creating wallet: {:?}", e);
@@ -487,7 +478,7 @@ fn coordinator_sign(
 mod tests {
 	use crate::coordinator;
 
-use super::*;
+	use super::*;
 	use anyhow::{Context, Error};
 	// use bdk::blockchain::ElectrumBlockchain;
 	// use bdk::sled;

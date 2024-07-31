@@ -29,6 +29,8 @@ pub struct BondSubmissionRequest {
 	pub taproot_pubkey_hex: String,
 	pub musig_pub_nonce_hex: String,
 	pub musig_pubkey_hex: String,
+	pub bdk_psbt_inputs_hex_csv: String,
+	pub client_change_address: String,
 }
 
 // Response after step2 if offer creation was successful and the offer is now online in the orderbook

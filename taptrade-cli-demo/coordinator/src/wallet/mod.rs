@@ -25,6 +25,7 @@ use bdk::{
 	KeychainKind, SyncOptions, Wallet,
 };
 use coordinator::mempool_monitoring::MempoolHandler;
+use core::panic;
 use std::{collections::HashMap, str::FromStr};
 use std::{fmt, ops::Deref};
 use utils::*;
@@ -236,11 +237,13 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(())
 	}
 
-	pub async fn get_escrow_psbt_outputs(
+	pub async fn get_escrow_psbt(
 		&self,
 		db: &Arc<CoordinatorDB>,
-		trade_id: &str,
+		taker_psbt_request: &OfferPsbtRequest,
 	) -> Result<EscrowPsbt> {
+		let trade_id = &taker_psbt_request.offer.offer_id_hex;
+		panic!("adjust");
 		let escrow_pubkeys = db.fetch_escrow_tx_payout_data(trade_id).await?;
 		let coordinator_escrow_pk = self.get_coordinator_taproot_pk().await?;
 		let escrow_output_descriptor =

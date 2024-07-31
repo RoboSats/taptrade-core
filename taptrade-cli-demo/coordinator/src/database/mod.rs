@@ -100,6 +100,8 @@ impl CoordinatorDB {
 				bond_amount_sat INTEGER NOT NULL,
 				bond_tx_hex TEXT NOT NULL,
 				payout_address TEXT NOT NULL,
+				change_address_maker TEXT NOT NULL,
+				escrow_inputs_hex_maker_csv TEXT NOT NULL,
 				taproot_pubkey_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex TEXT NOT NULL,
 				musig_pubkey_hex TEXT NOT NULL,
@@ -241,8 +243,9 @@ impl CoordinatorDB {
 		);
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
-					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address,
+					change_address_maker, escrow_inputs_hex_maker_csv)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(offer_id)
 		.bind(hex::decode(&data.robohash_hex)?)
@@ -258,6 +261,8 @@ impl CoordinatorDB {
 		.bind(data.musig_pub_nonce_hex.clone())
 		.bind(data.musig_pubkey_hex.clone())
 		.bind(taker_bond_address)
+		.bind(data.client_change_address.clone())
+		.bind(data.bdk_psbt_inputs_hex_csv.clone())
 		.execute(&*self.db_pool)
 		.await?;
 

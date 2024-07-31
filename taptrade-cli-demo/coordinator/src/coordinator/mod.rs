@@ -133,10 +133,7 @@ pub async fn handle_taker_bond(
 	}
 	debug!("\nTaker bond validation successful");
 
-	let escrow_output_data = match wallet
-		.get_escrow_psbt_outputs(database, &payload.offer.offer_id_hex)
-		.await
-	{
+	let escrow_output_data = match wallet.get_escrow_psbt(database, &payload).await {
 		Ok(escrow_output_data) => escrow_output_data,
 		Err(e) => {
 			return Err(BondError::CoordinatorError(e.to_string()));
