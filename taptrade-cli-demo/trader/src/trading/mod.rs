@@ -5,7 +5,7 @@ pub mod utils;
 use self::utils::ActiveOffer;
 use super::*;
 use crate::{
-	cli::TraderSettings,
+	cli::{OfferType, TraderSettings},
 	communication::api::{
 		BondRequirementResponse, BondSubmissionRequest, IsOfferReadyRequest, OfferTakenRequest,
 		OfferTakenResponse, PsbtSubmissionRequest, PublicOffer, PublicOffers,
@@ -31,9 +31,9 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	info!("Maker offer created: {:#?}", &offer);
 
 	let escrow_psbt_requirements = offer.wait_until_taken(maker_config)?;
-	let escrow_psbt = wallet.get_escrow_psbt(escrow_psbt_requirements, maker_config)?;
-	// .validate_maker_psbt(&escrow_contract_psbt)?
-	// .sign_escrow_psbt(&mut escrow_contract_psbt)?;
+	let escrow_psbt = wallet
+		.validate_maker_psbt(&escrow_contract_psbt)?
+		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
 
 	// submit signed escrow psbt back to coordinator
 	PsbtSubmissionRequest::submit_escrow_psbt(

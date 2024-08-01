@@ -5,8 +5,10 @@ use anyhow::Context;
 use futures_util::StreamExt;
 
 use super::*;
+use bdk::bitcoin::address::Address;
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
 use std::env;
+use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorDB {
@@ -692,29 +694,29 @@ impl CoordinatorDB {
 		Ok(winner_robohash)
 	}
 
-	pub async fn fetch_escrow_tx_payout_data(
-		&self,
-		offer_id: &str,
-	) -> Result<EscrowPsbtConstructionData> {
-		let row = sqlx::query("SELECT taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker FROM taken_offers WHERE offer_id = ?")
-			.bind(offer_id)
-			.fetch_one(&*self.db_pool)
-			.await?;
+	// pub async fn fetch_escrow_tx_payout_data(
+	// 	&self,
+	// 	offer_id: &str,
+	// ) -> Result<EscrowPsbtConstructionData> {
+	// 	let row = sqlx::query("SELECT taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker FROM taken_offers WHERE offer_id = ?")
+	// 		.bind(offer_id)
+	// 		.fetch_one(&*self.db_pool)
+	// 		.await?;
 
-		let taproot_xonly_pubkey_hex_maker: String = row.get("taproot_xonly_pubkey_hex_maker");
-		let taproot_xonly_pubkey_hex_taker: String = row.get("taproot_xonly_pubkey_hex_taker");
-		let musig_pubkey_compressed_hex_maker: String =
-			row.get("musig_pubkey_compressed_hex_maker");
-		let musig_pubkey_compressed_hex_taker: String =
-			row.get("musig_pubkey_compressed_hex_taker");
+	// 	let taproot_xonly_pubkey_hex_maker: String = row.get("taproot_xonly_pubkey_hex_maker");
+	// 	let taproot_xonly_pubkey_hex_taker: String = row.get("taproot_xonly_pubkey_hex_taker");
+	// 	let musig_pubkey_compressed_hex_maker: String =
+	// 		row.get("musig_pubkey_compressed_hex_maker");
+	// 	let musig_pubkey_compressed_hex_taker: String =
+	// 		row.get("musig_pubkey_compressed_hex_taker");
 
-		Ok(EscrowPsbtConstructionData {
-			taproot_xonly_pubkey_hex_maker,
-			taproot_xonly_pubkey_hex_taker,
-			musig_pubkey_compressed_hex_maker,
-			musig_pubkey_compressed_hex_taker,
-		})
-	}
+	// 	Ok(EscrowPsbtConstructionData {
+	// 		taproot_xonly_pubkey_hex_maker,
+	// 		taproot_xonly_pubkey_hex_taker,
+	// 		musig_pubkey_compressed_hex_maker,
+	// 		musig_pubkey_compressed_hex_taker,
+	// 	})
+	// }
 
 	pub async fn get_escrow_tx_amounts(
 		&self,
@@ -742,5 +744,27 @@ impl CoordinatorDB {
 			escrow_amount_taker_sat,
 			escrow_fee_per_participant,
 		))
+	}
+
+	pub async fn fetch_maker_escrow_psbt_data(
+		&self,
+		trade_id: &str,
+	) -> Result<EscrowPsbtConstructionData> {
+		let row = sqlx::query(
+			"SELECT escrow_inputs_hex_maker_csv, change_address_maker, taproot_pubkey_hex_maker, musig_pubkey_hex FROM active_maker_offers WHERE offer_id = ?",
+		)
+		.bind(trade_id)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		let deserialized_inputs = csv_hex_to_bdk_input(row.get("escrow_inputs_hex_maker_csv"))?;
+		let change_address: String = row.get("change_address_maker");
+
+		Ok(EscrowPsbtConstructionData {
+			escrow_input_utxos: deserialized_inputs,
+			change_address: Address::from_str(&change_address)?.assume_checked(),
+			taproot_xonly_pubkey_hex: row.get("taproot_pubkey_hex_maker"),
+			musig_pubkey_compressed_hex: row.get("musig_pubkey_hex"),
+		})
 	}
 }

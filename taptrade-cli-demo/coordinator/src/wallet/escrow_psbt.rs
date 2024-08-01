@@ -1,5 +1,6 @@
 use super::*;
 use bdk::{
+	bitcoin::psbt::Input,
 	descriptor::Descriptor,
 	miniscript::{descriptor::TapTree, policy::Concrete, Tap},
 };
@@ -7,11 +8,28 @@ use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
 
 #[derive(Debug)]
 pub struct EscrowPsbtConstructionData {
-	pub taproot_xonly_pubkey_hex_maker: String,
-	pub taproot_xonly_pubkey_hex_taker: String,
+	pub taproot_xonly_pubkey_hex: String,
+	pub escrow_input_utxos: Vec<PsbtInput>,
+	pub change_address: Address,
+	// pub taproot_xonly_pubkey_hex_taker: String,
 	// pub taproot_pubkey_hex_coordinator: String,
-	pub musig_pubkey_compressed_hex_maker: String,
-	pub musig_pubkey_compressed_hex_taker: String,
+	pub musig_pubkey_compressed_hex: String,
+	// pub musig_pubkey_compressed_hex_taker: String,
+}
+
+impl EscrowPsbtConstructionData {
+	pub fn input_sum(&self) -> Result<u64> {
+		let mut input_sum = 0;
+		for input in &self.escrow_input_utxos {
+			if let Some(txout) = input.psbt_input.witness_utxo.as_ref() {
+				input_sum += txout.value;
+			}
+		}
+		if input_sum == 0 {
+			return Err(anyhow!("Input sum of escrow creation psbt input is 0"));
+		}
+		Ok(input_sum)
+	}
 }
 
 fn aggregate_musig_pubkeys(maker_musig_pubkey: &str, taker_musig_pubkey: &str) -> Result<String> {
@@ -31,12 +49,12 @@ fn aggregate_musig_pubkeys(maker_musig_pubkey: &str, taker_musig_pubkey: &str) -
 }
 
 pub fn build_escrow_transaction_output_descriptor(
-	escrow_data: &EscrowPsbtConstructionData,
+	maker_escrow_data: &EscrowPsbtConstructionData,
+	taker_escrow_data: &EscrowPsbtConstructionData,
 	coordinator_pk: &XOnlyPublicKey,
 ) -> Result<String> {
-	let taproot_pubkey_hex_maker = escrow_data.taproot_xonly_pubkey_hex_maker.clone();
-	let maker_pk = taproot_pubkey_hex_maker;
-	let taker_pk = escrow_data.taproot_xonly_pubkey_hex_taker.clone();
+	let maker_pk = maker_escrow_data.taproot_xonly_pubkey_hex.clone();
+	let taker_pk = taker_escrow_data.taproot_xonly_pubkey_hex.clone();
 	let coordinator_pk = hex::encode(coordinator_pk.serialize());
 
 	// let script_a = format!("and(and(after({}),{}),{})", "144", maker_pk, coordinator_pk);
@@ -84,8 +102,8 @@ pub fn build_escrow_transaction_output_descriptor(
 
 	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
 	let internal_agg_musig_key = aggregate_musig_pubkeys(
-		&escrow_data.musig_pubkey_compressed_hex_maker,
-		&escrow_data.musig_pubkey_compressed_hex_taker,
+		&maker_escrow_data.musig_pubkey_compressed_hex,
+		&taker_escrow_data.musig_pubkey_compressed_hex,
 	)?;
 
 	// Create the descriptor
@@ -97,11 +115,11 @@ pub fn build_escrow_transaction_output_descriptor(
 	Ok(descriptor.to_string())
 }
 
-pub fn assemble_escrow_psbts(
-	coordinator: &Coordinator,
-	escrow_data: &EscrowPsbtConstructionData,
-	coordinator_pk: &XOnlyPublicKey,
-) -> Result<()> {
-	panic!("Implement wallet.build_escrow_psbt()");
-	Ok(())
-}
+// pub fn assemble_escrow_psbts(
+// coordinator: &Coordinator,
+// escrow_data: &EscrowPsbtConstructionData,
+// coordinator_pk: &XOnlyPublicKey,
+// ) -> Result<()> {
+// panic!("Implement wallet.build_escrow_psbt()");
+// Ok(())
+// }

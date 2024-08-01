@@ -12,6 +12,7 @@ use bdk::{
 	bitcoin::{
 		self,
 		bip32::ExtendedPrivKey,
+		consensus::encode::serialize_hex,
 		key::{KeyPair, Secp256k1, XOnlyPublicKey},
 		psbt::{serialize, Input, PartiallySignedTransaction},
 		Address, Network,
@@ -36,6 +37,12 @@ pub struct TradingWallet {
 	pub wallet: Wallet<MemoryDatabase>,
 	pub backend: ElectrumBlockchain,
 	pub taproot_pubkey: XOnlyPublicKey,
+}
+
+#[derive(Serialize)]
+pub struct PsbtInput {
+	pub psbt_input: Input,
+	pub utxo: bdk::bitcoin::OutPoint,
 }
 
 pub fn get_wallet_xprv(xprv_input: Option<String>) -> Result<ExtendedPrivKey> {
@@ -138,8 +145,12 @@ impl TradingWallet {
 
 		// could use more advanced coin selection if neccessary
 		for utxo in available_utxos {
-			let psbt_input = self.wallet.get_psbt_input(utxo, None, false)?;
-			inputs.push(hex::encode(bincode::serialize(&psbt_input)?));
+			let psbt_input: Input = self.wallet.get_psbt_input(utxo, None, false)?;
+			let input = PsbtInput {
+				psbt_input,
+				utxo: utxo.outpoint,
+			};
+			inputs.push(hex::encode(bincode::serialize(&input)?));
 			amount_sat -= utxo.txout.value as i64;
 			if amount_sat <= 0 {
 				break;

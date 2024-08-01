@@ -21,7 +21,7 @@ use std::{
 };
 use tokio::sync::Mutex;
 use validator::{Validate, ValidationError};
-use wallet::{escrow_psbt::*, *};
+use wallet::{escrow_psbt::*, wallet_utils::*, *};
 
 pub struct Coordinator {
 	pub coordinator_db: Arc<CoordinatorDB>,

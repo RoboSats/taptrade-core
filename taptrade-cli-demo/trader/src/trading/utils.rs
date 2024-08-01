@@ -7,6 +7,8 @@ pub struct ActiveOffer {
 	pub used_bond: PartiallySignedTransaction,
 	pub expected_payout_address: AddressInfo,
 	pub escrow_psbt: Option<PartiallySignedTransaction>,
+	pub escrow_change_address: String,
+	pub psbt_inputs_hex_csv: String,
 }
 
 impl ActiveOffer {

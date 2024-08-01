@@ -1,9 +1,16 @@
 use super::*;
 use bdk::{
-	bitcoin::{Address, Network},
+	bitcoin::{psbt::Input, Address, Network},
 	blockchain::GetTx,
 	database::Database,
 };
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+pub struct PsbtInput {
+	pub psbt_input: Input,
+	pub utxo: bdk::bitcoin::OutPoint,
+}
 
 pub trait BondTx {
 	fn input_sum<D: Database, B: GetTx>(&self, blockchain: &B, db: &D) -> Result<u64>;
@@ -55,4 +62,17 @@ impl BondTx for Transaction {
 	fn all_output_sum(&self) -> u64 {
 		self.output.iter().map(|output| output.value).sum()
 	}
+}
+
+pub fn csv_hex_to_bdk_input(inputs_csv_hex: &str) -> Result<Vec<PsbtInput>> {
+	let mut inputs: Vec<PsbtInput> = Vec::new();
+	for input_hex in inputs_csv_hex.split(',') {
+		let binary = hex::decode(input_hex)?;
+		let input: PsbtInput = bincode::deserialize(&binary)?;
+		inputs.push(input);
+	}
+	if inputs.is_empty() {
+		return Err(anyhow!("No inputs found in csv input value"));
+	}
+	Ok(inputs)
 }
