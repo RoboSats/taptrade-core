@@ -169,6 +169,7 @@ pub async fn get_offer_status_maker(
 		escrow_amount_maker_sat,
 		escrow_amount_taker_sat,
 		escrow_fee_sat_per_participant,
+		escrow_psbt_hex,
 		..
 	} = match database
 		.fetch_escrow_output_information(&payload.offer_id_hex)
@@ -183,6 +184,7 @@ pub async fn get_offer_status_maker(
 		}
 	};
 	Ok(OfferTakenResponse {
+		escrow_psbt_hex,
 		escrow_output_descriptor,
 		escrow_tx_fee_address,
 		escrow_amount_maker_sat,

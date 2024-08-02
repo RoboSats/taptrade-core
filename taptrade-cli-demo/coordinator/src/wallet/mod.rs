@@ -110,6 +110,11 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 }
 
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
+	pub async fn shutdown(&self) {
+		debug!("Shutting down wallet");
+		self.mempool.shutdown().await;
+	}
+
 	pub async fn get_new_address(&self) -> Result<String> {
 		let wallet = self.wallet.lock().await;
 		let address = wallet.get_address(bdk::wallet::AddressIndex::New)?;
@@ -313,10 +318,10 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				.fee_absolute(tx_fee_abs);
 			for input in maker_psbt_input_data.escrow_input_utxos.iter() {
 				// satisfaction weight 66 bytes for schnorr sig + opcode + sighash for keyspend. This is a hack?
-				builder.add_foreign_utxo(input.utxo, input.psbt_input.clone(), 264);
+				builder.add_foreign_utxo(input.utxo, input.psbt_input.clone(), 264)?;
 			}
 			for input in taker_psbt_input_data.escrow_input_utxos.iter() {
-				builder.add_foreign_utxo(input.utxo, input.psbt_input.clone(), 264);
+				builder.add_foreign_utxo(input.utxo, input.psbt_input.clone(), 264)?;
 			}
 			builder.finish()?
 		};

@@ -1,11 +1,14 @@
-use std::collections::btree_map::Range;
 use std::time::Duration;
 
 use super::*;
-use bdk::bitcoin::Network;
-use bdk::database::MemoryDatabase;
-use bdk::keys::GeneratableKey;
-use bdk::{blockchain::RpcBlockchain, Wallet};
+use bdk::{
+	bitcoin::{psbt::Input, Network},
+	blockchain::RpcBlockchain,
+	database::MemoryDatabase,
+	wallet::AddressIndex,
+	Wallet,
+};
+
 async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 	dotenv().ok();
 	let wallet_xprv = ExtendedPrivKey::from_str(wallet_xprv).unwrap();
@@ -39,7 +42,7 @@ async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase>
 	)
 	.unwrap();
 	wallet.sync(&backend, SyncOptions::default()).unwrap();
-	tokio::time::sleep(Duration::from_secs(16)).await; // fetch the mempool
+	tokio::time::sleep(Duration::from_secs(10)).await; // fetch the mempool
 	CoordinatorWallet::<MemoryDatabase> {
 		wallet: Arc::new(Mutex::new(wallet)),
 		backend: Arc::new(backend),
@@ -47,6 +50,65 @@ async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase>
 		mempool: Arc::new(MempoolHandler::new(json_rpc_client).await),
 		coordinator_feerate: env::var("COORDINATOR_FEERATE").unwrap().parse().unwrap(),
 	}
+}
+
+async fn get_escrow_psbt_inputs(
+	coordinator_wallet: &CoordinatorWallet<MemoryDatabase>,
+	mut amount_sat: i64,
+) -> Result<Vec<PsbtInput>> {
+	let wallet = coordinator_wallet.wallet.lock().await;
+	let mut inputs: Vec<PsbtInput> = Vec::new();
+
+	wallet.sync(&coordinator_wallet.backend, SyncOptions::default())?;
+	let available_utxos = wallet.list_unspent()?;
+
+	// could use more advanced coin selection if neccessary
+	for utxo in available_utxos {
+		let psbt_input: Input = wallet.get_psbt_input(utxo.clone(), None, false)?;
+		let input = PsbtInput {
+			psbt_input,
+			utxo: utxo.outpoint,
+		};
+		inputs.push(input);
+		amount_sat -= utxo.txout.value as i64;
+		if amount_sat <= 0 {
+			break;
+		}
+	}
+	Ok(inputs)
+}
+
+async fn get_dummy_escrow_psbt_data(
+	maker_wallet: &CoordinatorWallet<MemoryDatabase>,
+	taker_wallet: &CoordinatorWallet<MemoryDatabase>,
+) -> (EscrowPsbtConstructionData, EscrowPsbtConstructionData) {
+	let maker_inputs = get_escrow_psbt_inputs(maker_wallet, 50000).await.unwrap();
+	let taker_inputs = get_escrow_psbt_inputs(taker_wallet, 50000).await.unwrap();
+	let maker_escrow_data = EscrowPsbtConstructionData {
+		taproot_xonly_pubkey_hex:
+			"b709f64da734e04e35b129a65a7fae361cad8a9458d1abc4f0b45b7661a42fca".to_string(),
+		musig_pubkey_compressed_hex:
+			"02d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5".to_string(),
+		change_address: Address::from_str(
+			"bcrt1pmcgt8wjuxlkp2pqykatt4n6w0jw45vzgsa8em3rx9gacqwzyttjqmg0ufp",
+		)
+		.expect("Invalid address")
+		.assume_checked(),
+		escrow_input_utxos: maker_inputs,
+	};
+	let taker_escrow_data = EscrowPsbtConstructionData {
+		taproot_xonly_pubkey_hex:
+			"4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d".to_string(),
+		musig_pubkey_compressed_hex:
+			"02d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5".to_string(),
+		change_address: Address::from_str(
+			"bcrt1p28lv60c0t64taw5pp6k5fwwd4z66t99lny9d8mmpsysm5xanzd3smyz320",
+		)
+		.expect("Invalid address")
+		.assume_checked(),
+		escrow_input_utxos: taker_inputs,
+	};
+	(maker_escrow_data, taker_escrow_data)
 }
 
 // the transactions are testnet4 transactions, so run a testnet4 rpc node as backend
@@ -167,35 +229,43 @@ async fn test_invalid_bond_tx_low_fee_rate() {
 		.contains("Bond fee rate too low"));
 }
 
-#[test]
-fn test_build_escrow_transaction_output_descriptor() {
+#[tokio::test]
+async fn test_build_escrow_transaction_output_descriptor() {
 	// generating pubkeys
 	// let seed: [u8; 32] = [
 	// 	0x1b, 0x2d, 0x3d, 0x4d, 0x5d, 0x6d, 0x7d, 0x8d, 0x9d, 0xad, 0xbd, 0xcd, 0xdd, 0xed, 0xfd,
 	// 	0x0d, 0x1d, 0x2d, 0x3d, 0x4d, 0x5d, 0x6d, 0x8d, 0x8d, 0x9d, 0xbd, 0xbd, 0xcd, 0xdd, 0xed,
-	// 	0xfd, 0x0d,
+	// 	0xfd, 0x1d,
 	// ];
-	// let xprv = ExtendedPrivKey::new_master(Network::Testnet, &seed).unwrap();
+	// let xprv = ExtendedPrivKey::new_master(Network::Regtest, &seed).unwrap();
+	// println!("xprv: {}", xprv.to_string());
 	// let pubkey = xprv
 	// 	.to_keypair(&secp256k1::Secp256k1::new())
 	// 	.public_key()
 	// 	.to_string();
 	// dbg!(&pubkey);
-	let escrow_data = EscrowPsbtConstructionData {
-		taproot_xonly_pubkey_hex_maker:
-			"b709f64da734e04e35b129a65a7fae361cad8a9458d1abc4f0b45b7661a42fca".to_string(),
-		taproot_xonly_pubkey_hex_taker:
-			"4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d".to_string(),
-		musig_pubkey_compressed_hex_maker:
-			"02d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5".to_string(),
-		musig_pubkey_compressed_hex_taker:
-			"02d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5".to_string(),
-	};
+	let maker_escrow_data: EscrowPsbtConstructionData;
+	let taker_escrow_data: EscrowPsbtConstructionData;
+	{
+		let maker_wallet = new_test_wallet("tprv8ZgxMBicQKsPdHuCSjhQuSZP1h6ZTeiRqREYS5guGPdtL7D1uNLpnJmb2oJep99Esq1NbNZKVJBNnD2ZhuXSK7G5eFmmcx73gsoa65e2U32").await;
+		let taker_wallet = new_test_wallet("tprv8ZgxMBicQKsPdKxWZWv9zVc22ubUdFrgaUzA4BZQUpEyMxYX3dwFbNfAGsVJ94zEhUUS1z56YBARpvTEjrSz9NzHyySCL33oMXpbqoGunL4").await;
+
+		(maker_escrow_data, taker_escrow_data) =
+			get_dummy_escrow_psbt_data(&maker_wallet, &taker_wallet).await;
+		maker_wallet.shutdown().await;
+		taker_wallet.shutdown().await;
+	}
+	println!("created dummmy psbt data");
 	let coordinator_pk = XOnlyPublicKey::from_str(
 		"d8e204cdaebec4c5a637311072c865858dc4f142b3848b8e6dde4143476535b5",
 	)
 	.unwrap();
-	let result = build_escrow_transaction_output_descriptor(&escrow_data, &coordinator_pk);
+	println!("assembling output descriptor");
+	let result = build_escrow_transaction_output_descriptor(
+		&maker_escrow_data,
+		&taker_escrow_data,
+		&coordinator_pk,
+	);
 	dbg!(&result); // cargo test -- --nocapture to see the output
 	assert!(result.is_ok());
 }

@@ -8,8 +8,10 @@ use bdk::bitcoin::{OutPoint, Transaction};
 use bdk::bitcoin::{TxIn, Txid};
 use bdk::bitcoincore_rpc::{Client, RpcApi};
 use std::collections::{HashMap, HashSet};
+use std::net::Shutdown;
 use std::ops::Deref;
 use std::sync::RwLock;
+use tokio::sync::oneshot;
 
 struct Mempool {
 	transactions: Arc<RwLock<HashMap<Txid, Vec<TxIn>>>>,
@@ -27,8 +29,12 @@ impl Mempool {
 	}
 }
 
-fn run_mempool(mempool: Arc<Mempool>) {
+fn run_mempool(mempool: Arc<Mempool>, mut shutdown_receiver: oneshot::Receiver<()>) {
 	loop {
+		if shutdown_receiver.try_recv().is_ok() {
+			debug!("Shutting down mempool monitoring");
+			break;
+		}
 		// sleep for a while
 		std::thread::sleep(std::time::Duration::from_secs(15));
 		trace!("Fetching mempool");
@@ -85,14 +91,23 @@ fn run_mempool(mempool: Arc<Mempool>) {
 
 pub struct MempoolHandler {
 	mempool: Arc<Mempool>,
+	shutdown_sender: Mutex<Option<oneshot::Sender<()>>>,
+	handle: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl MempoolHandler {
 	pub async fn new(json_rpc_client: Arc<Client>) -> Self {
 		let mempool = Arc::new(Mempool::new(json_rpc_client));
 		let mempool_clone = Arc::clone(&mempool);
-		tokio::task::spawn_blocking(move || run_mempool(mempool_clone));
-		Self { mempool }
+		let (shutdown_sender, shutdown_receiver) = oneshot::channel();
+
+		let handle =
+			tokio::task::spawn_blocking(move || run_mempool(mempool_clone, shutdown_receiver));
+		Self {
+			mempool,
+			shutdown_sender: Mutex::new(Some(shutdown_sender)),
+			handle: Mutex::new(Some(handle)),
+		}
 	}
 
 	pub async fn lookup_mempool_inputs(
@@ -117,5 +132,16 @@ impl MempoolHandler {
 			}
 		}
 		Ok(bonds_to_punish)
+	}
+
+	pub async fn shutdown(&self) {
+		if let Some(sender) = self.shutdown_sender.lock().await.take() {
+			let _ = sender.send(()); // Ignore the result, as the receiver might have been dropped
+		}
+		if let Some(handle) = self.handle.lock().await.take() {
+			if let Err(e) = handle.await {
+				error!("Error shutting down mempool handler: {:?}", e);
+			}
+		}
 	}
 }

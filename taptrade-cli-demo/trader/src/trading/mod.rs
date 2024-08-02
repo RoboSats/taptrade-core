@@ -22,7 +22,7 @@ use bdk::{
 	database::MemoryDatabase,
 	wallet::AddressInfo,
 };
-use std::{thread, time::Duration};
+use std::{str::FromStr, thread, time::Duration};
 
 pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let wallet = TradingWallet::load_wallet(maker_config)?; // initialize the wallet with xprv
@@ -31,9 +31,11 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	info!("Maker offer created: {:#?}", &offer);
 
 	let escrow_psbt_requirements = offer.wait_until_taken(maker_config)?;
-	let escrow_psbt = wallet
-		.validate_maker_psbt(&escrow_contract_psbt)?
-		.sign_escrow_psbt(&mut escrow_contract_psbt)?;
+	let mut escrow_psbt =
+		PartiallySignedTransaction::from_str(escrow_psbt_requirements.escrow_psbt_hex.as_str())?;
+	let signed_escrow_psbt = wallet
+		.validate_maker_psbt(&escrow_psbt)?
+		.sign_escrow_psbt(&mut escrow_psbt)?;
 
 	// submit signed escrow psbt back to coordinator
 	PsbtSubmissionRequest::submit_escrow_psbt(

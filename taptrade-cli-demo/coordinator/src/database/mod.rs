@@ -135,8 +135,7 @@ impl CoordinatorDB {
 				musig_pubkey_compressed_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
 				musig_pubkey_compressed_hex_taker TEXT NOT NULL,
-				escrow_psbt_hex_maker TEXT,
-				escrow_psbt_hex_taker TEXT,
+				escrow_psbt_hex TEXT,
 				escrow_psbt_txid TEXT,
 				escrow_psbt_is_confirmed INTEGER,
 				maker_happy INTEGER,
@@ -376,7 +375,7 @@ impl CoordinatorDB {
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_output_descriptor, escrow_tx_fee_address, escrow_psbt_is_confirmed, escrow_ongoing,
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex, escrow_output_descriptor, escrow_tx_fee_address, escrow_psbt_is_confirmed, escrow_ongoing,
 						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant)
 						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
@@ -401,6 +400,7 @@ impl CoordinatorDB {
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
 			.bind(&escrow_tx_data.escrow_output_descriptor)
+			.bind(&escrow_tx_data.escrow_psbt_hex)
 			.bind(&escrow_tx_data.escrow_tx_fee_address)
 			.bind(0)
 			.bind(0)
@@ -438,8 +438,10 @@ impl CoordinatorDB {
 			offer.try_get::<i64, _>("escrow_fee_per_participant")? as u64;
 		let coordinator_xonly_escrow_pk =
 			offer.try_get::<String, _>("escrow_taproot_pk_coordinator")?;
+		let escrow_psbt_hex = offer.try_get::<String, _>("escrow_psbt_hex")?;
 
 		Ok(Some(EscrowPsbt {
+			escrow_psbt_hex,
 			escrow_output_descriptor,
 			escrow_tx_fee_address,
 			coordinator_xonly_escrow_pk,

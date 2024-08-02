@@ -200,6 +200,9 @@ async fn test_move_offer_to_active() -> Result<()> {
 
 	// Create a sample BondSubmissionRequest
 	let bond_submission_request = BondSubmissionRequest {
+		bdk_psbt_inputs_hex_csv: "l33t,DEADBEEF".to_string(),
+		client_change_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx"
+			.to_string(),
 		robohash_hex: robohash_hex.to_string(),
 		signed_bond_hex: "signedBondHex".to_string(),
 		payout_address: "1PayoutAddress".to_string(),

@@ -145,7 +145,7 @@ impl TradingWallet {
 
 		// could use more advanced coin selection if neccessary
 		for utxo in available_utxos {
-			let psbt_input: Input = self.wallet.get_psbt_input(utxo, None, false)?;
+			let psbt_input: Input = self.wallet.get_psbt_input(utxo.clone(), None, false)?;
 			let input = PsbtInput {
 				psbt_input,
 				utxo: utxo.outpoint,
@@ -175,19 +175,22 @@ impl TradingWallet {
 	// 	Ok(self)
 	// }
 
-	// pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
-	// 	let finalized = self.wallet.sign(escrow_psbt, SignOptions::default())?;
-	// 	if !finalized {
-	// 		return Err(anyhow!("Signing of taker escrow psbt failed!"));
-	// 	}
-	// 	Ok(self)
-	// }
+	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
+		// do not finalize as the psbt will be finalized by the coordinator
+		let sign_options = SignOptions {
+			try_finalize: false,
+			..SignOptions::default()
+		};
+		let _ = self.wallet.sign(escrow_psbt, sign_options)?;
+		Ok(self)
+	}
 
 	// validate amounts, escrow output
-	// pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-	// 	error!("IMPLEMENT MAKER PSBT VALIDATION!");
-	// 	// tbd once the trade psbt is implemented on coordinator side
+	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		warn!("IMPLEMENT MAKER PSBT VALIDATION for production use!");
+		// validate: change output address, amounts, fee
+		// tbd once the trade psbt is implemented on coordinator side
 
-	// 	Ok(self)
-	// }
+		Ok(self)
+	}
 }
