@@ -22,23 +22,32 @@ impl ActiveOffer {
 
 		// now we submit the signed bond transaction to the coordinator and receive the escrow PSBT we have to sign
 		// in exchange
-		let bond_submission_request = BondSubmissionRequest::prepare_bond_request(
-			&bond,
-			&payout_address,
-			&mut musig_data,
-			taker_config,
-			&trading_wallet.taproot_pubkey,
-		)?;
+		let (bdk_psbt_inputs_hex_csv, client_change_address) =
+			trading_wallet.get_escrow_psbt_inputs(bond_requirements.locking_amount_sat as i64)?;
+
+		let bond_submission_request = BondSubmissionRequest {
+			robohash_hex: taker_config.robosats_robohash_hex.clone(),
+			signed_bond_hex: bond.to_string(),
+			payout_address: payout_address.address.to_string(),
+			taproot_pubkey_hex: trading_wallet.taproot_pubkey.to_string(),
+			musig_pub_nonce_hex: musig_data.nonce.get_pub_for_sharing()?.to_string(),
+			musig_pubkey_hex: musig_data.public_key.to_string(),
+			bdk_psbt_inputs_hex_csv: bdk_psbt_inputs_hex_csv.clone(),
+			client_change_address: client_change_address.clone(),
+		};
 		let escrow_contract_requirements =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;
 
+		let mut escrow_psbt =
+			PartiallySignedTransaction::from_str(&escrow_contract_requirements.escrow_psbt_hex)?;
 		// now we have to verify, sign and submit the escrow psbt again
-		let escrow_contract_psbt =
-			trading_wallet.get_escrow_psbt(escrow_contract_requirements, taker_config)?;
+		trading_wallet
+			.validate_escrow_psbt(&escrow_psbt)?
+			.sign_escrow_psbt(&mut escrow_psbt)?;
 
 		// submit signed escrow psbt back to coordinator
 		PsbtSubmissionRequest::submit_escrow_psbt(
-			&escrow_contract_psbt,
+			&escrow_psbt,
 			offer.offer_id_hex.clone(),
 			taker_config,
 		)?;
@@ -48,7 +57,9 @@ impl ActiveOffer {
 			used_musig_config: musig_data,
 			used_bond: bond,
 			expected_payout_address: payout_address,
-			escrow_psbt: Some(escrow_contract_psbt),
+			escrow_psbt: Some(escrow_psbt),
+			psbt_inputs_hex_csv: bdk_psbt_inputs_hex_csv,
+			escrow_change_address: client_change_address,
 		})
 	}
 }

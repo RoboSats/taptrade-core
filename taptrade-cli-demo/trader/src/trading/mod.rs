@@ -34,7 +34,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let mut escrow_psbt =
 		PartiallySignedTransaction::from_str(escrow_psbt_requirements.escrow_psbt_hex.as_str())?;
 	let signed_escrow_psbt = wallet
-		.validate_maker_psbt(&escrow_psbt)?
+		.validate_escrow_psbt(&escrow_psbt)?
 		.sign_escrow_psbt(&mut escrow_psbt)?;
 
 	// submit signed escrow psbt back to coordinator

@@ -186,7 +186,7 @@ impl TradingWallet {
 	}
 
 	// validate amounts, escrow output
-	pub fn validate_maker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+	pub fn validate_escrow_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
 		warn!("IMPLEMENT MAKER PSBT VALIDATION for production use!");
 		// validate: change output address, amounts, fee
 		// tbd once the trade psbt is implemented on coordinator side
