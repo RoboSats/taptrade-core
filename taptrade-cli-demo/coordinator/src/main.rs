@@ -32,7 +32,7 @@ pub struct Coordinator {
 #[tokio::main]
 async fn main() -> Result<()> {
 	env_logger::builder()
-		.filter_module("coordinator", log::LevelFilter::Debug)
+		.filter_module("coordinator", log::LevelFilter::Trace)
 		.filter_level(log::LevelFilter::Info)
 		.init();
 	dotenv().ok();

@@ -45,7 +45,6 @@ pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 pub struct EscrowPsbt {
 	pub escrow_psbt_hex: String,
 	pub escrow_output_descriptor: String,
-	pub escrow_tx_fee_address: String,
 	pub coordinator_xonly_escrow_pk: String,
 	pub escrow_amount_maker_sat: u64,
 	pub escrow_amount_taker_sat: u64,
@@ -126,7 +125,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		bond_tx_hex: &str,
 		requirements: &BondRequirements,
 	) -> Result<()> {
-		debug!("Validating bond in validate_bond_tx_hex()");
+		debug!("Validating bond in validate_bond_tx_hex(): {}", bond_tx_hex);
 		let dummy_monitoring_bond = MonitoringBond {
 			bond_tx_hex: bond_tx_hex.to_string(),
 			trade_id_hex: "0".to_string(),
@@ -157,6 +156,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		{
 			let wallet = self.wallet.lock().await;
 			for bond in bonds.as_ref().iter() {
+				trace!("Deserializing bond in validate_bonds()");
 				let tx: Transaction = deserialize(&hex::decode(&bond.bond_tx_hex)?)?;
 				debug!("Validating bond in validate_bonds()");
 				// we need to test this with signed and invalid/unsigned transactions
@@ -329,7 +329,6 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(EscrowPsbt {
 			escrow_psbt_hex: escrow_psbt.to_string(),
 			escrow_output_descriptor,
-			escrow_tx_fee_address: escrow_coordinator_fee_address.to_string(),
 			coordinator_xonly_escrow_pk: coordinator_escrow_pk.to_string(),
 			escrow_amount_maker_sat,
 			escrow_amount_taker_sat,

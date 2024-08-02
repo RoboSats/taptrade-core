@@ -136,9 +136,10 @@ impl OfferTakenResponse {
 		offer: &ActiveOffer,
 		trader_setup: &TraderSettings,
 	) -> Result<Option<OfferTakenResponse>> {
+		trace!("Polling offer status from coordinator.");
 		let request = OfferTakenRequest {
 			robohash_hex: trader_setup.robosats_robohash_hex.clone(),
-			order_id_hex: offer.offer_id_hex.clone(),
+			offer_id_hex: offer.offer_id_hex.clone(),
 		};
 		let client = reqwest::blocking::Client::new();
 		let res = client

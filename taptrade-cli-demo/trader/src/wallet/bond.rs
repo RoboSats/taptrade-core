@@ -1,8 +1,9 @@
 use anyhow::{anyhow, Result};
 use bdk::bitcoin::address::{NetworkChecked, NetworkUnchecked};
+use bdk::bitcoin::amount::serde::as_btc::opt::deserialize;
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
-use bdk::bitcoin::ScriptBuf;
 use bdk::bitcoin::{Address, Network};
+use bdk::bitcoin::{ScriptBuf, Transaction};
 use bdk::{
 	database::MemoryDatabase, wallet::coin_selection::BranchAndBoundCoinSelection, FeeRate,
 	SignOptions, Wallet,

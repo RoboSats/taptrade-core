@@ -1,3 +1,4 @@
+use bdk::bitcoin::consensus::encode::serialize_hex;
 use bdk::electrum_client::Request;
 
 use crate::communication::api::{IsOfferReadyRequest, OfferPsbtRequest, PsbtSubmissionRequest};
@@ -27,7 +28,7 @@ impl ActiveOffer {
 
 		let bond_submission_request = BondSubmissionRequest {
 			robohash_hex: taker_config.robosats_robohash_hex.clone(),
-			signed_bond_hex: bond.to_string(),
+			signed_bond_hex: serialize_hex(&bond.clone().extract_tx()),
 			payout_address: payout_address.address.to_string(),
 			taproot_pubkey_hex: trading_wallet.taproot_pubkey.to_string(),
 			musig_pub_nonce_hex: musig_data.nonce.get_pub_for_sharing()?.to_string(),

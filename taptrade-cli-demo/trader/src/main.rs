@@ -21,6 +21,7 @@ fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 
 fn main() -> Result<()> {
 	env_logger::builder()
+		.filter_module("trader", log::LevelFilter::Debug)
 		.filter_level(log::LevelFilter::Info)
 		.init();
 

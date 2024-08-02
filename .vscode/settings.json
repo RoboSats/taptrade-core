@@ -4,5 +4,6 @@
         "${workspaceFolder}/taptrade-cli-demo/trader/Cargo.toml",
     ],
     "nixEnvSelector.suggestion": true,
-    "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix"
+    "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
+    "lldb.showDisassembly": "never"
 }

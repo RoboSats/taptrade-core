@@ -1,3 +1,8 @@
+use bdk::bitcoin::amount::serde::as_btc::opt::serialize;
+use bdk::bitcoin::consensus::encode::serialize_hex;
+use bdk::bitcoin::Transaction;
+use serde::Serialize;
+
 use super::utils::*;
 use super::*;
 
@@ -14,9 +19,13 @@ impl ActiveOffer {
 		let (psbt_inputs_hex_csv, escrow_change_address) =
 			trading_wallet.get_escrow_psbt_inputs(offer_conditions.locking_amount_sat as i64)?;
 
+		debug!(
+			"Submitting maker bond: {:#?}",
+			hex::encode(bond.serialize())
+		);
 		let bond_submission_request = BondSubmissionRequest {
 			robohash_hex: maker_config.robosats_robohash_hex.clone(),
-			signed_bond_hex: bond.to_string(),
+			signed_bond_hex: serialize_hex(&bond.clone().extract_tx()),
 			payout_address: payout_address.address.to_string(),
 			musig_pub_nonce_hex: hex::encode(musig_data.nonce.get_pub_for_sharing()?.serialize()),
 			musig_pubkey_hex: hex::encode(musig_data.public_key.to_string()),

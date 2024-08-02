@@ -375,9 +375,9 @@ impl CoordinatorDB {
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex, escrow_output_descriptor, escrow_tx_fee_address, escrow_psbt_is_confirmed, escrow_ongoing,
+						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex, escrow_output_descriptor, escrow_psbt_is_confirmed, escrow_ongoing,
 						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -401,7 +401,6 @@ impl CoordinatorDB {
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
 			.bind(&escrow_tx_data.escrow_output_descriptor)
 			.bind(&escrow_tx_data.escrow_psbt_hex)
-			.bind(&escrow_tx_data.escrow_tx_fee_address)
 			.bind(0)
 			.bind(0)
 			.bind(&escrow_tx_data.coordinator_xonly_escrow_pk)
@@ -419,7 +418,7 @@ impl CoordinatorDB {
 		offer_id_hex: &str,
 	) -> Result<Option<EscrowPsbt>> {
 		let offer = sqlx::query(
-			"SELECT escrow_output_descriptor, escrow_tx_fee_address, escrow_amount_maker_sat, 
+			"SELECT escrow_output_descriptor, escrow_amount_maker_sat, 
 			escrow_amount_taker_sat, escrow_fee_per_participant, escrow_taproot_pk_coordinator 
 			FROM taken_offers WHERE offer_id = ?",
 		)
@@ -431,7 +430,6 @@ impl CoordinatorDB {
 			None => return Ok(None),
 		};
 		let escrow_output_descriptor = offer.try_get::<String, _>("escrow_output_descriptor")?;
-		let escrow_tx_fee_address = offer.try_get::<String, _>("escrow_tx_fee_address")?;
 		let escrow_amount_maker_sat = offer.try_get::<i64, _>("escrow_amount_maker_sat")? as u64;
 		let escrow_amount_taker_sat = offer.try_get::<i64, _>("escrow_amount_taker_sat")? as u64;
 		let escrow_fee_sat_per_participant =
@@ -443,7 +441,6 @@ impl CoordinatorDB {
 		Ok(Some(EscrowPsbt {
 			escrow_psbt_hex,
 			escrow_output_descriptor,
-			escrow_tx_fee_address,
 			coordinator_xonly_escrow_pk,
 			escrow_amount_maker_sat,
 			escrow_amount_taker_sat,
