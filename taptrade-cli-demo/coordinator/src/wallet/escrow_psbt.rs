@@ -113,6 +113,8 @@ pub fn build_escrow_transaction_output_descriptor(
 	let descriptor = Descriptor::new_tr(internal_agg_musig_key, Some(final_tap_tree))
 		.context("Error assembling escrow output descriptor")?;
 	descriptor.sanity_check()?;
+	// let descriptor = miniscript::Descriptor::<bitcoin::PublicKey>::from_str(&descriptor).unwrap();
+	// https://docs.rs/miniscript/latest/miniscript/
 
 	debug!("Escrow descriptor: {}", descriptor);
 	Ok(descriptor.to_string())
