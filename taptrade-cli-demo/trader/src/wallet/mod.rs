@@ -30,7 +30,7 @@ use bond::Bond;
 use cli::OfferType;
 use musig2::MuSigData;
 use serde::Serialize;
-use std::str::FromStr;
+use std::{ops::Add, str::FromStr};
 use wallet_utils::get_seed;
 
 pub struct TradingWallet {
@@ -74,7 +74,11 @@ impl TradingWallet {
 			.x_only_public_key();
 
 		wallet.sync(&backend, SyncOptions::default())?;
-		dbg!("Balance: {} SAT", wallet.get_balance()?);
+		dbg!(
+			"Balance: {} SAT\nnew address: {}",
+			wallet.get_balance()?,
+			wallet.get_address(AddressIndex::New)?.address
+		);
 		Ok(TradingWallet {
 			wallet,
 			backend,

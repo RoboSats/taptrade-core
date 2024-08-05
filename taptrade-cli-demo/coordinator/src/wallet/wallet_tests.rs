@@ -269,3 +269,12 @@ async fn test_build_escrow_transaction_output_descriptor() {
 	dbg!(&result); // cargo test -- --nocapture to see the output
 	assert!(result.is_ok());
 }
+
+#[test]
+fn test_aggregate_musig_pubkeys() {
+	let agg_pk_result = aggregate_musig_pubkeys(
+		"02F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9",
+		"03DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659",
+	);
+	assert!(agg_pk_result.is_ok());
+}

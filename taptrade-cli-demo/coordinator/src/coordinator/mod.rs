@@ -212,7 +212,6 @@ pub async fn fetch_escrow_confirmation_status(
 		Ok(status) => status,
 		Err(e) => return Err(FetchEscrowConfirmationError::Database(e.to_string())),
 	} {
-		// rust smh
 		Ok(true)
 	} else {
 		Err(FetchEscrowConfirmationError::NotFound)

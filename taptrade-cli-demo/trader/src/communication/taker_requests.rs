@@ -1,4 +1,5 @@
 use anyhow::Context;
+use reqwest::StatusCode;
 
 use super::{api::*, *};
 
@@ -78,10 +79,19 @@ impl OfferPsbtRequest {
 				taker_config.coordinator_endpoint, "/submit-taker-bond"
 			))
 			.json(&request)
-			.send()?
-			.json::<OfferTakenResponse>()?;
-
-		debug!("Trader received escrow psbt");
-		Ok(res)
+			.send()?;
+		match res.status() {
+			StatusCode::OK => {
+				debug!("Taker bond accepted");
+				Ok(res.json::<OfferTakenResponse>()?)
+			}
+			_ => {
+				debug!(
+					"Taker bond submission failed: status code: {}",
+					res.status()
+				);
+				Err(anyhow!("Taker bond rejected"))
+			}
+		}
 	}
 }

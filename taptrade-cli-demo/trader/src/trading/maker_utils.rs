@@ -28,7 +28,7 @@ impl ActiveOffer {
 			signed_bond_hex: serialize_hex(&bond.clone().extract_tx()),
 			payout_address: payout_address.address.to_string(),
 			musig_pub_nonce_hex: hex::encode(musig_data.nonce.get_pub_for_sharing()?.serialize()),
-			musig_pubkey_hex: hex::encode(musig_data.public_key.to_string()),
+			musig_pubkey_hex: hex::encode(musig_data.public_key.serialize()),
 			taproot_pubkey_hex: hex::encode(&trading_wallet.taproot_pubkey.serialize()),
 			bdk_psbt_inputs_hex_csv: psbt_inputs_hex_csv.clone(),
 			client_change_address: escrow_change_address.clone(),

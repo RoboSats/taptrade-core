@@ -32,14 +32,17 @@ impl EscrowPsbtConstructionData {
 	}
 }
 
-fn aggregate_musig_pubkeys(maker_musig_pubkey: &str, taker_musig_pubkey: &str) -> Result<String> {
+pub fn aggregate_musig_pubkeys(
+	maker_musig_pubkey: &str,
+	taker_musig_pubkey: &str,
+) -> Result<String> {
+	debug!(
+		"Aggregating musig pubkeys: {} and {}",
+		maker_musig_pubkey, taker_musig_pubkey
+	);
 	let pubkeys: [MuSig2PubKey; 2] = [
-		maker_musig_pubkey
-			.parse()
-			.context("Error parsing musig pk 1")?,
-		taker_musig_pubkey
-			.parse()
-			.context("Error parsing musig pk 2")?,
+		MuSig2PubKey::from_str(maker_musig_pubkey).context("Error parsing musig pk 1")?,
+		MuSig2PubKey::from_str(taker_musig_pubkey).context("Error parsing musig pk 2")?,
 	];
 
 	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;

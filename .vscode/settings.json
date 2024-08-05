@@ -5,5 +5,6 @@
     ],
     "nixEnvSelector.suggestion": true,
     "nixEnvSelector.nixFile": "${workspaceFolder}/shell.nix",
-    "lldb.showDisassembly": "never"
+    "lldb.showDisassembly": "never",
+    "vim.useSystemClipboard": true
 }

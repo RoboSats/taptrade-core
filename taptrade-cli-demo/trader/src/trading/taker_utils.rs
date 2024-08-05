@@ -32,7 +32,7 @@ impl ActiveOffer {
 			payout_address: payout_address.address.to_string(),
 			taproot_pubkey_hex: trading_wallet.taproot_pubkey.to_string(),
 			musig_pub_nonce_hex: musig_data.nonce.get_pub_for_sharing()?.to_string(),
-			musig_pubkey_hex: musig_data.public_key.to_string(),
+			musig_pubkey_hex: hex::encode(musig_data.public_key.serialize()),
 			bdk_psbt_inputs_hex_csv: bdk_psbt_inputs_hex_csv.clone(),
 			client_change_address: client_change_address.clone(),
 		};
