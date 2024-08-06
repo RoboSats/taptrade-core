@@ -4,8 +4,6 @@ pub mod create_taproot;
 pub mod mempool_monitoring;
 pub mod tx_confirmation_monitoring;
 
-use axum::routing::trace;
-
 use self::coordinator_utils::*;
 use super::*;
 
@@ -222,6 +220,55 @@ pub async fn fetch_escrow_confirmation_status(
 	} else {
 		Err(FetchEscrowConfirmationError::NotFound)
 	}
+}
+
+pub async fn handle_signed_escrow_psbt(
+	payload: &PsbtSubmissionRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+	let wallet = &coordinator.coordinator_wallet;
+
+	match database
+		.is_valid_robohash_in_table(&payload.robohash_hex, &payload.offer_id_hex)
+		.await
+	{
+		Ok(false) => return Err(RequestError::NotFound),
+		Ok(true) => (),
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	match wallet
+		.validate_escrow_init_psbt(&payload.signed_psbt_hex)
+		.await
+	{
+		Ok(()) => (),
+		Err(e) => return Err(RequestError::PsbtInvalid(e.to_string())),
+	};
+	match database.insert_signed_escrow_psbt(payload).await {
+		Ok(false) => return Err(RequestError::PsbtAlreadySubmitted),
+		Ok(true) => (),
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	// check if both signed parts are there, if so, combine and broadcast
+	let (maker_psbt, taker_psbt) = match database
+		.fetch_both_signed_escrow_psbts(&payload.offer_id_hex)
+		.await
+	{
+		Ok(Some((maker_psbt, taker_psbt))) => (maker_psbt, taker_psbt),
+		Ok(None) => return Ok(()),
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	if let Err(e) = wallet
+		.combine_and_broadcast_escrow_psbt(&maker_psbt, &taker_psbt)
+		.await
+	{
+		return Err(RequestError::PsbtInvalid(e.to_string()));
+	}
+
+	Ok(())
 }
 
 pub async fn handle_obligation_confirmation(

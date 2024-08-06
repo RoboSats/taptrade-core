@@ -3,7 +3,9 @@ use bdk::{
 	bitcoin::psbt::Input,
 	descriptor::Descriptor,
 	miniscript::{descriptor::TapTree, policy::Concrete, Tap},
+	SignOptions,
 };
+use bitcoin::psbt::PartiallySignedTransaction;
 use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
 
 #[derive(Debug)]
@@ -220,5 +222,34 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			escrow_amount_taker_sat,
 			escrow_fee_sat_per_participant,
 		})
+	}
+
+	pub async fn validate_escrow_init_psbt(&self, escrow_init_psbt: &str) -> Result<()> {
+		warn!("Implement escrow psbt validation. For now, returning Ok");
+		Ok(())
+	}
+
+	pub async fn combine_and_broadcast_escrow_psbt(
+		&self,
+		signed_maker_psbt_hex: &str,
+		signed_taker_psbt_hex: &str,
+	) -> Result<()> {
+		let mut maker_psbt = PartiallySignedTransaction::from_str(signed_maker_psbt_hex)?;
+		let taker_psbt = PartiallySignedTransaction::from_str(signed_taker_psbt_hex)?;
+
+		maker_psbt.combine(&taker_psbt)?;
+
+		let wallet = self.wallet.lock().await;
+		match wallet.finalize_psbt(&mut maker_psbt, SignOptions::default()) {
+			Ok(true) => {
+				let tx = maker_psbt.extract_tx();
+				let tx_hex = tx.to_string();
+				self.backend.broadcast(&tx)?;
+				info!("Escrow transaction broadcasted: {}", tx.txid());
+				Ok(())
+			}
+			Ok(false) => Err(anyhow!("Failed to finalize escrow psbt")),
+			Err(e) => Err(anyhow!("Error finalizing escrow psbt: {}", e)),
+		}
 	}
 }

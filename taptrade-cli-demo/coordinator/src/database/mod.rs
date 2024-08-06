@@ -3,6 +3,7 @@ mod db_tests;
 
 use anyhow::Context;
 use futures_util::StreamExt;
+use serde::de::IntoDeserializer;
 
 use super::*;
 use bdk::bitcoin::address::Address;
@@ -137,6 +138,8 @@ impl CoordinatorDB {
 				musig_pubkey_compressed_hex_taker TEXT NOT NULL,
 				escrow_psbt_hex TEXT NOT NULL,
 				escrow_psbt_txid TEXT NOT NULL,
+				signed_escrow_psbt_hex_maker TEXT,
+				signed_escrow_psbt_hex_taker TEXT,
 				escrow_psbt_is_confirmed INTEGER,
 				maker_happy INTEGER,
 				taker_happy INTEGER,
@@ -611,22 +614,8 @@ impl CoordinatorDB {
 		Ok(robohash.is_some())
 	}
 
-	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &str) -> Result<bool> {
-		let status =
-			sqlx::query("SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE offer_id = ?")
-				.bind(offer_id)
-				.fetch_one(&*self.db_pool)
-				.await?;
-		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
-	}
-
-	pub async fn set_trader_happy_field(
-		&self,
-		offer_id: &str,
-		robohash: &str,
-		is_happy: bool,
-	) -> Result<()> {
-		let robohash_bytes = hex::decode(robohash)?;
+	async fn is_maker_in_taken_offers(&self, offer_id: &str, robohash_hex: &str) -> Result<bool> {
+		let robohash_bytes = hex::decode(robohash_hex)?;
 
 		// First, check if the robohash matches the maker or taker
 		let row = sqlx::query(
@@ -642,6 +631,100 @@ impl CoordinatorDB {
 		if !is_maker && !is_taker {
 			return Err(anyhow::anyhow!("Robohash does not match maker or taker"));
 		}
+		Ok(is_maker)
+	}
+
+	pub async fn insert_signed_escrow_psbt(
+		&self,
+		signed_escow_psbt_data: &PsbtSubmissionRequest,
+	) -> Result<bool> {
+		// first check if the escrow psbt has already been submitted
+		let is_maker = self
+			.is_maker_in_taken_offers(
+				&signed_escow_psbt_data.offer_id_hex,
+				&signed_escow_psbt_data.robohash_hex,
+			)
+			.await?;
+
+		let is_already_there = match is_maker {
+			true => {
+				let status = sqlx::query(
+					"SELECT signed_escrow_psbt_hex_maker FROM taken_offers WHERE offer_id = ?",
+				)
+				.bind(&signed_escow_psbt_data.offer_id_hex)
+				.fetch_one(&*self.db_pool)
+				.await?;
+				status
+					.get::<Option<String>, _>("signed_escrow_psbt_hex_maker")
+					.is_some()
+			}
+			false => {
+				let status = sqlx::query(
+					"SELECT signed_escrow_psbt_hex_taker FROM taken_offers WHERE offer_id = ?",
+				)
+				.bind(&signed_escow_psbt_data.offer_id_hex)
+				.fetch_one(&*self.db_pool)
+				.await?;
+				status
+					.get::<Option<String>, _>("signed_escrow_psbt_hex_taker")
+					.is_some()
+			}
+		};
+
+		if is_already_there {
+			return Ok(false);
+		} else {
+			let query = if is_maker {
+				"UPDATE taken_offers SET signed_escrow_psbt_hex_maker = ? WHERE offer_id = ?"
+			} else {
+				"UPDATE taken_offers SET signed_escrow_psbt_hex_taker = ? WHERE offer_id = ?"
+			};
+
+			sqlx::query(query)
+				.bind(&signed_escow_psbt_data.signed_psbt_hex)
+				.bind(&signed_escow_psbt_data.offer_id_hex)
+				.execute(&*self.db_pool)
+				.await?;
+			Ok(true)
+		}
+	}
+
+	pub async fn fetch_both_signed_escrow_psbts(
+		&self,
+		offer_id_hex: &str,
+	) -> Result<Option<(String, String)>> {
+		let row = sqlx::query(
+			"SELECT signed_escrow_psbt_hex_maker, signed_escrow_psbt_hex_taker FROM taken_offers WHERE offer_id = ?",
+		)
+		.bind(offer_id_hex)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		let maker_psbt: Option<String> = row.try_get("signed_escrow_psbt_hex_maker")?;
+		let taker_psbt: Option<String> = row.try_get("signed_escrow_psbt_hex_taker")?;
+
+		Ok(match (maker_psbt, taker_psbt) {
+			(Some(maker), Some(taker)) => Some((maker, taker)),
+			_ => None,
+		})
+	}
+
+	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &str) -> Result<bool> {
+		let status =
+			sqlx::query("SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE offer_id = ?")
+				.bind(offer_id)
+				.fetch_one(&*self.db_pool)
+				.await?;
+		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
+	}
+
+	pub async fn set_trader_happy_field(
+		&self,
+		offer_id: &str,
+		robohash: &str,
+		is_happy: bool,
+	) -> Result<()> {
+		let is_maker = self.is_maker_in_taken_offers(offer_id, robohash).await?;
 
 		let query = if is_maker {
 			"UPDATE taken_offers SET maker_happy = ? WHERE offer_id = ?"

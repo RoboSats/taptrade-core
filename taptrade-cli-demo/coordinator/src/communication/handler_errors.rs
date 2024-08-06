@@ -22,4 +22,6 @@ pub enum RequestError {
 	Database(String),
 	NotConfirmed,
 	NotFound,
+	PsbtAlreadySubmitted,
+	PsbtInvalid(String),
 }

@@ -121,8 +121,27 @@ async fn submit_escrow_psbt(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<PsbtSubmissionRequest>,
 ) -> Result<Response, AppError> {
-	panic!("implement")
-
+	debug!("\n\nReceived signed escrow psbt: {:?}", payload);
+	match handle_signed_escrow_psbt(&payload, coordinator).await {
+		Ok(()) => Ok(StatusCode::OK.into_response()),
+		Err(RequestError::PsbtAlreadySubmitted) => {
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
+		Err(RequestError::PsbtInvalid) => Ok(StatusCode::NOT_ACCEPTABLE.into_response()),
+		_ => Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
+		// Err(RequestError::NotFound) => {
+		// 	info!("Offer for escrow psbt not found");
+		// 	Ok(StatusCode::NOT_FOUND.into_response())
+		// }
+		// Err(RequestError::NotConfirmed) => {
+		// 	info!("Offer for escrow psbt not confirmed");
+		// 	Ok(StatusCode::NOT_ACCEPTABLE.into_response())
+		// }
+		// Err(RequestError::Database(e)) => {
+		// 	error!("Database error fetching escrow psbt: {e}");
+		// 	Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		// }
+	}
 	// check if psbt is correct, valid and signed
 	// publish psbt if it is correct
 	// return 200 if everything is correct
