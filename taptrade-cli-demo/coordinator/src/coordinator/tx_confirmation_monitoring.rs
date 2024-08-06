@@ -1,6 +1,12 @@
 use std::str::FromStr;
 
-use bdk::{bitcoin::Txid, bitcoincore_rpc::RpcApi};
+use axum::Json;
+use bdk::{
+	bitcoin::Txid,
+	bitcoincore_rpc::{
+		jsonrpc::error::RpcError, jsonrpc::Error as JsonRpcError, Error as CoreRpcError, RpcApi,
+	},
+};
 
 use super::*;
 
@@ -11,11 +17,44 @@ fn get_confirmations(
 	let mut now_confirmed_txs = Vec::new();
 	for txid in unconfirmed_txids {
 		let txid_struct = Txid::from_str(&txid)?;
-		let tx_info = coordinator
+		let tx_info = match coordinator
 			.coordinator_wallet
 			.json_rpc_client
 			.as_ref()
-			.get_raw_transaction_info(&txid_struct, None)?;
+			.get_raw_transaction_info(&txid_struct, None)
+		{
+			Ok(tx_info) => tx_info,
+			Err(e) => match e {
+				CoreRpcError::JsonRpc(e) => {
+					if let JsonRpcError::Rpc(rpc_error) = e {
+						if rpc_error.code == -5 {
+							trace!("Escrow transaction {} not yet found in mempool", &txid);
+							continue;
+						} else {
+							return Err(anyhow!(
+								"Error fetching transaction info for {}: {:?}",
+								&txid,
+								rpc_error
+							));
+						}
+					} else {
+						return Err(anyhow!(
+							"Error fetching transaction info for {}: {:?}",
+							&txid,
+							e
+						));
+					}
+				}
+				_ => {
+					error!("Error fetching transaction info for {}: {:?}", &txid, e);
+					return Err(anyhow!(
+						"Error fetching transaction info for {}: {:?}",
+						&txid,
+						e
+					));
+				}
+			},
+		};
 		if let Some(confirmations) = tx_info.confirmations {
 			debug!(
 				"Transaction {} in now confirmed with {} confirmations",
@@ -35,7 +74,7 @@ pub async fn update_transaction_confirmations(coordinator: Arc<Coordinator>) {
 		trace!("Checking for transaction confirmations");
 		let unconfirmed_transactions = match coordinator
 			.coordinator_db
-			.fetch_unconfirmed_bond_txids()
+			.fetch_unconfirmed_escrow_txids()
 			.await
 		{
 			Ok(txids) => txids,

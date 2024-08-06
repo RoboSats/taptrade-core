@@ -157,15 +157,17 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		let (escrow_psbt, details) = {
 			// maybe we can generate a address/taproot pk directly from the descriptor without a new wallet?
-			let temp_wallet = Wallet::new(
-				&escrow_output_descriptor,
-				None,
-				bitcoin::Network::Regtest,
-				MemoryDatabase::new(),
-			)?;
-			let escrow_address = temp_wallet
-				.get_address(bdk::wallet::AddressIndex::New)?
-				.address;
+			// let temp_wallet = Wallet::new(
+			// 	&escrow_output_descriptor,
+			// 	None,
+			// 	bitcoin::Network::Regtest,
+			// 	MemoryDatabase::new(),
+			// )?;
+			// let escrow_address = temp_wallet
+			// .get_address(bdk::wallet::AddressIndex::New)?
+			// 	.address;
+			let escrow_address =
+				Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
 
 			// using absolute fee for now, in production we should come up with a way to determine the tx weight
 			// upfront and substract the fee from the change outputs
@@ -177,7 +179,10 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				- (escrow_amount_taker_sat + escrow_fee_sat_per_participant + tx_fee_abs / 2);
 
 			let amount_escrow = escrow_amount_maker_sat + escrow_amount_taker_sat;
-			let mut builder = temp_wallet.build_tx();
+
+			let wallet = self.wallet.lock().await;
+			// let mut builder = temp_wallet.build_tx();
+			let mut builder = wallet.build_tx();
 			builder
 				.manually_selected_only()
 				.add_recipient(escrow_address.script_pubkey(), amount_escrow)
@@ -204,7 +209,10 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			builder.finish()?
 		};
 
+		let escrow_tx_txid: String = details.txid.to_string();
+
 		Ok(EscrowPsbt {
+			escrow_tx_txid,
 			escrow_psbt_hex: escrow_psbt.to_string(),
 			escrow_output_descriptor,
 			coordinator_xonly_escrow_pk: coordinator_escrow_pk.to_string(),

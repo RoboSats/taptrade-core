@@ -44,6 +44,7 @@ pub struct CoordinatorWallet<D: bdk::database::BatchDatabase> {
 #[derive(Debug)]
 pub struct EscrowPsbt {
 	pub escrow_psbt_hex: String,
+	pub escrow_tx_txid: String,
 	pub escrow_output_descriptor: String,
 	pub coordinator_xonly_escrow_pk: String,
 	pub escrow_amount_maker_sat: u64,
@@ -58,7 +59,7 @@ pub struct BondRequirements {
 	pub min_input_sum_sat: u64,
 }
 
-pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> {
+pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabase>> {
 	let wallet_xprv = ExtendedPrivKey::from_str(
 		&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
 	)?;
@@ -87,12 +88,12 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<sled::Tree>> 
 	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
 	let backend = RpcBlockchain::from_config(&rpc_config)?;
 	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
-	let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
+	// let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
 	let wallet = Wallet::new(
 		Bip86(wallet_xprv, KeychainKind::External),
 		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
 		bitcoin::Network::Regtest,
-		sled_db,
+		MemoryDatabase::new(),
 	)?;
 
 	wallet

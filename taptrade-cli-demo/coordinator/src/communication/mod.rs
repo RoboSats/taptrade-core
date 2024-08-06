@@ -107,7 +107,7 @@ async fn request_offer_status_maker(
 		Ok(offer_taken_response) => Ok(Json(offer_taken_response).into_response()),
 		Err(FetchOffersError::NoOffersAvailable) => Ok(StatusCode::NO_CONTENT.into_response()),
 		Err(FetchOffersError::Database(e)) => {
-			error!("Database error fetching offers: {e}");
+			error!("Database error fetching offer status maker: {e}");
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
 	}

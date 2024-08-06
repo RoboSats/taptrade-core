@@ -4,6 +4,8 @@ pub mod create_taproot;
 pub mod mempool_monitoring;
 pub mod tx_confirmation_monitoring;
 
+use axum::routing::trace;
+
 use self::coordinator_utils::*;
 use super::*;
 
@@ -139,6 +141,10 @@ pub async fn handle_taker_bond(
 			return Err(BondError::CoordinatorError(e.to_string()));
 		}
 	};
+	debug!(
+		"\nEscrow PSBT creation successful: {:?}",
+		escrow_output_data
+	);
 
 	if let Err(e) = database
 		.add_taker_info_and_move_table(payload, &escrow_output_data)
@@ -146,7 +152,7 @@ pub async fn handle_taker_bond(
 	{
 		return Err(BondError::CoordinatorError(e.to_string()));
 	}
-
+	trace!("Taker information added to database and moved table successfully");
 	Ok(OfferTakenResponse {
 		escrow_psbt_hex: escrow_output_data.escrow_psbt_hex,
 		escrow_output_descriptor: escrow_output_data.escrow_output_descriptor,

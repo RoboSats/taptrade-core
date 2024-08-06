@@ -4,7 +4,7 @@ mod database;
 mod wallet;
 
 use anyhow::{anyhow, Result};
-use bdk::sled;
+use bdk::{database::MemoryDatabase, sled};
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
 	bond_monitoring::*, coordinator_utils::*,
@@ -25,7 +25,7 @@ use wallet::{escrow_psbt::*, wallet_utils::*, *};
 
 pub struct Coordinator {
 	pub coordinator_db: Arc<CoordinatorDB>,
-	pub coordinator_wallet: Arc<CoordinatorWallet<sled::Tree>>,
+	pub coordinator_wallet: Arc<CoordinatorWallet<MemoryDatabase>>,
 }
 
 // populate .env with values before starting

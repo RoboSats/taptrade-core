@@ -135,8 +135,8 @@ impl CoordinatorDB {
 				musig_pubkey_compressed_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
 				musig_pubkey_compressed_hex_taker TEXT NOT NULL,
-				escrow_psbt_hex TEXT,
-				escrow_psbt_txid TEXT,
+				escrow_psbt_hex TEXT NOT NULL,
+				escrow_psbt_txid TEXT NOT NULL,
 				escrow_psbt_is_confirmed INTEGER,
 				maker_happy INTEGER,
 				taker_happy INTEGER,
@@ -374,10 +374,10 @@ impl CoordinatorDB {
 		sqlx::query(
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
-						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_pubkey_hex_maker, taproot_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_hex_maker,
-						musig_pub_nonce_hex_taker, musig_pubkey_hex_taker, escrow_psbt_hex, escrow_output_descriptor, escrow_psbt_is_confirmed, escrow_ongoing,
+						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_compressed_hex_maker,
+						musig_pub_nonce_hex_taker, musig_pubkey_compressed_hex_taker, escrow_psbt_hex, escrow_psbt_txid, escrow_output_descriptor, escrow_psbt_is_confirmed, escrow_ongoing,
 						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -399,8 +399,9 @@ impl CoordinatorDB {
 			.bind(public_offer.musig_pubkey_hex_maker)
 			.bind(trade_and_taker_info.trade_data.musig_pub_nonce_hex.clone())
 			.bind(trade_and_taker_info.trade_data.musig_pubkey_hex.clone())
-			.bind(&escrow_tx_data.escrow_output_descriptor)
 			.bind(&escrow_tx_data.escrow_psbt_hex)
+			.bind(&escrow_tx_data.escrow_tx_txid)
+			.bind(&escrow_tx_data.escrow_output_descriptor)
 			.bind(0)
 			.bind(0)
 			.bind(&escrow_tx_data.coordinator_xonly_escrow_pk)
@@ -418,8 +419,8 @@ impl CoordinatorDB {
 		offer_id_hex: &str,
 	) -> Result<Option<EscrowPsbt>> {
 		let offer = sqlx::query(
-			"SELECT escrow_output_descriptor, escrow_amount_maker_sat, 
-			escrow_amount_taker_sat, escrow_fee_per_participant, escrow_taproot_pk_coordinator 
+			"SELECT escrow_output_descriptor, escrow_amount_maker_sat,
+			escrow_amount_taker_sat, escrow_fee_per_participant, escrow_taproot_pk_coordinator, escrow_psbt_hex, escrow_psbt_txid
 			FROM taken_offers WHERE offer_id = ?",
 		)
 		.bind(offer_id_hex)
@@ -437,8 +438,10 @@ impl CoordinatorDB {
 		let coordinator_xonly_escrow_pk =
 			offer.try_get::<String, _>("escrow_taproot_pk_coordinator")?;
 		let escrow_psbt_hex = offer.try_get::<String, _>("escrow_psbt_hex")?;
+		let escrow_tx_txid = offer.try_get::<String, _>("escrow_psbt_txid")?;
 
 		Ok(Some(EscrowPsbt {
+			escrow_tx_txid,
 			escrow_psbt_hex,
 			escrow_output_descriptor,
 			coordinator_xonly_escrow_pk,
@@ -555,7 +558,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	pub async fn fetch_unconfirmed_bond_txids(&self) -> Result<Vec<String>> {
+	pub async fn fetch_unconfirmed_escrow_txids(&self) -> Result<Vec<String>> {
 		let mut txids = Vec::new();
 		let mut rows = sqlx::query(
 			"SELECT escrow_psbt_txid FROM taken_offers WHERE escrow_psbt_is_confirmed = 0",
