@@ -127,7 +127,10 @@ async fn submit_escrow_psbt(
 		Err(RequestError::PsbtAlreadySubmitted) => {
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
-		Err(RequestError::PsbtInvalid) => Ok(StatusCode::NOT_ACCEPTABLE.into_response()),
+		Err(RequestError::PsbtInvalid(e)) => {
+			warn!("Invalid PSBT: {e}");
+			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
+		}
 		_ => Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
 		// Err(RequestError::NotFound) => {
 		// 	info!("Offer for escrow psbt not found");
@@ -187,6 +190,10 @@ async fn submit_obligation_confirmation(
 			error!("Database error fetching obligation confirmation: {e}");
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
+		_ => {
+			error!("Unknown error handling obligation confirmation");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
 	}
 }
 
@@ -210,6 +217,10 @@ async fn request_escrow(
 		}
 		Err(RequestError::Database(e)) => {
 			error!("Database error fetching obligation confirmation: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
+		_ => {
+			error!("Unknown error handling request_escrow()");
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
 	}
@@ -238,6 +249,10 @@ async fn poll_final_payout(
 		}
 		Err(RequestError::Database(e)) => {
 			error!("Database error fetching final payout: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
+		_ => {
+			error!("Unknown error handling poll_final_payout()");
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
 	}

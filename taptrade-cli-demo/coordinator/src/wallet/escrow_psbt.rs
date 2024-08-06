@@ -1,11 +1,10 @@
 use super::*;
 use bdk::{
-	bitcoin::psbt::Input,
+	bitcoin::psbt::PartiallySignedTransaction,
 	descriptor::Descriptor,
 	miniscript::{descriptor::TapTree, policy::Concrete, Tap},
 	SignOptions,
 };
-use bitcoin::psbt::PartiallySignedTransaction;
 use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
 
 #[derive(Debug)]
@@ -237,13 +236,12 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		let mut maker_psbt = PartiallySignedTransaction::from_str(signed_maker_psbt_hex)?;
 		let taker_psbt = PartiallySignedTransaction::from_str(signed_taker_psbt_hex)?;
 
-		maker_psbt.combine(&taker_psbt)?;
+		maker_psbt.combine(taker_psbt)?;
 
 		let wallet = self.wallet.lock().await;
 		match wallet.finalize_psbt(&mut maker_psbt, SignOptions::default()) {
 			Ok(true) => {
 				let tx = maker_psbt.extract_tx();
-				let tx_hex = tx.to_string();
 				self.backend.broadcast(&tx)?;
 				info!("Escrow transaction broadcasted: {}", tx.txid());
 				Ok(())
