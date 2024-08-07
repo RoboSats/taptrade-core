@@ -1,4 +1,5 @@
 use super::*;
+use axum::routing::trace;
 use bdk::{
 	bitcoin::psbt::PartiallySignedTransaction,
 	descriptor::Descriptor,
@@ -233,10 +234,19 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		signed_maker_psbt_hex: &str,
 		signed_taker_psbt_hex: &str,
 	) -> Result<()> {
-		let mut maker_psbt = PartiallySignedTransaction::from_str(signed_maker_psbt_hex)?;
-		let taker_psbt = PartiallySignedTransaction::from_str(signed_taker_psbt_hex)?;
+		trace!(
+			"\n\n\nCombining and broadcasting escrow psbt.
+			signed maker psbt hex: {}, signed taker psbt hex: {}",
+			signed_maker_psbt_hex,
+			signed_taker_psbt_hex
+		);
+		let mut maker_psbt =
+			PartiallySignedTransaction::deserialize(&hex::decode(signed_maker_psbt_hex)?)?;
+		let taker_psbt =
+			PartiallySignedTransaction::deserialize(&hex::decode(signed_taker_psbt_hex)?)?;
 
 		maker_psbt.combine(taker_psbt)?;
+		debug!("Combined escrow psbt: {:#?}", maker_psbt);
 
 		let wallet = self.wallet.lock().await;
 		match wallet.finalize_psbt(&mut maker_psbt, SignOptions::default()) {
