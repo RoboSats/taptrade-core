@@ -233,7 +233,7 @@ impl IsOfferReadyRequest {
 				.send()?;
 			if res.status() == 200 {
 				return Ok(());
-			} else if res.status() != 204 {
+			} else if res.status() != 202 {
 				return Err(anyhow!(
 					"Requesting offer status when waiting on other party failed: {}",
 					res.status()

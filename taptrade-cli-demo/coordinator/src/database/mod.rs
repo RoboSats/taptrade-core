@@ -816,7 +816,8 @@ impl CoordinatorDB {
 		let is_buy_order: bool = 1 == row.get::<i64, _>("is_buy_order");
 		let bond_amount_sat: u64 = row.get("bond_amount_sat");
 
-		let escrow_fee_per_participant: u64 = (amount_sat as f64 * coordinator_feerate) as u64;
+		let escrow_fee_per_participant: u64 =
+			(amount_sat as f64 * (coordinator_feerate / 100.0)) as u64;
 
 		let (escrow_amount_maker_sat, escrow_amount_taker_sat) = if is_buy_order {
 			(amount_sat + bond_amount_sat, bond_amount_sat)

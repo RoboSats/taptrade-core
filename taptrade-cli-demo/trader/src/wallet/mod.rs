@@ -180,9 +180,9 @@ impl TradingWallet {
 	// }
 
 	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
-		// do not finalize as the psbt will be finalized by the coordinator
+		// we need to finalize here too to make finalizing on the coordinator side work
 		let sign_options = SignOptions {
-			try_finalize: false,
+			try_finalize: true,
 			..SignOptions::default()
 		};
 		let _ = self.wallet.sign(escrow_psbt, sign_options)?;
