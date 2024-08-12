@@ -4,7 +4,7 @@ pub mod wallet_utils;
 #[cfg(test)]
 mod wallet_tests;
 
-use self::escrow_psbt::*;
+pub use self::escrow_psbt::*;
 use super::*;
 use anyhow::Context;
 use bdk::{

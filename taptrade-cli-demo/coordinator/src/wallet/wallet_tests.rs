@@ -1,13 +1,21 @@
 use std::time::Duration;
 
+use super::escrow_psbt::*;
 use super::*;
+use bdk::bitcoin::secp256k1::XOnlyPublicKey;
+use bdk::miniscript::ToPublicKey;
 use bdk::{
 	bitcoin::{psbt::Input, Network},
 	blockchain::RpcBlockchain,
 	database::MemoryDatabase,
-	wallet::AddressIndex,
+	miniscript::{
+		descriptor::{self},
+		policy::Concrete,
+		Descriptor, Tap,
+	},
 	Wallet,
 };
+use sha2::digest::XofReader;
 
 async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 	dotenv().ok();
@@ -277,4 +285,35 @@ fn test_aggregate_musig_pubkeys() {
 		"03DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659",
 	);
 	assert!(agg_pk_result.is_ok());
+}
+
+#[test]
+fn test_miniscript_compilation() {
+	let maker_pk = "4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d";
+	let taker_pk = "f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151";
+	let coordinator_pk = "4b588489c13b2fbcfc2c3b8b6c885e9c366768f216899ba059d6c467af432ad4";
+	let internal_key = bdk::bitcoin::PublicKey::from_str(
+		"03f00949d6dd1ce99a03f88a1a4f59117d553b0da51728bb7fd5b98fbf541337fb",
+	)
+	.unwrap()
+	.to_x_only_pubkey();
+
+	let policy_a_string = format!("and(pk({}),pk({}))", maker_pk, taker_pk);
+	let policy_b_string = format!("and(pk({}),pk({}))", maker_pk, coordinator_pk);
+
+	let policy_a = Concrete::<XOnlyPublicKey>::from_str(&policy_a_string).unwrap();
+	let policy_b = Concrete::<XOnlyPublicKey>::from_str(&policy_b_string).unwrap();
+
+	let miniscript_a = policy_a.compile::<Tap>().unwrap();
+	let miniscript_b = policy_b.compile::<Tap>().unwrap();
+
+	let tap_leaf_a = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_a));
+	let tap_leaf_b = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_b));
+
+	let tap_tree_root =
+		bdk::miniscript::descriptor::TapTree::Tree(Arc::new(tap_leaf_a), Arc::new(tap_leaf_b));
+
+	let descriptor =
+		Descriptor::<XOnlyPublicKey>::new_tr(internal_key, Some(tap_tree_root)).unwrap();
+	dbg!(descriptor.address(bdk::bitcoin::Network::Regtest).unwrap());
 }

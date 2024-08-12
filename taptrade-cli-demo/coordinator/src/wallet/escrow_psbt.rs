@@ -1,14 +1,13 @@
 use super::*;
 use axum::routing::trace;
 use bdk::{
-	bitcoin::psbt::PartiallySignedTransaction,
-	descriptor::Descriptor,
-	miniscript::{descriptor::TapTree, policy::Concrete, Tap},
+	bitcoin::{psbt::PartiallySignedTransaction, PublicKey},
+	descriptor::{policy, Descriptor},
+	miniscript::{descriptor::TapTree, policy::Concrete, Miniscript, Tap, ToPublicKey},
 	SignOptions,
 };
-use bitcoin::PublicKey;
 use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
-use sha2::digest::typenum::bit;
+use sha2::digest::typenum::{bit, Xor};
 
 #[derive(Debug)]
 pub struct EscrowPsbtConstructionData {
@@ -39,7 +38,7 @@ impl EscrowPsbtConstructionData {
 pub fn aggregate_musig_pubkeys(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
-) -> Result<bdk::bitcoin::PublicKey> {
+) -> Result<XOnlyPublicKey> {
 	debug!(
 		"Aggregating musig pubkeys: {} and {}",
 		maker_musig_pubkey, taker_musig_pubkey
@@ -52,77 +51,74 @@ pub fn aggregate_musig_pubkeys(
 	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;
 	let agg_pk: MuSig2PubKey = key_agg_ctx.aggregated_pubkey();
 	let bitcoin_pk = bdk::bitcoin::PublicKey::from_slice(&agg_pk.serialize())
-		.context("Error converting musig pk to bitcoin pk")?;
+		.context("Error converting musig pk to bitcoin pk")?
+		.to_x_only_pubkey();
 	Ok(bitcoin_pk)
 }
 
+/// this function builds the escrow output with all possible spending conditions
 pub fn build_escrow_transaction_output_descriptor(
 	maker_escrow_data: &EscrowPsbtConstructionData,
 	taker_escrow_data: &EscrowPsbtConstructionData,
 	coordinator_pk: &XOnlyPublicKey,
-) -> Result<String> {
+) -> Result<Descriptor<XOnlyPublicKey>> {
 	let maker_pk = maker_escrow_data.taproot_xonly_pubkey_hex.clone();
 	let taker_pk = taker_escrow_data.taproot_xonly_pubkey_hex.clone();
 	let coordinator_pk = hex::encode(coordinator_pk.serialize());
 
-	// let script_a = format!("and(and(after({}),{}),{})", "144", maker_pk, coordinator_pk);
-	// let script_b = format!(
-	// 	"and_v(v:{},and_v(v:{},{}))",
-	// 	maker_pk, taker_pk, coordinator_pk
-	// );
-	let script_c: String = format!("and(pk({}),pk({}))", maker_pk, coordinator_pk);
-	let script_d = format!("and(pk({}),pk({}))", taker_pk, coordinator_pk);
-	let script_e = format!("and(pk({}),after(12228))", maker_pk);
-	let script_f = format!("and(and(pk({}),pk({})),after(2048))", maker_pk, taker_pk);
+	let policy_a_string = format!("and(pk({}),pk({}))", maker_pk, coordinator_pk);
+	let policy_b_string = format!("and(pk({}),pk({}))", taker_pk, coordinator_pk);
+	let policy_c_string = format!("and(pk({}),after(12228))", maker_pk);
+	let policy_d_string = format!("and(and(pk({}),pk({})),after(2048))", maker_pk, taker_pk);
 
-	// let compiled_a = Concrete::<String>::from_str(&script_a)?.compile::<Tap>()?;
-	// let compiled_b = Concrete::<String>::from_str(&script_b)?.compile()?;
-	let compiled_c = Concrete::<String>::from_str(&script_c)
-		.context("Failed to parse script_c")?
+	// parse the policy strings into policy objects
+	let policy_a = Concrete::<XOnlyPublicKey>::from_str(&policy_a_string)
+		.context("Failed to parse policy string a")?;
+	let policy_b = Concrete::<XOnlyPublicKey>::from_str(&policy_b_string)
+		.context("Failed to parse policy string b")?;
+	let policy_c = Concrete::<XOnlyPublicKey>::from_str(&policy_c_string)
+		.context("Failed to parse policy string c")?;
+	let policy_d = Concrete::<XOnlyPublicKey>::from_str(&policy_d_string)
+		.context("Failed to parse policy string d")?;
+
+	// Compile the policies into Miniscript
+	let miniscript_a = policy_a
 		.compile::<Tap>()
-		.context("Failed to compile script_c")?;
-	let compiled_d = Concrete::<String>::from_str(&script_d)
-		.context("Failed to parse script_d")?
+		.context("Failed to compile miniscript a")?;
+	let miniscript_b = policy_b
 		.compile::<Tap>()
-		.context("Failed to compile script_d")?;
-	let compiled_e = Concrete::<String>::from_str(&script_e)
-		.context("Failed to parse script_e")?
+		.context("Failed to compile miniscript b")?;
+	let miniscript_c = policy_c
 		.compile::<Tap>()
-		.context("Failed to compile script_e")?;
-	let compiled_f = Concrete::<String>::from_str(&script_f)
-		.context("Failed to parse script_f")?
+		.context("Failed to compile miniscript c")?;
+	let miniscript_d = policy_d
 		.compile::<Tap>()
-		.context("Failed to compile script_f")?;
+		.context("Failed to compile miniscript d")?;
 
 	// Create TapTree leaves
-	// let tap_leaf_a = TapTree::Leaf(Arc::new(compiled_a));
-	// let tap_leaf_b = TapTree::Leaf(Arc::new(compiled_b));
-	let tap_leaf_c = TapTree::Leaf(Arc::new(compiled_c));
-	let tap_leaf_d = TapTree::Leaf(Arc::new(compiled_d));
-	let tap_leaf_e = TapTree::Leaf(Arc::new(compiled_e));
-	let tap_leaf_f = TapTree::Leaf(Arc::new(compiled_f));
+	let tap_leaf_a = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_a));
+	let tap_leaf_b = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_b));
+	let tap_leaf_c = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_c));
+	let tap_leaf_d = bdk::miniscript::descriptor::TapTree::Leaf(Arc::new(miniscript_d));
 
-	let tap_node_cd = TapTree::Tree(Arc::new(tap_leaf_c), Arc::new(tap_leaf_d));
-	let tap_node_ef = TapTree::Tree(Arc::new(tap_leaf_e), Arc::new(tap_leaf_f));
+	let tap_node_ab = TapTree::Tree(Arc::new(tap_leaf_a), Arc::new(tap_leaf_b));
+	let tap_node_cd = TapTree::Tree(Arc::new(tap_leaf_d), Arc::new(tap_leaf_c));
 
 	// Create the TapTree (example combining leaves, adjust as necessary), will be used for Script Path Spending (Alternative Spending Paths) in the descriptor
-	let final_tap_tree =
-		TapTree::<bdk::bitcoin::PublicKey>::Tree(Arc::new(tap_node_cd), Arc::new(tap_node_ef));
+	let tap_root = TapTree::Tree(Arc::new(tap_node_ab), Arc::new(tap_node_cd));
 
 	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
-	let internal_agg_musig_key: bdk::bitcoin::PublicKey = aggregate_musig_pubkeys(
+	let internal_agg_musig_key: XOnlyPublicKey = aggregate_musig_pubkeys(
 		&maker_escrow_data.musig_pubkey_compressed_hex,
 		&taker_escrow_data.musig_pubkey_compressed_hex,
 	)?;
 
 	// Create the descriptor
-	let descriptor =
-		Descriptor::<bdk::bitcoin::PublicKey>::new_tr(internal_agg_musig_key, Some(final_tap_tree))
-			.context("Error assembling escrow output descriptor")?;
+	let descriptor = Descriptor::<XOnlyPublicKey>::new_tr(internal_agg_musig_key, Some(tap_root))
+		.context("Error assembling escrow output descriptor")?;
 	descriptor.sanity_check()?;
-	// https://docs.rs/miniscript/latest/miniscript/
 	// debug!("Escrow descriptor: {}", descriptor.address(network));
-	Ok(descriptor.to_string())
+	Ok(descriptor) // then spend to descriptor.address(Network::Regtest)
 }
 
 // pub fn assemble_escrow_psbts(
@@ -162,19 +158,20 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 		let (escrow_psbt, details) = {
 			// maybe we can generate a address/taproot pk directly from the descriptor without a new wallet?
-			let temp_wallet = Wallet::new(
-				&escrow_output_descriptor,
-				None,
-				bitcoin::Network::Regtest,
-				MemoryDatabase::new(),
-			)?;
-			// let escrow_address = temp_wallet
-			// 	.get_address(bdk::wallet::AddressIndex::New)?
-			// 	.address;
+			// let temp_wallet = Wallet::new(
+			// 	&escrow_output_descriptor,
+			// 	None,
+			// 	bitcoin::Network::Regtest,
+			// 	MemoryDatabase::new(),
+			// )?;
+			let escrow_address =
+				escrow_output_descriptor.address(bdk::bitcoin::Network::Regtest)?;
+
+			debug!("Created escrow address: {escrow_address}");
 
 			// dummy escrow address for testing the psbt signing flow
-			let escrow_address =
-				Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
+			// let escrow_address =
+			// Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
 
 			// using absolute fee for now, in production we should come up with a way to determine the tx weight
 			// upfront and substract the fee from the change outputs (10k == ~30/sat vbyte)
@@ -187,9 +184,9 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 
 			let amount_escrow = escrow_amount_maker_sat + escrow_amount_taker_sat;
 
-			// let wallet = self.wallet.lock().await;
-			let mut builder = temp_wallet.build_tx();
-			// let mut builder = wallet.build_tx();
+			let wallet = self.wallet.lock().await;
+			// let mut builder = temp_wallet.build_tx();
+			let mut builder = wallet.build_tx();
 			builder
 				.manually_selected_only()
 				.add_recipient(escrow_address.script_pubkey(), amount_escrow)
@@ -221,7 +218,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(EscrowPsbt {
 			escrow_tx_txid,
 			escrow_psbt_hex: escrow_psbt.to_string(),
-			escrow_output_descriptor,
+			escrow_output_descriptor: escrow_output_descriptor.to_string(),
 			coordinator_xonly_escrow_pk: coordinator_escrow_pk.to_string(),
 			escrow_amount_maker_sat,
 			escrow_amount_taker_sat,
