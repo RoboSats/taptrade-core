@@ -6,7 +6,9 @@ use bdk::{
 	miniscript::{descriptor::TapTree, policy::Concrete, Tap},
 	SignOptions,
 };
+use bitcoin::PublicKey;
 use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
+use sha2::digest::typenum::bit;
 
 #[derive(Debug)]
 pub struct EscrowPsbtConstructionData {
@@ -37,7 +39,7 @@ impl EscrowPsbtConstructionData {
 pub fn aggregate_musig_pubkeys(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
-) -> Result<String> {
+) -> Result<bdk::bitcoin::PublicKey> {
 	debug!(
 		"Aggregating musig pubkeys: {} and {}",
 		maker_musig_pubkey, taker_musig_pubkey
@@ -49,8 +51,9 @@ pub fn aggregate_musig_pubkeys(
 
 	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;
 	let agg_pk: MuSig2PubKey = key_agg_ctx.aggregated_pubkey();
-
-	Ok(agg_pk.to_string())
+	let bitcoin_pk = bdk::bitcoin::PublicKey::from_slice(&agg_pk.serialize())
+		.context("Error converting musig pk to bitcoin pk")?;
+	Ok(bitcoin_pk)
 }
 
 pub fn build_escrow_transaction_output_descriptor(
@@ -103,22 +106,22 @@ pub fn build_escrow_transaction_output_descriptor(
 	let tap_node_ef = TapTree::Tree(Arc::new(tap_leaf_e), Arc::new(tap_leaf_f));
 
 	// Create the TapTree (example combining leaves, adjust as necessary), will be used for Script Path Spending (Alternative Spending Paths) in the descriptor
-	let final_tap_tree = TapTree::Tree(Arc::new(tap_node_cd), Arc::new(tap_node_ef));
+	let final_tap_tree =
+		TapTree::<bdk::bitcoin::PublicKey>::Tree(Arc::new(tap_node_cd), Arc::new(tap_node_ef));
 
 	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
-	let internal_agg_musig_key = aggregate_musig_pubkeys(
+	let internal_agg_musig_key: bdk::bitcoin::PublicKey = aggregate_musig_pubkeys(
 		&maker_escrow_data.musig_pubkey_compressed_hex,
 		&taker_escrow_data.musig_pubkey_compressed_hex,
 	)?;
 
 	// Create the descriptor
-	let descriptor = Descriptor::new_tr(internal_agg_musig_key, Some(final_tap_tree))
-		.context("Error assembling escrow output descriptor")?;
+	let descriptor =
+		Descriptor::<bdk::bitcoin::PublicKey>::new_tr(internal_agg_musig_key, Some(final_tap_tree))
+			.context("Error assembling escrow output descriptor")?;
 	descriptor.sanity_check()?;
-	// let descriptor = miniscript::Descriptor::<bitcoin::PublicKey>::from_str(&descriptor).unwrap();
 	// https://docs.rs/miniscript/latest/miniscript/
-
-	debug!("Escrow descriptor: {}", descriptor);
+	// debug!("Escrow descriptor: {}", descriptor.address(network));
 	Ok(descriptor.to_string())
 }
 
@@ -165,13 +168,13 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 				bitcoin::Network::Regtest,
 				MemoryDatabase::new(),
 			)?;
-			let escrow_address = temp_wallet
-				.get_address(bdk::wallet::AddressIndex::New)?
-				.address;
+			// let escrow_address = temp_wallet
+			// 	.get_address(bdk::wallet::AddressIndex::New)?
+			// 	.address;
 
 			// dummy escrow address for testing the psbt signing flow
-			// let escrow_address =
-			// 	Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
+			let escrow_address =
+				Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
 
 			// using absolute fee for now, in production we should come up with a way to determine the tx weight
 			// upfront and substract the fee from the change outputs (10k == ~30/sat vbyte)
