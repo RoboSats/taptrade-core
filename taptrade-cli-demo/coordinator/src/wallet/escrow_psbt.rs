@@ -117,7 +117,7 @@ pub fn build_escrow_transaction_output_descriptor(
 	let descriptor = Descriptor::<XOnlyPublicKey>::new_tr(internal_agg_musig_key, Some(tap_root))
 		.context("Error assembling escrow output descriptor")?;
 	descriptor.sanity_check()?;
-	// debug!("Escrow descriptor: {}", descriptor.address(network));
+	debug!("Escrow descriptor: {:#?}", descriptor);
 	Ok(descriptor) // then spend to descriptor.address(Network::Regtest)
 }
 
