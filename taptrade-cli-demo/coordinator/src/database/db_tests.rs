@@ -261,6 +261,9 @@ async fn test_fetch_suitable_offers() -> Result<()> {
 			50,                         // bond_amount_sat
 			"signedBondHex".to_string(),
 			"1PayoutAddress".to_string(),
+			"1ChangeAddressMaker".to_string(),
+			"escrowInputsHexMakerCSV1,PSBT1,PSBT2".to_string(),
+			"taprootPubkeyHexMaker1".to_string(),
 			"musigPubNonceHex".to_string(),
 			"musigPubkeyHex".to_string(),
 			"1TakerBondAddress".to_string(),
@@ -275,6 +278,9 @@ async fn test_fetch_suitable_offers() -> Result<()> {
 			100,                        // bond_amount_sat
 			"signedBondHex2".to_string(),
 			"2PayoutAddress".to_string(),
+			"2ChangeAddressMaker".to_string(),
+			"escrowInputsHexMakerCSV2,PSBT3,PSBT4".to_string(),
+			"taprootPubkeyHexMaker2".to_string(),
 			"musigPubNonceHex2".to_string(),
 			"musigPubkeyHex2".to_string(),
 			"2TakerBondAddress".to_string(),
@@ -283,24 +289,28 @@ async fn test_fetch_suitable_offers() -> Result<()> {
 
 	for offer in offers {
 		sqlx::query(
-                "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            )
-            .bind(offer.0)
-            .bind(hex::decode("a3f1f1f0e2f3f4f5").unwrap()) // Example robohash
-            .bind(offer.1)
-            .bind(offer.2)
-            .bind(offer.3)
-            .bind(offer.4)
-            .bind(offer.5.clone())
-            .bind(offer.6)
-            .bind(offer.7.clone())
-            .bind(offer.8.clone())
-            .bind(offer.9.clone())
-            .bind(offer.10.clone())
-            .bind(offer.11.clone())
-            .execute(&*database.db_pool)
-            .await?;
+        "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat,
+        bond_tx_hex, payout_address, change_address_maker, escrow_inputs_hex_maker_csv, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(offer.0)
+    .bind(hex::decode("a3f1f1f0e2f3f4f5").unwrap()) // Example robohash
+    .bind(offer.1)
+    .bind(offer.2)
+    .bind(offer.3)
+    .bind(offer.4)
+    .bind(offer.5)
+    .bind(offer.6)
+    .bind(offer.7)
+    .bind(offer.8)
+    .bind(offer.9)
+    .bind(offer.10)
+    .bind(offer.11)
+    .bind(offer.12)
+    .bind(offer.13)
+    .bind(offer.14)
+    .execute(&*database.db_pool)
+    .await?;
 	}
 
 	// Create a sample OffersRequest
@@ -337,24 +347,28 @@ async fn test_fetch_taker_bond_requirements() -> Result<()> {
 	let bond_amount_sat = 100;
 
 	sqlx::query(
-            "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(offer_id_hex)
-        .bind(hex::decode("a3f1f1f0e2f3f4f5").unwrap()) // Example robohash
-        .bind(true) // is_buy_order
-        .bind(1500) // amount_sat
-        .bind(50) // bond_ratio
-        .bind(1234567890) // offer_duration_ts
-        .bind("1BondAddress")
-        .bind(bond_amount_sat)
-        .bind("signedBondHex")
-        .bind("1PayoutAddress")
-        .bind("musigPubNonceHex")
-        .bind("musigPubkeyHex")
-        .bind(taker_bond_address)
-        .execute(&*database.db_pool)
-        .await?;
+    "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat,
+    bond_tx_hex, payout_address, change_address_maker, escrow_inputs_hex_maker_csv, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+	)
+	.bind(offer_id_hex)
+	.bind(hex::decode("a3f1f1f0e2f3f4f5").unwrap()) // Example robohash
+	.bind(true) // is_buy_order
+	.bind(1500) // amount_sat
+	.bind(50) // bond_ratio
+	.bind(1234567890) // offer_duration_ts
+	.bind("1BondAddress")
+	.bind(bond_amount_sat)
+	.bind("signedBondHex")
+	.bind("1PayoutAddress")
+	.bind("1ChangeAddressMaker")
+	.bind("escrowInputsHexMakerCSV,PSBT1,PSBT2")
+	.bind("taprootPubkeyHexMaker")
+	.bind("musigPubNonceHex")
+	.bind("musigPubkeyHex")
+	.bind(taker_bond_address)
+	.execute(&*database.db_pool)
+	.await?;
 
 	// Call the fetch_taker_bond_requirements function
 	let result = database
@@ -383,28 +397,36 @@ async fn test_fetch_and_delete_offer_from_public_offers_table() -> Result<()> {
 	let bond_amount_sat = 500;
 	let bond_tx_hex = "signedBondHex".to_string();
 	let payout_address = "1PayoutAddress".to_string();
+	let change_address_maker = "1ChangeAddressMaker".to_string();
+	let escrow_inputs_hex_maker_csv = "escrowInputsHexMakerCSV,PSBT1,PSBT2".to_string();
+	let taproot_pubkey_hex_maker = "taprootPubkeyHexMaker".to_string();
 	let musig_pub_nonce_hex = "musigPubNonceHex".to_string();
 	let musig_pubkey_hex = "musigPubkeyHex".to_string();
+	let taker_bond_address = "1TakerBondAddress".to_string();
 
 	sqlx::query(
-            "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, musig_pub_nonce_hex, musig_pubkey_hex)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        )
-        .bind(offer_id_hex)
-        .bind(robohash.clone())
-        .bind(is_buy_order)
-        .bind(amount_sat)
-        .bind(bond_ratio)
-        .bind(offer_duration_ts)
-        .bind(bond_address.clone())
-        .bind(bond_amount_sat)
-        .bind(bond_tx_hex.clone())
-        .bind(payout_address.clone())
-        .bind(musig_pub_nonce_hex.clone())
-        .bind(musig_pubkey_hex.clone())
-        .execute(&*database.db_pool)
-        .await?;
-
+    "INSERT INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat,
+    bond_tx_hex, payout_address, change_address_maker, escrow_inputs_hex_maker_csv, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+      .bind(offer_id_hex)
+      .bind(robohash.clone())
+      .bind(is_buy_order)
+      .bind(amount_sat)
+      .bind(bond_ratio)
+      .bind(offer_duration_ts)
+      .bind(bond_address.clone())
+      .bind(bond_amount_sat)
+      .bind(bond_tx_hex.clone())
+      .bind(payout_address.clone())
+      .bind(change_address_maker.clone())
+      .bind(escrow_inputs_hex_maker_csv.clone())
+      .bind(taproot_pubkey_hex_maker.clone())
+      .bind(musig_pub_nonce_hex.clone())
+      .bind(musig_pubkey_hex.clone())
+      .bind(taker_bond_address.clone())
+      .execute(&*database.db_pool)
+      .await?;
 	// Call the fetch_and_delete_offer_from_public_offers_table function
 	let result = database
 		.fetch_and_delete_offer_from_public_offers_table(offer_id_hex)

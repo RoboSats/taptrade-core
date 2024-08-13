@@ -134,6 +134,7 @@ async fn test_transaction_without_signature() {
 		.validate_bond_tx_hex(&bond_without_signature, &requirements)
 		.await;
 	assert!(result.is_err());
+	test_wallet.shutdown().await;
 }
 
 #[tokio::test]
@@ -151,6 +152,7 @@ async fn test_transaction_with_invalid_signature() {
 		.validate_bond_tx_hex(&bond_with_invalid_signature, &requirements)
 		.await;
 	assert!(result.is_err());
+	test_wallet.shutdown().await;
 }
 
 #[tokio::test]
@@ -167,6 +169,7 @@ async fn test_bond_with_spent_input() {
 		.validate_bond_tx_hex(&bond_with_spent_input, &requirements)
 		.await;
 	assert!(result.is_err());
+	test_wallet.shutdown().await;
 }
 
 #[tokio::test]
@@ -181,6 +184,7 @@ async fn test_valid_bond_tx() {
 
 	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
 	assert!(result.is_ok());
+	test_wallet.shutdown().await;
 }
 
 #[tokio::test]
@@ -199,6 +203,7 @@ async fn test_invalid_bond_tx_low_input_sum() {
 		.unwrap_err()
 		.to_string()
 		.contains("Bond input sum too small"));
+	test_wallet.shutdown().await;
 }
 
 #[tokio::test]
@@ -212,6 +217,7 @@ async fn test_invalid_bond_tx_low_output_sum() {
 	};
 
 	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	test_wallet.shutdown().await;
 	assert!(result.is_err());
 	assert!(result
 		.unwrap_err()
@@ -230,6 +236,7 @@ async fn test_invalid_bond_tx_low_fee_rate() {
 	};
 
 	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	test_wallet.shutdown().await;
 	assert!(result.is_err());
 	assert!(result
 		.unwrap_err()
