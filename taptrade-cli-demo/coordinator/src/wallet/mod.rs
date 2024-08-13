@@ -1,4 +1,5 @@
 pub mod escrow_psbt;
+pub mod payout_tx;
 pub mod wallet_utils;
 // pub mod verify_tx;
 #[cfg(test)]

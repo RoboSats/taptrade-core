@@ -8,14 +8,9 @@ use bdk::{
 	bitcoin::{psbt::Input, Network},
 	blockchain::RpcBlockchain,
 	database::MemoryDatabase,
-	miniscript::{
-		descriptor::{self},
-		policy::Concrete,
-		Descriptor, Tap,
-	},
+	miniscript::{policy::Concrete, Descriptor, Tap},
 	Wallet,
 };
-use sha2::digest::XofReader;
 
 async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 	dotenv().ok();
@@ -323,4 +318,44 @@ fn test_miniscript_compilation() {
 	let descriptor =
 		Descriptor::<XOnlyPublicKey>::new_tr(internal_key, Some(tap_tree_root)).unwrap();
 	dbg!(descriptor.address(bdk::bitcoin::Network::Regtest).unwrap());
+}
+
+#[test]
+fn test_create_escrow_spending_psbt() {
+	dotenv().ok();
+	let test_descriptor = "tr(f00949d6dd1ce99a03f88a1a4f59117d553b0da51728bb7fd5b98fbf541337fb,{{and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(8f808f457423ff5e4e20a36d317ce9426f9da2fde875e74e15a04481b94bec06)),and_v(v:pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151),pk(8f808f457423ff5e4e20a36d317ce9426f9da2fde875e74e15a04481b94bec06))},{and_v(v:and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151)),after(2048)),and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),after(12228))}})#0edq24m2";
+
+	let escrow_output_wallet = Wallet::new(
+		test_descriptor,
+		None,
+		Network::Regtest,
+		MemoryDatabase::new(),
+	)
+	.unwrap();
+	let secp_context = secp256k1::Secp256k1::new();
+	let rpc_config = RpcConfig {
+		url: env::var("BITCOIN_RPC_ADDRESS_PORT").unwrap().to_string(),
+		auth: Auth::UserPass {
+			username: env::var("BITCOIN_RPC_USER").unwrap(),
+			password: env::var("BITCOIN_RPC_PASSWORD").unwrap(),
+		},
+		network: Regtest,
+		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		wallet_name: bdk::wallet::wallet_name_from_descriptor(
+			test_descriptor,
+			None,
+			Network::Regtest,
+			&secp_context,
+		)
+		.unwrap(),
+		sync_params: None,
+	};
+	let backend = RpcBlockchain::from_config(&rpc_config).unwrap();
+	escrow_output_wallet
+		.sync(&backend, SyncOptions::default())
+		.unwrap();
+
+	let escrow_utxo = escrow_output_wallet.list_unspent().unwrap();
+	dbg!(&escrow_utxo);
+	assert!(escrow_utxo.len() > 0);
 }
