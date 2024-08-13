@@ -13,6 +13,15 @@ Therefore the implementation of a purely on-chain pipeline would enable larger t
 
 ## Architecture
 
+### Trade pipeline
+Insert protocol flow diagram
+
+### Communication
+HTTP Api
+
+### Implementation
+BDK+RustBitcoin+MuSig2+Axum+SQlite+Tokio+...
+
 ## Status
 
 ## Contribution
