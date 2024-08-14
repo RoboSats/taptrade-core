@@ -50,11 +50,12 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&offer.offer_id_hex, maker_config)?;
 		info!("Waiting for other party to confirm the trade.");
-		let (payout_keyspend_psbt, agg_pub_nonce) =
+		let (payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx) =
 			IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
+
 		let signed_payout_psbt = wallet
 			.validate_payout_psbt(&payout_keyspend_psbt)?
-			.sign_payout_psbt(payout_keyspend_psbt, agg_pub_nonce)?;
+			.sign_payout_psbt(payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx)?;
 		// submit signed payout psbt back to coordinator
 		panic!("Payout to be implemented!");
 	} else {

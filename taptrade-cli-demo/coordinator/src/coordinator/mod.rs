@@ -333,6 +333,7 @@ pub async fn handle_final_payout(
 		return Ok(PayoutProcessingResult::ReadyPSBT(PayoutResponse {
 			payout_psbt_hex: payout_keyspend_psbt_hex,
 			agg_musig_nonce_hex: escrow_payout_data.agg_musig_nonce.to_string(),
+			agg_musig_pubkey_ctx_hex: escrow_payout_data.aggregated_musig_pubkey_ctx_hex,
 		}));
 	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
 		&& !trader_happiness.escrow_ongoing

@@ -37,7 +37,7 @@ impl EscrowPsbtConstructionData {
 pub fn aggregate_musig_pubkeys(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
-) -> Result<XOnlyPublicKey> {
+) -> Result<KeyAggContext> {
 	debug!(
 		"Aggregating musig pubkeys: {} and {}",
 		maker_musig_pubkey, taker_musig_pubkey
@@ -48,11 +48,7 @@ pub fn aggregate_musig_pubkeys(
 	];
 
 	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;
-	let agg_pk: MuSig2PubKey = key_agg_ctx.aggregated_pubkey();
-	let bitcoin_pk = bdk::bitcoin::PublicKey::from_slice(&agg_pk.serialize())
-		.context("Error converting musig pk to bitcoin pk")?
-		.to_x_only_pubkey();
-	Ok(bitcoin_pk)
+	Ok(key_agg_ctx)
 }
 
 /// this function builds the escrow output with all possible spending conditions
@@ -107,10 +103,15 @@ pub fn build_escrow_transaction_output_descriptor(
 	let tap_root = TapTree::Tree(Arc::new(tap_node_ab), Arc::new(tap_node_cd));
 
 	// An internal key, that defines the way to spend the transaction directly, using Key Path Spending
-	let internal_agg_musig_key: XOnlyPublicKey = aggregate_musig_pubkeys(
+	let key_agg_ctx: KeyAggContext = aggregate_musig_pubkeys(
 		&maker_escrow_data.musig_pubkey_compressed_hex,
 		&taker_escrow_data.musig_pubkey_compressed_hex,
 	)?;
+	let internal_agg_musig_key: XOnlyPublicKey = bdk::bitcoin::PublicKey::from_slice(
+		&key_agg_ctx.aggregated_pubkey::<MuSig2PubKey>().serialize(),
+	)
+	.context("Error converting musig pk to bitcoin pk")?
+	.to_x_only_pubkey();
 
 	// Create the descriptor
 	let descriptor = Descriptor::<XOnlyPublicKey>::new_tr(internal_agg_musig_key, Some(tap_root))

@@ -95,6 +95,7 @@ pub struct PsbtSubmissionRequest {
 pub struct PayoutResponse {
 	pub payout_psbt_hex: String,
 	pub agg_musig_nonce_hex: String,
+	pub agg_musig_pubkey_ctx_hex: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

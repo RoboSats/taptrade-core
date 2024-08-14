@@ -3,6 +3,7 @@ mod db_tests;
 
 use anyhow::Context;
 use futures_util::StreamExt;
+use musig2::BinaryEncoding;
 use serde::de::IntoDeserializer;
 
 use super::*;
@@ -858,7 +859,8 @@ impl CoordinatorDB {
 		let row = sqlx::query(
 			"SELECT escrow_output_descriptor, payout_address_maker,
 			payout_address_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
-			escrow_amount_maker_sat, escrow_amount_taker_sat
+			escrow_amount_maker_sat, escrow_amount_taker_sat, musig_pubkey_compressed_hex_maker,
+			musig_pubkey_compressed_hex_taker
 			FROM taken_offers WHERE offer_id = ?",
 		)
 		.bind(trade_id)
@@ -873,6 +875,8 @@ impl CoordinatorDB {
 		let musig_pub_nonce_hex_taker: &str = row.try_get("musig_pub_nonce_hex_taker")?;
 		let payout_amount_maker: u64 = row.try_get::<i64, _>("escrow_amount_maker_sat")? as u64;
 		let payout_amount_taker: u64 = row.try_get::<i64, _>("escrow_amount_taker_sat")? as u64;
+		let musig_pubkey_hex_maker: &str = row.try_get("musig_pubkey_compressed_hex_maker")?;
+		let musig_pubkey_hex_taker: &str = row.try_get("musig_pubkey_compressed_hex_taker")?;
 
 		PayoutData::new_from_strings(
 			escrow_output_descriptor,
@@ -882,6 +886,8 @@ impl CoordinatorDB {
 			payout_amount_taker,
 			musig_pub_nonce_hex_maker,
 			musig_pub_nonce_hex_taker,
+			musig_pubkey_hex_maker,
+			musig_pubkey_hex_taker,
 		)
 	}
 }

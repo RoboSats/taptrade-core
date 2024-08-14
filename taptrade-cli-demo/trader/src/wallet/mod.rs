@@ -7,21 +7,23 @@ use crate::{
 	cli::TraderSettings,
 	communication::api::{BondRequirementResponse, OfferTakenResponse},
 };
-use ::musig2::AggNonce;
-use anyhow::{anyhow, Result};
+use ::musig2::{AggNonce, KeyAggContext};
+use anyhow::{anyhow, Context, Result};
 use bdk::{
 	bitcoin::{
 		self,
 		bip32::ExtendedPrivKey,
 		consensus::encode::serialize_hex,
+		hashes::Hash,
 		key::{KeyPair, Secp256k1, XOnlyPublicKey},
-		psbt::{serialize, Input, PartiallySignedTransaction},
-		Address, Network,
+		psbt::{serialize, Input, PartiallySignedTransaction, Prevouts},
+		sighash::{SighashCache, TapSighash, TapSighashType},
+		Address, Network, TxOut,
 	},
 	blockchain::ElectrumBlockchain,
 	database::{Database, MemoryDatabase},
 	electrum_client::Client,
-	keys::DescriptorPublicKey,
+	keys::{DescriptorPublicKey, ValidNetworks},
 	miniscript::{descriptor::Tr, Descriptor},
 	template::{Bip86, DescriptorTemplate},
 	wallet::{AddressIndex, AddressInfo},
@@ -207,11 +209,31 @@ impl TradingWallet {
 		Ok(self)
 	}
 
-	pub fn sign_payout_psbt(
+	/// creates a partitial signature to spend the keyspend path of the escrow output
+	/// which will be returned to the coordinator for aggregation
+	pub fn sign_keyspend_payout_psbt(
 		&self,
-		psbt: PartiallySignedTransaction,
+		validated_payout_psbt: PartiallySignedTransaction,
+		key_agg_context: KeyAggContext,
 		agg_pub_nonce: AggNonce,
-	) -> Result<PartiallySignedTransaction> {
+	) -> Result<String> {
+		let payout_tx = validated_payout_psbt.extract_tx();
+		let sig_hash_cache = SighashCache::new(payout_tx);
+
+		let utxo = validated_payout_psbt
+			.iter_funding_utxos()
+			.next()
+			.ok_or(anyhow!("No UTXO found in payout psbt"))??
+			.clone();
+
+		// get the msg (sighash) to sign with the musig key
+		let keyspend_sig_hash_msg = sig_hash_cache
+			.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), TapSighashType::All)
+			.context("Failed to create keyspend sighash")?
+			.as_byte_array();
+
+		panic!("Implement keyspend signing");
+
 		Ok(signed_psbt)
 	}
 }

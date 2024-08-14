@@ -14,7 +14,7 @@ use bdk::{
 	bitcoin::{consensus::Encodable, psbt::PartiallySignedTransaction},
 	wallet::AddressInfo,
 };
-use musig2::AggNonce;
+use musig2::{AggNonce, KeyAggContext};
 use serde::{Deserialize, Serialize};
 use std::{f32::consts::E, str::FromStr, thread::sleep, time::Duration};
 
@@ -248,7 +248,7 @@ impl IsOfferReadyRequest {
 	pub fn poll_payout(
 		trader_config: &TraderSettings,
 		offer: &ActiveOffer,
-	) -> Result<(PartiallySignedTransaction, AggNonce)> {
+	) -> Result<(PartiallySignedTransaction, AggNonce, KeyAggContext)> {
 		let request = IsOfferReadyRequest {
 			robohash_hex: trader_config.robosats_robohash_hex.clone(),
 			offer_id_hex: offer.offer_id_hex.clone(),
@@ -295,7 +295,9 @@ impl IsOfferReadyRequest {
 		let final_psbt = PartiallySignedTransaction::from_str(&payout_response.payout_psbt_hex)?;
 		let agg_nonce = AggNonce::from_str(&payout_response.agg_musig_nonce_hex)
 			.map_err(|e| anyhow!("Error parsing agg nonce: {}", e))?;
-		Ok((final_psbt, agg_nonce))
+		let agg_pubk_ctx = KeyAggContext::from_hex(&payout_response.agg_musig_nonce_hex)
+			.map_err(|e| anyhow!("Error parsing agg pubkey ctx: {}", e))?;
+		Ok((final_psbt, agg_nonce, agg_pubk_ctx))
 	}
 }
 
