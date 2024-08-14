@@ -1,5 +1,4 @@
 use super::*;
-use axum::routing::trace;
 use bdk::{
 	bitcoin::{psbt::PartiallySignedTransaction, PublicKey},
 	descriptor::{policy, Descriptor},

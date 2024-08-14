@@ -7,6 +7,7 @@ use crate::{
 	cli::TraderSettings,
 	communication::api::{BondRequirementResponse, OfferTakenResponse},
 };
+use ::musig2::AggNonce;
 use anyhow::{anyhow, Result};
 use bdk::{
 	bitcoin::{
@@ -196,5 +197,21 @@ impl TradingWallet {
 		// tbd once the trade psbt is implemented on coordinator side
 
 		Ok(self)
+	}
+
+	pub fn validate_payout_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
+		warn!("IMPLEMENT PAYOUT PSBT VALIDATION for production use!");
+		// validate: change output address, amounts, fee
+		// tbd once the trade psbt is implemented on coordinator side
+
+		Ok(self)
+	}
+
+	pub fn sign_payout_psbt(
+		&self,
+		psbt: PartiallySignedTransaction,
+		agg_pub_nonce: AggNonce,
+	) -> Result<PartiallySignedTransaction> {
+		Ok(signed_psbt)
 	}
 }

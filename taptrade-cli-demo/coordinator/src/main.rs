@@ -13,6 +13,7 @@ use coordinator::{
 use database::CoordinatorDB;
 use dotenvy::dotenv;
 use log::{debug, error, info, trace, warn};
+use musig2::{AggNonce as MusigAggNonce, PubNonce as MusigPubNonce};
 use rand::Rng;
 use std::{
 	env,

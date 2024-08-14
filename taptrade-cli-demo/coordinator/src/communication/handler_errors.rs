@@ -21,6 +21,7 @@ pub enum FetchEscrowConfirmationError {
 pub enum RequestError {
 	Database(String),
 	NotConfirmed,
+	CoordinatorError(String),
 	NotFound,
 	PsbtAlreadySubmitted,
 	PsbtInvalid(String),

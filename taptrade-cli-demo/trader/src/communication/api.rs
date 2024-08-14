@@ -110,11 +110,11 @@ pub struct TradeObligationsSatisfied {
 	pub offer_id_hex: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct PayoutPsbtResponse {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PayoutResponse {
 	pub payout_psbt_hex: String,
+	pub agg_musig_nonce_hex: String,
 }
-
 #[derive(Debug, Serialize)]
 pub struct TradeObligationsUnsatisfied {
 	pub robohash_hex: String,

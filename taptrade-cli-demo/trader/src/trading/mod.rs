@@ -50,7 +50,13 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		// this represents the "confirm payment" / "confirm fiat recieved" button
 		TradeObligationsSatisfied::submit(&offer.offer_id_hex, maker_config)?;
 		info!("Waiting for other party to confirm the trade.");
-		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
+		let (payout_keyspend_psbt, agg_pub_nonce) =
+			IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
+		let signed_payout_psbt = wallet
+			.validate_payout_psbt(&payout_keyspend_psbt)?
+			.sign_payout_psbt(payout_keyspend_psbt, agg_pub_nonce)?;
+		// submit signed payout psbt back to coordinator
+		panic!("Payout to be implemented!");
 	} else {
 		error!("Trade failed. Initiating escrow mode.");
 		TradeObligationsUnsatisfied::request_escrow(&offer.offer_id_hex, maker_config)?;

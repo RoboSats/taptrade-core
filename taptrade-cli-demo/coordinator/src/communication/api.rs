@@ -92,6 +92,12 @@ pub struct PsbtSubmissionRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PayoutResponse {
+	pub payout_psbt_hex: String,
+	pub agg_musig_nonce_hex: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TradeObligationsUnsatisfied {
 	pub robohash_hex: String,
 	pub offer_id_hex: String,

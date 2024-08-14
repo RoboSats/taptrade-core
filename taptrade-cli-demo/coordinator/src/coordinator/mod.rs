@@ -317,12 +317,23 @@ pub async fn handle_final_payout(
 	if trader_happiness.maker_happy.is_some_and(|x| x)
 		&& trader_happiness.taker_happy.is_some_and(|x| x)
 	{
-		panic!("Implement wallet.assemble_keyspend_payout_psbt()");
-	// let payout_keyspend_psbt_hex = wallet
-	// 	.assemble_keyspend_payout_psbt(&payload.offer_id_hex, &payload.robohash_hex)
-	// 	.await
-	// 	.context("Error assembling payout PSBT")?;
-	// return Ok(PayoutProcessingResult::ReadyPSBT(payout_keyspend_psbt_hex));
+		let escrow_payout_data = match database.fetch_payout_data(&payload.offer_id_hex).await {
+			Ok(payout_data) => payout_data,
+			Err(e) => return Err(RequestError::Database(e.to_string())),
+		};
+
+		let payout_keyspend_psbt_hex = match coordinator
+			.coordinator_wallet
+			.assemble_keyspend_payout_psbt(&escrow_payout_data)
+			.await
+		{
+			Ok(psbt_hex) => psbt_hex,
+			Err(e) => return Err(RequestError::CoordinatorError(e.to_string())),
+		};
+		return Ok(PayoutProcessingResult::ReadyPSBT(PayoutResponse {
+			payout_psbt_hex: payout_keyspend_psbt_hex,
+			agg_musig_nonce_hex: escrow_payout_data.agg_musig_nonce.to_string(),
+		}));
 	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
 		&& !trader_happiness.escrow_ongoing
 	{

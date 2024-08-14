@@ -853,4 +853,35 @@ impl CoordinatorDB {
 			musig_pubkey_compressed_hex: row.get("musig_pubkey_hex"),
 		})
 	}
+
+	pub async fn fetch_payout_data(&self, trade_id: &str) -> Result<PayoutData> {
+		let row = sqlx::query(
+			"SELECT escrow_output_descriptor, payout_address_maker,
+			payout_address_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
+			escrow_amount_maker_sat, escrow_amount_taker_sat
+			FROM taken_offers WHERE offer_id = ?",
+		)
+		.bind(trade_id)
+		.fetch_one(&*self.db_pool)
+		.await
+		.context("SQL query to fetch escrow_ouput_descriptor failed.")?;
+
+		let escrow_output_descriptor = row.try_get("escrow_output_descriptor")?;
+		let payout_address_maker = row.try_get("payout_address_maker")?;
+		let payout_address_taker = row.try_get("payout_address_taker")?;
+		let musig_pub_nonce_hex_maker: &str = row.try_get("musig_pub_nonce_hex_maker")?;
+		let musig_pub_nonce_hex_taker: &str = row.try_get("musig_pub_nonce_hex_taker")?;
+		let payout_amount_maker: u64 = row.try_get::<i64, _>("escrow_amount_maker_sat")? as u64;
+		let payout_amount_taker: u64 = row.try_get::<i64, _>("escrow_amount_taker_sat")? as u64;
+
+		PayoutData::new_from_strings(
+			escrow_output_descriptor,
+			payout_address_maker,
+			payout_address_taker,
+			payout_amount_maker,
+			payout_amount_taker,
+			musig_pub_nonce_hex_maker,
+			musig_pub_nonce_hex_taker,
+		)
+	}
 }

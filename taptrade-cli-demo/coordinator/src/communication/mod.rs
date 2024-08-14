@@ -237,7 +237,9 @@ async fn poll_final_payout(
 	match handle_final_payout(&payload, coordinator).await {
 		Ok(PayoutProcessingResult::NotReady) => Ok(StatusCode::ACCEPTED.into_response()),
 		Ok(PayoutProcessingResult::LostEscrow) => Ok(StatusCode::GONE.into_response()),
-		Ok(PayoutProcessingResult::ReadyPSBT(psbt)) => Ok(psbt.into_response()),
+		Ok(PayoutProcessingResult::ReadyPSBT(psbt_and_nonce)) => {
+			Ok(Json(psbt_and_nonce).into_response())
+		}
 		Ok(PayoutProcessingResult::DecidingEscrow) => Ok(StatusCode::PROCESSING.into_response()),
 		Err(RequestError::NotConfirmed) => {
 			info!("Offer tx for final payout not confirmed");
