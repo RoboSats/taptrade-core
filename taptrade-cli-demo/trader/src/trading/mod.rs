@@ -13,7 +13,7 @@ use crate::{
 	},
 	wallet::{
 		bond::Bond,
-		musig2::{MuSigData, MusigNonce},
+		musig2_utils::{MuSigData, MusigNonce},
 		TradingWallet,
 	},
 };
@@ -55,7 +55,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 
 		let signed_payout_psbt = wallet
 			.validate_payout_psbt(&payout_keyspend_psbt)?
-			.sign_payout_psbt(payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx)?;
+			.sign_keyspend_payout_psbt(payout_keyspend_psbt, agg_pubk_ctx, agg_pub_nonce, local_musig_state: &offer.used_musig_config)?;
 		// submit signed payout psbt back to coordinator
 		panic!("Payout to be implemented!");
 	} else {

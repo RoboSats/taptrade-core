@@ -3,14 +3,11 @@ use crate::wallet::{wallet_utils::get_seed, KeychainKind};
 use anyhow::{anyhow, Error, Result};
 use bdk::bitcoin::secp256k1::PublicKey;
 use bdk::{
-	bitcoin::{
-		bip32::ExtendedPrivKey,
-		secp256k1::{All, SecretKey},
-	},
+	bitcoin::{bip32::ExtendedPrivKey, secp256k1::All},
 	keys::{DescriptorPublicKey, DescriptorSecretKey},
 	template::{Bip86, DescriptorTemplate},
 };
-use musig2::{PubNonce, SecNonce, SecNonceBuilder};
+use musig2::{secp256k1::SecretKey as MusigSecretKey, PubNonce, SecNonce, SecNonceBuilder};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 // https://docs.rs/musig2/latest/musig2/
@@ -19,7 +16,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct MuSigData {
 	pub nonce: MusigNonce,
 	pub public_key: PublicKey,
-	pub secret_key: SecretKey,
+	pub secret_key: MusigSecretKey,
 }
 
 // secret nonce has to be used only one time!
@@ -70,10 +67,13 @@ impl MuSigData {
 		let nonce = MusigNonce::generate()?;
 		let keypair = xprv.to_owned().to_keypair(secp_ctx); // double check keypair, which derivation should we use?
 
+		// convert from bdk secp to musig crate secp for the traits needed to do sig agg
+		let musig_type_secret_key = MusigSecretKey::from_slice(&keypair.secret_bytes())?;
+
 		Ok(MuSigData {
 			nonce,
 			public_key: keypair.public_key(),
-			secret_key: keypair.secret_key(),
+			secret_key: musig_type_secret_key,
 		})
 	}
 }

@@ -1,5 +1,5 @@
 pub mod bond;
-pub mod musig2;
+pub mod musig2_utils;
 pub mod wallet_utils;
 
 use super::*;
@@ -31,7 +31,9 @@ use bdk::{
 };
 use bond::Bond;
 use cli::OfferType;
-use musig2::MuSigData;
+use hex::ToHex;
+use musig2::secp::MaybeScalar;
+use musig2_utils::MuSigData;
 use serde::Serialize;
 use std::{ops::Add, str::FromStr};
 use wallet_utils::get_seed;
@@ -216,9 +218,10 @@ impl TradingWallet {
 		validated_payout_psbt: PartiallySignedTransaction,
 		key_agg_context: KeyAggContext,
 		agg_pub_nonce: AggNonce,
+		local_musig_state: &MuSigData,
 	) -> Result<String> {
 		let payout_tx = validated_payout_psbt.extract_tx();
-		let sig_hash_cache = SighashCache::new(payout_tx);
+		let mut sig_hash_cache = SighashCache::new(payout_tx);
 
 		let utxo = validated_payout_psbt
 			.iter_funding_utxos()
@@ -232,8 +235,22 @@ impl TradingWallet {
 			.context("Failed to create keyspend sighash")?
 			.as_byte_array();
 
-		panic!("Implement keyspend signing");
+		let secret_nonce = local_musig_state.nonce.get_sec_for_signing()?;
+		let seckey = local_musig_state.secret_key;
 
-		Ok(signed_psbt)
+		let keyspend_sig: musig2::PartialSignature = musig2::sign_partial(
+			&key_agg_context,
+			seckey,
+			secret_nonce,
+			&agg_pub_nonce,
+			keyspend_sig_hash_msg,
+		)?;
+
+		match keyspend_sig {
+			MaybeScalar::Valid(s) => Ok(s.encode_hex()),
+			MaybeScalar::Zero => {
+				return Err(anyhow!("keyspend sig maybe scalar is Zero"));
+			}
+		}
 	}
 }
