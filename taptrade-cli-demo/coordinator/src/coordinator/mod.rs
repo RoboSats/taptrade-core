@@ -37,51 +37,28 @@ pub async fn handle_maker_bond(
 	let wallet = &coordinator.coordinator_wallet;
 	let database = &coordinator.coordinator_db;
 
-	let bond_requirements = if let Ok(requirements) = database
+	let bond_requirements = database
 		.fetch_bond_requirements(&payload.robohash_hex)
 		.await
-	{
-		requirements
-	} else {
-		return Err(BondError::BondNotFound);
-	};
+		.map_err(|_| BondError::BondNotFound)?;
 
-	match wallet
+	wallet
 		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
 		.await
-	{
-		Ok(()) => (),
-		Err(e) => {
-			return Err(BondError::InvalidBond(e.to_string()));
-		}
-	}
+		.map_err(|e| BondError::InvalidBond(e.to_string()))?;
 	debug!("\nBond validation successful");
 	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 														 // create address for taker bond
-	let new_taker_bond_address = match wallet.get_new_address().await {
-		Ok(address) => address,
-		Err(e) => {
-			let error = format!(
-				"Error generating taker bond address for offer id: {}. Error: {e}",
-				offer_id_hex
-			);
-			return Err(BondError::CoordinatorError(error.to_string()));
-		}
-	};
-	// insert bond into sql database and move offer to different table
-	let bond_locked_until_timestamp = match database
+	let new_taker_bond_address = wallet
+		.get_new_address()
+		.await
+		.map_err(|e| BondError::CoordinatorError(e.to_string()))?;
+
+	let bond_locked_until_timestamp = database
 		.move_offer_to_active(payload, &offer_id_hex, new_taker_bond_address)
 		.await
-	{
-		Ok(timestamp) => timestamp,
-		Err(e) => {
-			debug!(
-				"Error in validate_bond_tx_hex in move_offer_to_active: {}",
-				e
-			);
-			return Err(BondError::CoordinatorError(e.to_string()));
-		}
-	};
+		.map_err(|e| BondError::CoordinatorError(e.to_string()))?;
+
 	Ok(OfferActivatedResponse {
 		bond_locked_until_timestamp,
 		offer_id_hex,
@@ -94,12 +71,11 @@ pub async fn get_public_offers(
 ) -> Result<PublicOffers, FetchOffersError> {
 	let database = &coordinator.coordinator_db;
 
-	let offers = match database.fetch_suitable_offers(request).await {
-		Ok(offers) => offers,
-		Err(e) => {
-			return Err(FetchOffersError::Database(e.to_string()));
-		}
-	};
+	let offers = database
+		.fetch_suitable_offers(request)
+		.await
+		.map_err(|e| FetchOffersError::Database(e.to_string()))?;
+
 	if offers.is_none() {
 		return Err(FetchOffersError::NoOffersAvailable);
 	}
@@ -115,41 +91,30 @@ pub async fn handle_taker_bond(
 
 	let bond_requirements = database
 		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
-		.await;
+		.await
+		.map_err(|_| BondError::BondNotFound)?;
 
-	match bond_requirements {
-		Ok(bond_requirements) => {
-			match wallet
-				.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
-				.await
-			{
-				Ok(()) => (),
-				Err(e) => {
-					return Err(BondError::InvalidBond(e.to_string()));
-				}
-			}
-		}
-		Err(_) => return Err(BondError::BondNotFound),
-	}
+	wallet
+		.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
+		.await
+		.map_err(|e| BondError::InvalidBond(e.to_string()))?;
+
 	debug!("\nTaker bond validation successful");
 
-	let escrow_output_data = match wallet.create_escrow_psbt(database, &payload).await {
-		Ok(escrow_output_data) => escrow_output_data,
-		Err(e) => {
-			return Err(BondError::CoordinatorError(e.to_string()));
-		}
-	};
+	let escrow_output_data = wallet
+		.create_escrow_psbt(database, &payload)
+		.await
+		.map_err(|e| BondError::CoordinatorError(e.to_string()))?;
 	debug!(
 		"\nEscrow PSBT creation successful: {:?}",
 		escrow_output_data
 	);
 
-	if let Err(e) = database
+	database
 		.add_taker_info_and_move_table(payload, &escrow_output_data)
 		.await
-	{
-		return Err(BondError::CoordinatorError(e.to_string()));
-	}
+		.map_err(|e| BondError::CoordinatorError(e.to_string()))?;
+
 	trace!("Taker information added to database and moved table successfully");
 	Ok(OfferTakenResponse {
 		escrow_psbt_hex: escrow_output_data.escrow_psbt_hex,
@@ -209,13 +174,10 @@ pub async fn fetch_escrow_confirmation_status(
 		Err(e) => return Err(FetchEscrowConfirmationError::Database(e.to_string())),
 	}
 
-	match database
+	database
 		.fetch_escrow_tx_confirmation_status(&payload.offer_id_hex)
 		.await
-	{
-		Ok(status) => Ok(status),
-		Err(e) => return Err(FetchEscrowConfirmationError::Database(e.to_string())),
-	}
+		.map_err(|e| FetchEscrowConfirmationError::Database(e.to_string()))
 }
 
 pub async fn handle_signed_escrow_psbt(
@@ -234,13 +196,11 @@ pub async fn handle_signed_escrow_psbt(
 		Err(e) => return Err(RequestError::Database(e.to_string())),
 	};
 
-	match wallet
+	wallet
 		.validate_escrow_init_psbt(&payload.signed_psbt_hex)
 		.await
-	{
-		Ok(()) => (),
-		Err(e) => return Err(RequestError::PsbtInvalid(e.to_string())),
-	};
+		.map_err(|e| RequestError::PsbtInvalid(e.to_string()))?;
+
 	match database.insert_signed_escrow_psbt(payload).await {
 		Ok(false) => return Err(RequestError::PsbtAlreadySubmitted),
 		Ok(true) => (),
@@ -257,12 +217,10 @@ pub async fn handle_signed_escrow_psbt(
 		Err(e) => return Err(RequestError::Database(e.to_string())),
 	};
 
-	if let Err(e) = wallet
+	wallet
 		.combine_and_broadcast_escrow_psbt(&maker_psbt, &taker_psbt)
 		.await
-	{
-		return Err(RequestError::PsbtInvalid(e.to_string()));
-	}
+		.map_err(|e| RequestError::PsbtInvalid(e.to_string()))?;
 
 	Ok(())
 }
@@ -274,12 +232,10 @@ pub async fn handle_obligation_confirmation(
 	let database = &coordinator.coordinator_db;
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
-	if let Err(e) = database
+	database
 		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, true)
 		.await
-	{
-		return Err(RequestError::Database(e.to_string()));
-	}
+		.map_err(|e| RequestError::Database(e.to_string()))?;
 	Ok(())
 }
 
@@ -290,13 +246,10 @@ pub async fn initiate_escrow(
 	let database = &coordinator.coordinator_db;
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
-
-	if let Err(e) = database
+	database
 		.set_trader_happy_field(&payload.offer_id_hex, &payload.robohash_hex, false)
 		.await
-	{
-		return Err(RequestError::Database(e.to_string()));
-	}
+		.map_err(|e| RequestError::Database(e.to_string()))?;
 
 	Ok(())
 }
@@ -307,29 +260,30 @@ pub async fn handle_final_payout(
 ) -> Result<PayoutProcessingResult, RequestError> {
 	let database = &coordinator.coordinator_db;
 
-	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
-
-	let trader_happiness = match database.fetch_trader_happiness(&payload.offer_id_hex).await {
-		Ok(happiness) => happiness,
-		Err(e) => return Err(RequestError::Database(e.to_string())),
-	};
+	let trader_happiness = database
+		.fetch_trader_happiness(&payload.offer_id_hex)
+		.await
+		.map_err(|e| RequestError::Database(e.to_string()))?;
 
 	if trader_happiness.maker_happy.is_some_and(|x| x)
 		&& trader_happiness.taker_happy.is_some_and(|x| x)
 	{
-		let escrow_payout_data = match database.fetch_payout_data(&payload.offer_id_hex).await {
-			Ok(payout_data) => payout_data,
-			Err(e) => return Err(RequestError::Database(e.to_string())),
-		};
+		let escrow_payout_data = database
+			.fetch_payout_data(&payload.offer_id_hex)
+			.await
+			.map_err(|e| RequestError::Database(e.to_string()))?;
 
-		let payout_keyspend_psbt_hex = match coordinator
+		let payout_keyspend_psbt_hex = coordinator
 			.coordinator_wallet
 			.assemble_keyspend_payout_psbt(&escrow_payout_data)
 			.await
-		{
-			Ok(psbt_hex) => psbt_hex,
-			Err(e) => return Err(RequestError::CoordinatorError(e.to_string())),
-		};
+			.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
+
+		database
+			.insert_keyspend_payout_psbt(&payload.offer_id_hex, &payout_keyspend_psbt_hex)
+			.await
+			.map_err(|e| RequestError::Database(e.to_string()))?;
+
 		return Ok(PayoutProcessingResult::ReadyPSBT(PayoutResponse {
 			payout_psbt_hex: payout_keyspend_psbt_hex,
 			agg_musig_nonce_hex: escrow_payout_data.agg_musig_nonce.to_string(),
@@ -367,4 +321,39 @@ pub async fn handle_final_payout(
 		// this will be returned if the coordinator hasn't decided yet
 		Ok(PayoutProcessingResult::DecidingEscrow)
 	}
+}
+
+pub async fn handle_payout_signature(
+	payload: &PayoutSignatureRequest,
+	coordinator: Arc<Coordinator>,
+) -> Result<(), RequestError> {
+	let database = &coordinator.coordinator_db;
+	let wallet = &coordinator.coordinator_wallet;
+
+	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
+
+	let (maker_partitial_sig_hex, taker_partitial_sig_hex, payout_psbt_hex) = match database
+		.insert_partitial_sig_and_fetch_if_both(
+			&payload.partitial_sig_hex,
+			&payload.offer_id_hex,
+			&payload.robohash_hex,
+		)
+		.await
+	{
+		Ok(Some((maker_partitial_sig, taker_partitial_sig, payout_transaction_psbt_hex))) => (
+			maker_partitial_sig,
+			taker_partitial_sig,
+			bdk::bitcoin::psbt::PartiallySignedTransaction::deserialize(
+				&hex::decode(payout_transaction_psbt_hex)
+					.map_err(|e| RequestError::CoordinatorError(e.to_string()))?,
+			),
+		),
+		Ok(None) => return Ok(()),
+		Err(e) => return Err(RequestError::Database(e.to_string())),
+	};
+
+	let aggregated_signature = wallet
+		.aggregate_partitial_signatures(&maker_partitial_sig_hex, &taker_partitial_sig_hex)?;
+
+	Ok(())
 }

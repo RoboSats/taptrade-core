@@ -260,6 +260,31 @@ async fn poll_final_payout(
 	}
 }
 
+async fn submit_payout_signature(
+	Extension(coordinator): Extension<Arc<Coordinator>>,
+	Json(payload): Json<PayoutSignatureRequest>,
+) -> Result<Response, AppError> {
+	match handle_payout_signature(&payload, coordinator).await {
+		Ok(_) => Ok(StatusCode::OK.into_response()),
+		// 	Err(RequestError::NotConfirmed) => {
+		// 		info!("Offer tx for final payout not confirmed");
+		// 		Ok(StatusCode::NOT_ACCEPTABLE.into_response())
+		// 	}
+		// 	Err(RequestError::NotFound) => {
+		// 		info!("Offer for final payout not found");
+		// 		Ok(StatusCode::NOT_FOUND.into_response())
+		// 	}
+		// 	Err(RequestError::Database(e)) => {
+		// 		error!("Database error fetching final payout: {e}");
+		// 		Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		// 	}
+		_ => {
+			error!("Unknown error handling submit_payout_signature()");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
+	}
+}
+
 async fn test_api() -> &'static str {
 	"Hello, World!"
 }
@@ -280,6 +305,7 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 		)
 		.route("/request-escrow", post(request_escrow))
 		.route("/poll-final-payout", post(poll_final_payout))
+		.route("/submit-payout-signature", post(submit_payout_signature))
 		.layer(Extension(coordinator));
 	// add other routes here
 

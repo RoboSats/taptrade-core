@@ -137,6 +137,8 @@ impl CoordinatorDB {
 				musig_pubkey_compressed_hex_maker TEXT NOT NULL,
 				musig_pub_nonce_hex_taker TEXT NOT NULL,
 				musig_pubkey_compressed_hex_taker TEXT NOT NULL,
+				musig_partitial_sig_hex_maker TEXT,
+				musig_partitial_sig_hex_taker TEXT,
 				escrow_psbt_hex TEXT NOT NULL,
 				escrow_psbt_txid TEXT NOT NULL,
 				signed_escrow_psbt_hex_maker TEXT,
@@ -150,7 +152,8 @@ impl CoordinatorDB {
 				escrow_amount_maker_sat INTEGER,
 				escrow_amount_taker_sat INTEGER,
 				escrow_fee_per_participant INTEGER,
-				escrow_output_descriptor TEXT
+				escrow_output_descriptor TEXT,
+				payout_transaction_psbt_hex TEXT
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -889,5 +892,83 @@ impl CoordinatorDB {
 			musig_pubkey_hex_maker,
 			musig_pubkey_hex_taker,
 		)
+	}
+
+	pub async fn insert_keyspend_payout_psbt(
+		&self,
+		offer_id_hex: &str,
+		payout_psbt_hex: &str,
+	) -> Result<()> {
+		sqlx::query("UPDATE taken_offers SET payout_transaction_psbt_hex = ? WHERE offer_id = ?")
+			.bind(payout_psbt_hex)
+			.bind(offer_id_hex)
+			.execute(&*self.db_pool)
+			.await?;
+		Ok(())
+	}
+
+	pub async fn insert_partitial_sig_and_fetch_if_both(
+		&self,
+		partitial_sig_hex: &str,
+		offer_id_hex: &str,
+		robohash_hex: &str,
+	) -> Result<Option<(String, String, String)>> {
+		// first check if the escrow psbt has already been submitted
+		let is_maker = self
+			.is_maker_in_taken_offers(offer_id_hex, robohash_hex)
+			.await?;
+
+		let is_already_there = match is_maker {
+			true => {
+				let status = sqlx::query(
+					"SELECT musig_partitial_sig_maker FROM taken_offers WHERE offer_id = ?",
+				)
+				.bind(offer_id_hex)
+				.fetch_one(&*self.db_pool)
+				.await?;
+				status
+					.get::<Option<String>, _>("musig_partitial_sig_maker")
+					.is_some()
+			}
+			false => {
+				let status = sqlx::query(
+					"SELECT musig_partitial_sig_taker FROM taken_offers WHERE offer_id = ?",
+				)
+				.bind(offer_id_hex)
+				.fetch_one(&*self.db_pool)
+				.await?;
+				status
+					.get::<Option<String>, _>("musig_partitial_sig_taker")
+					.is_some()
+			}
+		};
+
+		if is_already_there {
+			return Err(anyhow!("Partial sig already submitted"));
+		} else {
+			let query = if is_maker {
+				"UPDATE taken_offers SET musig_partitial_sig_maker = ? WHERE offer_id = ?"
+			} else {
+				"UPDATE taken_offers SET musig_partitial_sig_taker = ? WHERE offer_id = ?"
+			};
+			sqlx::query(query)
+				.bind(partitial_sig_hex)
+				.bind(offer_id_hex)
+				.execute(&*self.db_pool)
+				.await?;
+		}
+
+		let row = sqlx::query(
+			"SELECT musig_partitial_sig_maker, musig_partitial_sig_taker, payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?",
+		).bind(offer_id_hex).fetch_one(&*self.db_pool).await?;
+
+		let maker_sig: Option<String> = row.try_get("musig_partitial_sig_maker")?;
+		let taker_sig: Option<String> = row.try_get("musig_partitial_sig_taker")?;
+		let payout_tx_hex: String = row.try_get("payout_transaction_psbt_hex")?;
+		if let (Some(maker), Some(taker)) = (maker_sig, taker_sig) {
+			Ok(Some((maker, taker, payout_tx_hex)))
+		} else {
+			Ok(None)
+		}
 	}
 }

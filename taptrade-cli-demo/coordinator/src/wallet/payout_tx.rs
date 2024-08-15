@@ -14,6 +14,10 @@ fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)>
 	Ok((tx_fee_abs, tx_fee_abs / 2))
 }
 
+pub fn aggregate_partitial_signatures() -> anyhow::Result<String> {
+	Ok(())
+}
+
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	fn get_escrow_utxo(
 		&self,

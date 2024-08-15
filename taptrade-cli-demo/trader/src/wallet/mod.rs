@@ -218,10 +218,9 @@ impl TradingWallet {
 		validated_payout_psbt: PartiallySignedTransaction,
 		key_agg_context: KeyAggContext,
 		agg_pub_nonce: AggNonce,
-		local_musig_state: &MuSigData,
+		local_musig_state: MuSigData,
 	) -> Result<String> {
-		let payout_tx = validated_payout_psbt.extract_tx();
-		let mut sig_hash_cache = SighashCache::new(payout_tx);
+		let mut sig_hash_cache = SighashCache::new(validated_payout_psbt.unsigned_tx.clone());
 
 		let utxo = validated_payout_psbt
 			.iter_funding_utxos()
@@ -230,10 +229,10 @@ impl TradingWallet {
 			.clone();
 
 		// get the msg (sighash) to sign with the musig key
-		let keyspend_sig_hash_msg = sig_hash_cache
+		let binding = sig_hash_cache
 			.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), TapSighashType::All)
-			.context("Failed to create keyspend sighash")?
-			.as_byte_array();
+			.context("Failed to create keyspend sighash")?;
+		let keyspend_sig_hash_msg = binding.as_byte_array();
 
 		let secret_nonce = local_musig_state.nonce.get_sec_for_signing()?;
 		let seckey = local_musig_state.secret_key;

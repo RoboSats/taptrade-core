@@ -22,6 +22,7 @@ use bdk::{
 	database::MemoryDatabase,
 	wallet::AddressInfo,
 };
+use reqwest::header::ACCEPT_LANGUAGE;
 use std::{str::FromStr, thread, time::Duration};
 
 pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
@@ -52,10 +53,15 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		info!("Waiting for other party to confirm the trade.");
 		let (payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx) =
 			IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
-
+		debug!("Payout PSBT received: {}", &payout_keyspend_psbt);
 		let signed_payout_psbt = wallet
 			.validate_payout_psbt(&payout_keyspend_psbt)?
-			.sign_keyspend_payout_psbt(payout_keyspend_psbt, agg_pubk_ctx, agg_pub_nonce, local_musig_state: &offer.used_musig_config)?;
+			.sign_keyspend_payout_psbt(
+				payout_keyspend_psbt,
+				agg_pubk_ctx,
+				agg_pub_nonce,
+				offer.used_musig_config,
+			)?;
 		// submit signed payout psbt back to coordinator
 		panic!("Payout to be implemented!");
 	} else {
@@ -86,7 +92,18 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 		TradeObligationsSatisfied::submit(&accepted_offer.offer_id_hex, taker_config)?;
 		debug!("Waiting for other party to confirm the trade.");
 		// pull for other parties confirmation, then receive the transaction to create MuSig signature for (keyspend) to payout address
-		let payout_keyspend_psbt = IsOfferReadyRequest::poll_payout(taker_config, &accepted_offer)?;
+		let (payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx) =
+			IsOfferReadyRequest::poll_payout(taker_config, &accepted_offer)?;
+
+		debug!("Received payout psbt: {}", &payout_keyspend_psbt);
+		let signed_payout_psbt = wallet
+			.validate_payout_psbt(&payout_keyspend_psbt)?
+			.sign_keyspend_payout_psbt(
+				payout_keyspend_psbt,
+				agg_pubk_ctx,
+				agg_pub_nonce,
+				accepted_offer.used_musig_config,
+			)?;
 	// here we need to handle if the other party is not cooperating
 	} else {
 		error!("Trade failed.");
