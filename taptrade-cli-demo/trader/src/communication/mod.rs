@@ -5,7 +5,7 @@ use super::*;
 use crate::{
 	cli::{OfferType, TraderSettings},
 	trading::utils::ActiveOffer,
-	wallet::{bond::Bond, musig2::MuSigData},
+	wallet::{bond::Bond, musig2_utils::MuSigData},
 };
 use anyhow::{anyhow, Result};
 use api::*;

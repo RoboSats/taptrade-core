@@ -116,7 +116,7 @@ async fn request_offer_status_maker(
 /// receives the signed escrow psbt and verifies it
 /// Supposed to be the endpoint that both maker & taker will send their part of the PSBT to (with signatures), the
 /// coordinator then has to check if their signatures are valid and everything else is according to the agreed upon contract.
-/// Once the coordinator has received both partitial signed PSBTs he can assemble them together to a transaction and publish it to the bitcoin network.
+/// Once the coordinator has received both partial signed PSBTs he can assemble them together to a transaction and publish it to the bitcoin network.
 async fn submit_escrow_psbt(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<PsbtSubmissionRequest>,

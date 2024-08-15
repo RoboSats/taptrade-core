@@ -332,17 +332,17 @@ pub async fn handle_payout_signature(
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
 
-	let (maker_partitial_sig_hex, taker_partitial_sig_hex, payout_psbt_hex) = match database
-		.insert_partitial_sig_and_fetch_if_both(
-			&payload.partitial_sig_hex,
+	let (maker_partial_sig_hex, taker_partial_sig_hex, payout_psbt_hex) = match database
+		.insert_partial_sig_and_fetch_if_both(
+			&payload.partial_sig_hex,
 			&payload.offer_id_hex,
 			&payload.robohash_hex,
 		)
 		.await
 	{
-		Ok(Some((maker_partitial_sig, taker_partitial_sig, payout_transaction_psbt_hex))) => (
-			maker_partitial_sig,
-			taker_partitial_sig,
+		Ok(Some((maker_partial_sig, taker_partial_sig, payout_transaction_psbt_hex))) => (
+			maker_partial_sig,
+			taker_partial_sig,
 			bdk::bitcoin::psbt::PartiallySignedTransaction::deserialize(
 				&hex::decode(payout_transaction_psbt_hex)
 					.map_err(|e| RequestError::CoordinatorError(e.to_string()))?,
@@ -352,8 +352,13 @@ pub async fn handle_payout_signature(
 		Err(e) => return Err(RequestError::Database(e.to_string())),
 	};
 
-	let aggregated_signature = wallet
-		.aggregate_partitial_signatures(&maker_partitial_sig_hex, &taker_partitial_sig_hex)?;
+	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
+
+	let aggregated_signature = wallet::payout_tx::aggregate_partial_signatures(
+		&maker_partial_sig_hex,
+		&taker_partial_sig_hex,
+	)
+	.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
 
 	Ok(())
 }

@@ -211,7 +211,7 @@ impl TradingWallet {
 		Ok(self)
 	}
 
-	/// creates a partitial signature to spend the keyspend path of the escrow output
+	/// creates a partial signature to spend the keyspend path of the escrow output
 	/// which will be returned to the coordinator for aggregation
 	pub fn sign_keyspend_payout_psbt(
 		&self,

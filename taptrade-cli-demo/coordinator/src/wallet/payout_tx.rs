@@ -4,6 +4,15 @@ use bdk::bitcoin::psbt::Input;
 use bdk::bitcoin::psbt::PartiallySignedTransaction;
 use bdk::bitcoin::OutPoint;
 use bdk::miniscript::Descriptor;
+use musig2::{AggNonce, KeyAggContext, PartialSignature};
+
+pub struct KeyspendContext {
+	pub partial_maker_sig: PartialSignature,
+	pub partial_taker_sig: PartialSignature,
+	pub agg_nonce: AggNonce,
+	pub key_agg_context: KeyAggContext,
+	pub keyspend_psbt: PartiallySignedTransaction,
+}
 
 fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)> {
 	let feerate = blockchain_backend.estimate_fee(6)?;
@@ -14,9 +23,12 @@ fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)>
 	Ok((tx_fee_abs, tx_fee_abs / 2))
 }
 
-pub fn aggregate_partitial_signatures() -> anyhow::Result<String> {
-	Ok(())
-}
+// pub fn aggregate_partial_signatures(
+// 	maker_sig_hex: &str,
+// 	taker_sig_hex: &str,
+// ) -> anyhow::Result<String> {
+// 	Ok(())
+// }
 
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	fn get_escrow_utxo(

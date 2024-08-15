@@ -106,7 +106,7 @@ pub struct TradeObligationsUnsatisfied {
 
 #[derive(Debug, Deserialize)]
 pub struct PayoutSignatureRequest {
-	pub partitial_sig_hex: String,
+	pub partial_sig_hex: String,
 	pub offer_id_hex: String,
 	pub robohash_hex: String,
 }
