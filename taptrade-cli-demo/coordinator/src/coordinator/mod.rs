@@ -1,11 +1,12 @@
 pub mod bond_monitoring;
 pub mod coordinator_utils;
-pub mod create_taproot;
+// pub mod create_taproot;
 pub mod mempool_monitoring;
 pub mod tx_confirmation_monitoring;
 
 use self::coordinator_utils::*;
 use super::*;
+use bitcoin::key;
 use musig2::{AggNonce, KeyAggContext, PartialSignature};
 
 pub async fn process_order(
@@ -351,13 +352,7 @@ pub async fn handle_payout_signature(
 	} else {
 		return Ok(false);
 	};
-
-	// let aggregated_signature = wallet::payout_tx::aggregate_partial_signatures(
-	// 	&maker_partial_sig_hex,
-	// 	&taker_partial_sig_hex,
-	// )
-	// .map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
-
+	dbg!("Keyspend info: {}", keyspend_information);
 	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
 
 	Ok(true)

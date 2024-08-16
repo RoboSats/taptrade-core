@@ -32,6 +32,7 @@ pub struct PayoutData {
 	pub aggregated_musig_pubkey_ctx_hex: String,
 }
 
+#[derive(Debug, Clone)]
 pub struct KeyspendContext {
 	pub agg_sig: LiftedSignature,
 	pub agg_nonce: MusigAggNonce,
