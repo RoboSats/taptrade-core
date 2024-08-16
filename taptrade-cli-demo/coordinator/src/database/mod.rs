@@ -944,6 +944,7 @@ impl CoordinatorDB {
 			}
 		};
 
+		warn!("we can use musig2::verify_partial to detect users submitting invalid partial signatures");
 		if is_already_there {
 			return Err(anyhow!("Partial sig already submitted"));
 		} else {
