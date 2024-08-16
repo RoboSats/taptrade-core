@@ -1,17 +1,7 @@
 #[cfg(test)]
 mod db_tests;
 
-use anyhow::Context;
-
-use futures_util::StreamExt;
-
-
-
 use super::*;
-use bdk::bitcoin::address::Address;
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
-use std::env;
-use std::str::FromStr;
 
 #[derive(Clone, Debug)]
 pub struct CoordinatorDB {

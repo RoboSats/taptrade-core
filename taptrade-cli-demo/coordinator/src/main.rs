@@ -3,24 +3,67 @@ mod coordinator;
 mod database;
 mod wallet;
 
-use anyhow::{anyhow, Result};
-use bdk::{database::MemoryDatabase};
+use std::{
+	collections::{HashMap, HashSet},
+	env, fmt,
+	net::SocketAddr,
+	ops::Deref,
+	str::FromStr,
+	sync::{Arc, RwLock},
+	time::{SystemTime, UNIX_EPOCH},
+};
+
+use anyhow::{anyhow, Context, Result};
+use axum::{
+	http::StatusCode,
+	response::{IntoResponse, Response},
+	routing::{get, post},
+	Extension, Json, Router,
+};
+use bdk::{
+	bitcoin::{
+		self,
+		address::Payload,
+		bip32::ExtendedPrivKey,
+		consensus::encode::deserialize,
+		hashes::Hash,
+		key::{secp256k1, XOnlyPublicKey},
+		psbt::{Input, PartiallySignedTransaction, Prevouts},
+		sighash::{SighashCache, TapSighashType},
+		Address, Network, OutPoint, Transaction, TxIn, Txid,
+	},
+	bitcoincore_rpc::{
+		jsonrpc::Error as JsonRpcError, Client, Error as CoreRpcError, RawTx, RpcApi,
+	},
+	blockchain::{rpc::Auth, Blockchain, ConfigurableBlockchain, GetTx, RpcBlockchain, RpcConfig},
+	database::{Database, MemoryDatabase},
+	descriptor::Descriptor,
+	miniscript::{descriptor::TapTree, policy::Concrete, Tap, ToPublicKey},
+	sled::Tree,
+	template::Bip86,
+	wallet::verify::*,
+	KeychainKind, SignOptions, SyncOptions, Wallet,
+};
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
-	bond_monitoring::*, coordinator_utils::*,
+	bond_monitoring::*, coordinator_utils::*, mempool_monitoring::MempoolHandler,
 	tx_confirmation_monitoring::update_transaction_confirmations, *,
 };
 use database::CoordinatorDB;
 use dotenvy::dotenv;
+use futures_util::StreamExt;
 use log::{debug, error, info, trace, warn};
-use musig2::{AggNonce as MusigAggNonce, PubNonce as MusigPubNonce};
-use rand::Rng;
-use std::{
-	env,
-	sync::Arc,
-	time::{SystemTime, UNIX_EPOCH},
+use musig2::{
+	secp256k1::PublicKey as MuSig2PubKey, AggNonce as MusigAggNonce, BinaryEncoding, KeyAggContext,
+	LiftedSignature, PartialSignature, PubNonce as MusigPubNonce,
 };
-use tokio::sync::Mutex;
+use rand::Rng;
+use serde::{Deserialize, Serialize};
+use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
+use tokio::{
+	net::TcpListener,
+	sync::{oneshot, Mutex},
+};
 use validator::{Validate, ValidationError};
 use wallet::{escrow_psbt::*, wallet_utils::*, *};
 

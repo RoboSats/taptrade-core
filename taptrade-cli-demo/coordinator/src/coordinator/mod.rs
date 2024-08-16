@@ -1,13 +1,10 @@
 pub mod bond_monitoring;
 pub mod coordinator_utils;
-// pub mod create_taproot;
 pub mod mempool_monitoring;
 pub mod tx_confirmation_monitoring;
+// pub mod create_taproot;
 
-use self::coordinator_utils::*;
 use super::*;
-
-use musig2::{KeyAggContext, PartialSignature};
 
 pub async fn process_order(
 	coordinator: Arc<Coordinator>,

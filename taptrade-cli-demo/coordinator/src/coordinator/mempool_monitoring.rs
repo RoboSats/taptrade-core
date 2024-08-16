@@ -3,15 +3,6 @@
 
 use super::*;
 use anyhow::Ok;
-use bdk::bitcoin::consensus::encode::deserialize;
-use bdk::bitcoin::{OutPoint, Transaction};
-use bdk::bitcoin::{TxIn, Txid};
-use bdk::bitcoincore_rpc::{Client, RpcApi};
-use std::collections::{HashMap, HashSet};
-
-use std::ops::Deref;
-use std::sync::RwLock;
-use tokio::sync::oneshot;
 
 struct Mempool {
 	transactions: Arc<RwLock<HashMap<Txid, Vec<TxIn>>>>,

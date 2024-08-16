@@ -1,9 +1,5 @@
 /// construction of the transaction spending the escrow output after a successfull trade as keyspend transaction
 use super::*;
-use bdk::bitcoin::psbt::Input;
-
-use bdk::bitcoin::OutPoint;
-use bdk::miniscript::Descriptor;
 
 fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)> {
 	let feerate = blockchain_backend.estimate_fee(6)?;

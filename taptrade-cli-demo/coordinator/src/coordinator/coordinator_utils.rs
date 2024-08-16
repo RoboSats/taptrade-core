@@ -1,17 +1,4 @@
 use super::*;
-use anyhow::Context;
-use bdk::{
-	bitcoin::{
-		hashes::Hash,
-		key::XOnlyPublicKey,
-		psbt::{PartiallySignedTransaction, Prevouts},
-		sighash::{SighashCache, TapSighashType},
-		Address,
-	},
-	miniscript::Descriptor,
-};
-use musig2::{BinaryEncoding, LiftedSignature};
-use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum PayoutProcessingResult {

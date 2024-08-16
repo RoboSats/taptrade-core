@@ -7,29 +7,6 @@ mod wallet_tests;
 
 pub use self::escrow_psbt::*;
 use super::*;
-use anyhow::Context;
-use bdk::{
-	bitcoin::{
-		self,
-		address::Payload,
-		bip32::ExtendedPrivKey,
-		consensus::encode::deserialize,
-		key::{secp256k1, XOnlyPublicKey},
-		Address,
-		Network::Regtest,
-		Transaction,
-	},
-	bitcoincore_rpc::{Client, RawTx, RpcApi},
-	blockchain::{rpc::Auth, Blockchain, ConfigurableBlockchain, RpcBlockchain, RpcConfig},
-	database::MemoryDatabase,
-	sled::{Tree},
-	template::Bip86,
-	wallet::verify::*,
-	KeychainKind, SyncOptions, Wallet,
-};
-use coordinator::mempool_monitoring::MempoolHandler;
-use std::{collections::HashMap, str::FromStr};
-use std::{fmt, ops::Deref};
 // use verify_tx::*;
 
 #[derive(Clone)]
@@ -70,12 +47,12 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 			username: env::var("BITCOIN_RPC_USER")?,
 			password: env::var("BITCOIN_RPC_PASSWORD")?,
 		},
-		network: Regtest,
+		network: Network::Regtest,
 		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		wallet_name: bdk::wallet::wallet_name_from_descriptor(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-			Regtest,
+			Network::Regtest,
 			&secp_context,
 		)?,
 		sync_params: None,

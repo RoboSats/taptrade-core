@@ -4,15 +4,6 @@ pub mod handler_errors;
 
 use self::communication_utils::*;
 use super::*;
-use axum::{
-	http::StatusCode,
-	response::{IntoResponse, Response},
-	routing::{get, post},
-	Extension, Json, Router,
-};
-use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
-use tokio::net::TcpListener;
 
 //
 // Axum handler functions

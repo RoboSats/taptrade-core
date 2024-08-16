@@ -1,11 +1,4 @@
 use super::*;
-use bdk::{
-	bitcoin::{psbt::Input, Address, Network},
-	blockchain::GetTx,
-	database::Database,
-};
-use serde::{Deserialize, Serialize};
-
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PsbtInput {
 	pub psbt_input: Input,

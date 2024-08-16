@@ -1,13 +1,3 @@
-use std::str::FromStr;
-
-
-use bdk::{
-	bitcoin::Txid,
-	bitcoincore_rpc::{
-		jsonrpc::Error as JsonRpcError, Error as CoreRpcError, RpcApi,
-	},
-};
-
 use super::*;
 
 fn get_confirmations(
