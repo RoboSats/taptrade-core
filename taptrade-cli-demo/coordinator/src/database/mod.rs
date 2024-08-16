@@ -677,7 +677,7 @@ impl CoordinatorDB {
 		};
 
 		if is_already_there {
-			return Ok(false);
+			Ok(false)
 		} else {
 			let query = if is_maker {
 				"UPDATE taken_offers SET signed_escrow_psbt_hex_maker = ? WHERE offer_id = ?"

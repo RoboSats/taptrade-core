@@ -22,7 +22,7 @@ async fn receive_order(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(offer): Json<OfferRequest>,
 ) -> Result<Response, AppError> {
-	if let Err(_) = offer.validate() {
+	if offer.validate().is_err() {
 		Ok(StatusCode::BAD_REQUEST.into_response())
 	} else {
 		let bond_requirements = process_order(coordinator, &offer).await?;

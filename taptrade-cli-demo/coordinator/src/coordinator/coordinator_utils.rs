@@ -78,7 +78,7 @@ impl KeyspendContext {
 		let agg_keyspend_pk: musig2::KeyAggContext =
 			wallet::aggregate_musig_pubkeys(maker_pk, taker_pk)?;
 		let agg_nonce: MusigAggNonce =
-			coordinator_utils::agg_hex_musig_nonces(&maker_nonce, &taker_nonce)?;
+			coordinator_utils::agg_hex_musig_nonces(maker_nonce, taker_nonce)?;
 		let keyspend_psbt = PartiallySignedTransaction::from_str(keyspend_psbt)?;
 
 		let partial_maker_sig = PartialSignature::from_hex(maker_sig)?;
@@ -120,6 +120,7 @@ impl KeyspendContext {
 }
 
 impl PayoutData {
+	#[allow(clippy::too_many_arguments)]
 	pub fn new_from_strings(
 		escrow_output_descriptor: &str,
 		payout_address_maker: &str,
