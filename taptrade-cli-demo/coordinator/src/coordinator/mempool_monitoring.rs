@@ -8,7 +8,7 @@ use bdk::bitcoin::{OutPoint, Transaction};
 use bdk::bitcoin::{TxIn, Txid};
 use bdk::bitcoincore_rpc::{Client, RpcApi};
 use std::collections::{HashMap, HashSet};
-use std::net::Shutdown;
+
 use std::ops::Deref;
 use std::sync::RwLock;
 use tokio::sync::oneshot;

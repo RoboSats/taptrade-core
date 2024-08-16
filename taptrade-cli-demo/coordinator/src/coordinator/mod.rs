@@ -6,8 +6,8 @@ pub mod tx_confirmation_monitoring;
 
 use self::coordinator_utils::*;
 use super::*;
-use bitcoin::key;
-use musig2::{AggNonce, KeyAggContext, PartialSignature};
+
+use musig2::{KeyAggContext, PartialSignature};
 
 pub async fn process_order(
 	coordinator: Arc<Coordinator>,
@@ -330,7 +330,7 @@ pub async fn handle_payout_signature(
 	coordinator: Arc<Coordinator>,
 ) -> Result<bool, RequestError> {
 	let database = &coordinator.coordinator_db;
-	let wallet = &coordinator.coordinator_wallet;
+	let _wallet = &coordinator.coordinator_wallet;
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
 

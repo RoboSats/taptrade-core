@@ -4,7 +4,7 @@ mod database;
 mod wallet;
 
 use anyhow::{anyhow, Result};
-use bdk::{database::MemoryDatabase, sled};
+use bdk::{database::MemoryDatabase};
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
 	bond_monitoring::*, coordinator_utils::*,

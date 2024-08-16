@@ -1,12 +1,12 @@
 use super::*;
 use bdk::{
-	bitcoin::{psbt::PartiallySignedTransaction, PublicKey},
-	descriptor::{policy, Descriptor},
-	miniscript::{descriptor::TapTree, policy::Concrete, Miniscript, Tap, ToPublicKey},
+	bitcoin::{psbt::PartiallySignedTransaction},
+	descriptor::{Descriptor},
+	miniscript::{descriptor::TapTree, policy::Concrete, Tap, ToPublicKey},
 	SignOptions,
 };
 use musig2::{secp256k1::PublicKey as MuSig2PubKey, KeyAggContext};
-use sha2::digest::typenum::{bit, Xor};
+
 
 #[derive(Debug)]
 pub struct EscrowPsbtConstructionData {
@@ -226,7 +226,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		})
 	}
 
-	pub async fn validate_escrow_init_psbt(&self, escrow_init_psbt: &str) -> Result<()> {
+	pub async fn validate_escrow_init_psbt(&self, _escrow_init_psbt: &str) -> Result<()> {
 		warn!("Implement escrow psbt validation. For now, returning Ok");
 		Ok(())
 	}

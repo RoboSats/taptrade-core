@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
-use axum::Json;
+
 use bdk::{
 	bitcoin::Txid,
 	bitcoincore_rpc::{
-		jsonrpc::error::RpcError, jsonrpc::Error as JsonRpcError, Error as CoreRpcError, RpcApi,
+		jsonrpc::Error as JsonRpcError, Error as CoreRpcError, RpcApi,
 	},
 };
 
