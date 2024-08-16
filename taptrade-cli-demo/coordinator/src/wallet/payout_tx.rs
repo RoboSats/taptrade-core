@@ -1,18 +1,9 @@
 /// construction of the transaction spending the escrow output after a successfull trade as keyspend transaction
 use super::*;
 use bdk::bitcoin::psbt::Input;
-use bdk::bitcoin::psbt::PartiallySignedTransaction;
+
 use bdk::bitcoin::OutPoint;
 use bdk::miniscript::Descriptor;
-use musig2::{AggNonce, KeyAggContext, PartialSignature};
-
-pub struct KeyspendContext {
-	pub partial_maker_sig: PartialSignature,
-	pub partial_taker_sig: PartialSignature,
-	pub agg_nonce: AggNonce,
-	pub key_agg_context: KeyAggContext,
-	pub keyspend_psbt: PartiallySignedTransaction,
-}
 
 fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)> {
 	let feerate = blockchain_backend.estimate_fee(6)?;

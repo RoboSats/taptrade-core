@@ -2,9 +2,10 @@
 mod db_tests;
 
 use anyhow::Context;
+use coordinator::coordinator_utils::*;
 use futures_util::StreamExt;
-use musig2::BinaryEncoding;
-use serde::de::IntoDeserializer;
+use musig2::PartialSignature;
+use sha2::digest::typenum::marker_traits;
 
 use super::*;
 use bdk::bitcoin::address::Address;
@@ -907,12 +908,12 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	pub async fn insert_partial_sig_and_fetch_if_both(
+	pub async fn insert_partial_sig(
 		&self,
 		partial_sig_hex: &str,
 		offer_id_hex: &str,
 		robohash_hex: &str,
-	) -> Result<Option<(String, String, String)>> {
+	) -> Result<()> {
 		// first check if the escrow psbt has already been submitted
 		let is_maker = self
 			.is_maker_in_taken_offers(offer_id_hex, robohash_hex)
@@ -957,16 +958,40 @@ impl CoordinatorDB {
 				.execute(&*self.db_pool)
 				.await?;
 		}
+		Ok(())
+	}
 
+	pub async fn fetch_keyspend_payout_information(
+		&self,
+		offer_id_hex: &str,
+	) -> Result<Option<KeyspendContext>> {
 		let row = sqlx::query(
-			"SELECT musig_partial_sig_maker, musig_partial_sig_taker, payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?",
+			"SELECT musig_partial_sig_maker, musig_partial_sig_taker,
+			musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
+			payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?",
 		).bind(offer_id_hex).fetch_one(&*self.db_pool).await?;
 
 		let maker_sig: Option<String> = row.try_get("musig_partial_sig_maker")?;
 		let taker_sig: Option<String> = row.try_get("musig_partial_sig_taker")?;
-		let payout_tx_hex: String = row.try_get("payout_transaction_psbt_hex")?;
+
+		let maker_pubkey: String = row.try_get("musig_pubkey_compressed_hex_maker")?;
+		let taker_pubkey: String = row.try_get("musig_pubkey_compressed_hex_taker")?;
+
+		let maker_nonce: String = row.try_get("musig_pub_nonce_hex_maker")?;
+		let taker_nonce: String = row.try_get("musig_pub_nonce_hex_taker")?;
+
+		let keyspend_psbt: String = row.try_get("payout_transaction_psbt_hex")?;
+
 		if let (Some(maker), Some(taker)) = (maker_sig, taker_sig) {
-			Ok(Some((maker, taker, payout_tx_hex)))
+			Ok(Some(KeyspendContext::from_hex_str(
+				&maker,
+				&taker,
+				&maker_nonce,
+				&taker_nonce,
+				&maker_pubkey,
+				&taker_pubkey,
+				&keyspend_psbt,
+			)?))
 		} else {
 			Ok(None)
 		}

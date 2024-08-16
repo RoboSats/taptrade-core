@@ -6,6 +6,7 @@ pub mod tx_confirmation_monitoring;
 
 use self::coordinator_utils::*;
 use super::*;
+use musig2::{AggNonce, KeyAggContext, PartialSignature};
 
 pub async fn process_order(
 	coordinator: Arc<Coordinator>,
@@ -326,39 +327,38 @@ pub async fn handle_final_payout(
 pub async fn handle_payout_signature(
 	payload: &PayoutSignatureRequest,
 	coordinator: Arc<Coordinator>,
-) -> Result<(), RequestError> {
+) -> Result<bool, RequestError> {
 	let database = &coordinator.coordinator_db;
 	let wallet = &coordinator.coordinator_wallet;
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
 
-	let (maker_partial_sig_hex, taker_partial_sig_hex, payout_psbt_hex) = match database
-		.insert_partial_sig_and_fetch_if_both(
+	database
+		.insert_partial_sig(
 			&payload.partial_sig_hex,
 			&payload.offer_id_hex,
 			&payload.robohash_hex,
 		)
 		.await
+		.map_err(|e| RequestError::Database(e.to_string()))?;
+
+	let keyspend_information = if let Some(keyspend_context) = database
+		.fetch_keyspend_payout_information(&payload.offer_id_hex)
+		.await
+		.map_err(|e| RequestError::Database(e.to_string()))?
 	{
-		Ok(Some((maker_partial_sig, taker_partial_sig, payout_transaction_psbt_hex))) => (
-			maker_partial_sig,
-			taker_partial_sig,
-			bdk::bitcoin::psbt::PartiallySignedTransaction::deserialize(
-				&hex::decode(payout_transaction_psbt_hex)
-					.map_err(|e| RequestError::CoordinatorError(e.to_string()))?,
-			),
-		),
-		Ok(None) => return Ok(()),
-		Err(e) => return Err(RequestError::Database(e.to_string())),
+		keyspend_context
+	} else {
+		return Ok(false);
 	};
+
+	// let aggregated_signature = wallet::payout_tx::aggregate_partial_signatures(
+	// 	&maker_partial_sig_hex,
+	// 	&taker_partial_sig_hex,
+	// )
+	// .map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
 
 	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
 
-	let aggregated_signature = wallet::payout_tx::aggregate_partial_signatures(
-		&maker_partial_sig_hex,
-		&taker_partial_sig_hex,
-	)
-	.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
-
-	Ok(())
+	Ok(true)
 }

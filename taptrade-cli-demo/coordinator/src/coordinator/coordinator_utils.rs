@@ -1,13 +1,17 @@
-use std::str::FromStr;
-
+use super::*;
 use anyhow::Context;
 use bdk::{
-	bitcoin::{key::XOnlyPublicKey, Address},
+	bitcoin::{
+		hashes::Hash,
+		key::XOnlyPublicKey,
+		psbt::{PartiallySignedTransaction, Prevouts},
+		sighash::{SighashCache, TapSighashType},
+		Address,
+	},
 	miniscript::Descriptor,
 };
-use musig2::BinaryEncoding;
-
-use super::*;
+use musig2::{BinaryEncoding, LiftedSignature};
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub enum PayoutProcessingResult {
@@ -28,6 +32,92 @@ pub struct PayoutData {
 	pub aggregated_musig_pubkey_ctx_hex: String,
 }
 
+pub struct KeyspendContext {
+	pub agg_sig: LiftedSignature,
+	pub agg_nonce: MusigAggNonce,
+	pub agg_keyspend_pk: KeyAggContext,
+	pub keyspend_psbt: PartiallySignedTransaction,
+}
+
+pub fn agg_hex_musig_nonces(maker_nonce: &str, taker_nonce: &str) -> Result<MusigAggNonce> {
+	let musig_pub_nonce_maker = match MusigPubNonce::from_hex(maker_nonce) {
+		Ok(musig_pub_nonce_maker) => musig_pub_nonce_maker,
+		Err(e) => {
+			return Err(anyhow!(
+				"Error decoding maker musig pub nonce: {}",
+				e.to_string()
+			))
+		}
+	};
+	let musig_pub_nonce_taker = match MusigPubNonce::from_hex(taker_nonce) {
+		Ok(musig_pub_nonce_taker) => musig_pub_nonce_taker,
+		Err(e) => {
+			return Err(anyhow!(
+				"Error decoding taker musig pub nonce: {}",
+				e.to_string()
+			))
+		}
+	};
+
+	let agg_nonce = musig2::AggNonce::sum([musig_pub_nonce_maker, musig_pub_nonce_taker]);
+
+	Ok(agg_nonce)
+}
+
+impl KeyspendContext {
+	pub fn from_hex_str(
+		maker_sig: &str,
+		taker_sig: &str,
+		maker_nonce: &str,
+		taker_nonce: &str,
+		maker_pk: &str,
+		taker_pk: &str,
+		keyspend_psbt: &str,
+	) -> anyhow::Result<Self> {
+		let agg_keyspend_pk: musig2::KeyAggContext =
+			wallet::aggregate_musig_pubkeys(maker_pk, taker_pk)?;
+		let agg_nonce: MusigAggNonce =
+			coordinator_utils::agg_hex_musig_nonces(&maker_nonce, &taker_nonce)?;
+		let keyspend_psbt = PartiallySignedTransaction::from_str(keyspend_psbt)?;
+
+		let partial_maker_sig = PartialSignature::from_hex(maker_sig)?;
+		let partial_taker_sig = PartialSignature::from_hex(taker_sig)?;
+		let partial_signatures = vec![partial_maker_sig, partial_taker_sig];
+
+		// let msg = keyspend_psbt.
+		let msg = {
+			let mut sig_hash_cache = SighashCache::new(keyspend_psbt.unsigned_tx.clone());
+
+			let utxo = keyspend_psbt
+				.iter_funding_utxos()
+				.next()
+				.ok_or(anyhow!("No UTXO found in payout psbt"))??
+				.clone();
+
+			// get the msg (sighash) to sign with the musig key
+			let binding = sig_hash_cache
+				.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), TapSighashType::All)
+				.context("Failed to create keyspend sighash")?;
+			binding.as_byte_array().to_vec()
+		};
+
+		let agg_sig: LiftedSignature = musig2::aggregate_partial_signatures(
+			&agg_keyspend_pk,
+			&agg_nonce,
+			partial_signatures,
+			msg.as_slice(),
+		)
+		.context("Aggregating partial signatures failed")?;
+
+		Ok(Self {
+			agg_sig,
+			agg_nonce,
+			agg_keyspend_pk,
+			keyspend_psbt,
+		})
+	}
+}
+
 impl PayoutData {
 	pub fn new_from_strings(
 		escrow_output_descriptor: &str,
@@ -40,31 +130,12 @@ impl PayoutData {
 		musig_pk_hex_maker: &str,
 		musig_pk_hex_taker: &str,
 	) -> Result<Self> {
-		let musig_pub_nonce_maker = match MusigPubNonce::from_hex(musig_pub_nonce_hex_maker) {
-			Ok(musig_pub_nonce_maker) => musig_pub_nonce_maker,
-			Err(e) => {
-				return Err(anyhow!(
-					"Error decoding maker musig pub nonce: {}",
-					e.to_string()
-				))
-			}
-		};
-		let musig_pub_nonce_taker = match MusigPubNonce::from_hex(musig_pub_nonce_hex_taker) {
-			Ok(musig_pub_nonce_taker) => musig_pub_nonce_taker,
-			Err(e) => {
-				return Err(anyhow!(
-					"Error decoding taker musig pub nonce: {}",
-					e.to_string()
-				))
-			}
-		};
-
 		let aggregated_musig_pubkey_ctx_hex = hex::encode(
 			aggregate_musig_pubkeys(musig_pk_hex_maker, musig_pk_hex_taker)?.to_bytes(),
 		);
 
 		let agg_musig_nonce: MusigAggNonce =
-			musig2::AggNonce::sum([musig_pub_nonce_maker, musig_pub_nonce_taker]);
+			agg_hex_musig_nonces(musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker)?;
 
 		Ok(Self {
 			escrow_output_descriptor: Descriptor::from_str(escrow_output_descriptor)?,

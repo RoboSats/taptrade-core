@@ -265,7 +265,12 @@ async fn submit_payout_signature(
 	Json(payload): Json<PayoutSignatureRequest>,
 ) -> Result<Response, AppError> {
 	match handle_payout_signature(&payload, coordinator).await {
-		Ok(_) => Ok(StatusCode::OK.into_response()),
+		// received both sigs, published final tx
+		Ok(true) => Ok(StatusCode::OK.into_response()),
+
+		// this was the first signature
+		Ok(false) => Ok(StatusCode::ACCEPTED.into_response()),
+
 		// 	Err(RequestError::NotConfirmed) => {
 		// 		info!("Offer tx for final payout not confirmed");
 		// 		Ok(StatusCode::NOT_ACCEPTABLE.into_response())
