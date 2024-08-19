@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod db_tests;
 
+use axum::routing::trace;
+
 use super::*;
 
 #[derive(Clone, Debug)]
@@ -144,7 +146,8 @@ impl CoordinatorDB {
 				escrow_amount_taker_sat INTEGER,
 				escrow_fee_per_participant INTEGER,
 				escrow_output_descriptor TEXT,
-				payout_transaction_psbt_hex TEXT
+				payout_transaction_psbt_hex TEXT,
+				processing INTEGER NOT NULL
 			)", // escrow_psbt_is_confirmed will be set 1 once the escrow psbt is confirmed onchain
 		)
 		.execute(&db_pool)
@@ -374,8 +377,8 @@ impl CoordinatorDB {
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
 						bond_tx_hex_taker, payout_address_maker, payout_address_taker, taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pub_nonce_hex_maker, musig_pubkey_compressed_hex_maker,
 						musig_pub_nonce_hex_taker, musig_pubkey_compressed_hex_taker, escrow_psbt_hex, escrow_psbt_txid, escrow_output_descriptor, escrow_psbt_is_confirmed, escrow_ongoing,
-						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+						escrow_taproot_pk_coordinator, escrow_amount_maker_sat, escrow_amount_taker_sat, escrow_fee_per_participant, processing)
+						VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			)
 			.bind(public_offer.offer_id)
 			.bind(public_offer.robohash_maker)
@@ -406,6 +409,7 @@ impl CoordinatorDB {
 			.bind(escrow_tx_data.escrow_amount_maker_sat as i64)
 			.bind(escrow_tx_data.escrow_amount_taker_sat as i64)
 			.bind(escrow_tx_data.escrow_fee_sat_per_participant as i64)
+			.bind(0)
 			.execute(&*self.db_pool)
 			.await?;
 
@@ -912,24 +916,24 @@ impl CoordinatorDB {
 		let is_already_there = match is_maker {
 			true => {
 				let status = sqlx::query(
-					"SELECT musig_partial_sig_maker FROM taken_offers WHERE offer_id = ?",
+					"SELECT musig_partial_sig_hex_maker FROM taken_offers WHERE offer_id = ?",
 				)
 				.bind(offer_id_hex)
 				.fetch_one(&*self.db_pool)
 				.await?;
 				status
-					.get::<Option<String>, _>("musig_partial_sig_maker")
+					.get::<Option<String>, _>("musig_partial_sig_hex_maker")
 					.is_some()
 			}
 			false => {
 				let status = sqlx::query(
-					"SELECT musig_partial_sig_taker FROM taken_offers WHERE offer_id = ?",
+					"SELECT musig_partial_sig_hex_taker FROM taken_offers WHERE offer_id = ?",
 				)
 				.bind(offer_id_hex)
 				.fetch_one(&*self.db_pool)
 				.await?;
 				status
-					.get::<Option<String>, _>("musig_partial_sig_taker")
+					.get::<Option<String>, _>("musig_partial_sig_hex_taker")
 					.is_some()
 			}
 		};
@@ -939,9 +943,9 @@ impl CoordinatorDB {
 			return Err(anyhow!("Partial sig already submitted"));
 		} else {
 			let query = if is_maker {
-				"UPDATE taken_offers SET musig_partial_sig_maker = ? WHERE offer_id = ?"
+				"UPDATE taken_offers SET musig_partial_sig_hex_maker = ? WHERE offer_id = ?"
 			} else {
-				"UPDATE taken_offers SET musig_partial_sig_taker = ? WHERE offer_id = ?"
+				"UPDATE taken_offers SET musig_partial_sig_hex_taker = ? WHERE offer_id = ?"
 			};
 			sqlx::query(query)
 				.bind(partial_sig_hex)
@@ -957,13 +961,13 @@ impl CoordinatorDB {
 		offer_id_hex: &str,
 	) -> Result<Option<KeyspendContext>> {
 		let row = sqlx::query(
-			"SELECT musig_partial_sig_maker, musig_partial_sig_taker,
+			"SELECT musig_partial_sig_hex_maker, musig_partial_sig_hex_taker,
 			musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
 			payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?",
 		).bind(offer_id_hex).fetch_one(&*self.db_pool).await?;
 
-		let maker_sig: Option<String> = row.try_get("musig_partial_sig_maker")?;
-		let taker_sig: Option<String> = row.try_get("musig_partial_sig_taker")?;
+		let maker_sig: Option<String> = row.try_get("musig_partial_sig_hex_maker")?;
+		let taker_sig: Option<String> = row.try_get("musig_partial_sig_hex_taker")?;
 
 		let maker_pubkey: String = row.try_get("musig_pubkey_compressed_hex_maker")?;
 		let taker_pubkey: String = row.try_get("musig_pubkey_compressed_hex_taker")?;
@@ -986,5 +990,36 @@ impl CoordinatorDB {
 		} else {
 			Ok(None)
 		}
+	}
+
+	pub async fn fetch_keyspend_payout_psbt(&self, offer_id_hex: &str) -> Result<Option<String>> {
+		let row =
+			sqlx::query("SELECT payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?")
+				.bind(offer_id_hex)
+				.fetch_one(&*self.db_pool)
+				.await?;
+
+		let payout_psbt: Option<String> = row.try_get("payout_transaction_psbt_hex")?;
+		Ok(payout_psbt)
+	}
+
+	pub async fn toggle_processing(&self, offer_id: &str) -> Result<bool> {
+		let result = sqlx::query(
+			r#"
+        UPDATE taken_offers
+        SET processing = CASE
+            WHEN processing = 0 THEN 1
+            ELSE 0
+        END
+        WHERE offer_id = ?
+        RETURNING processing
+        "#,
+		)
+		.bind(offer_id)
+		.fetch_one(&*self.db_pool)
+		.await?;
+
+		trace!("Toggled processing status for offer {}", offer_id);
+		Ok(result.get::<i64, _>(0) == 1)
 	}
 }

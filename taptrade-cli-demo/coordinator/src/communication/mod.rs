@@ -244,8 +244,12 @@ async fn poll_final_payout(
 			error!("Database error fetching final payout: {e}");
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
-		_ => {
-			error!("Unknown error handling poll_final_payout()");
+		Err(RequestError::CoordinatorError(e)) => {
+			error!("Coordinator error handling final payout: {e}");
+			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
+		}
+		e => {
+			error!("Unknown error handling poll_final_payout(): {:?}", e);
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
 	}
@@ -274,8 +278,8 @@ async fn submit_payout_signature(
 		// 		error!("Database error fetching final payout: {e}");
 		// 		Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		// 	}
-		_ => {
-			error!("Unknown error handling submit_payout_signature()");
+		e => {
+			error!("Unknown error handling submit_payout_signature(): {:?}", e);
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
 	}

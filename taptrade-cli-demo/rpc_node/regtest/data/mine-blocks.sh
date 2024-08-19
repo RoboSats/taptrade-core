@@ -17,8 +17,8 @@ else
     bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -rpcwallet="coordinator_wallet" -generate 101
 fi
 
-# Generate a block every 120 seconds
+# Generate a block every 10 seconds
 while true; do
     bitcoin-cli -regtest -datadir="/home/bitcoin/.bitcoin" -rpcwallet="coordinator_wallet" -generate 1
-    sleep 120
+    sleep 10
 done

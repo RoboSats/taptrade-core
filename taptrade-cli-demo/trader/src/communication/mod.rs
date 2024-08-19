@@ -292,10 +292,12 @@ impl IsOfferReadyRequest {
 			}
 		}
 		let payout_response: PayoutResponse = res.json()?;
-		let final_psbt = PartiallySignedTransaction::from_str(&payout_response.payout_psbt_hex)?;
+		let final_psbt = PartiallySignedTransaction::deserialize(&hex::decode(
+			&payout_response.payout_psbt_hex,
+		)?)?;
 		let agg_nonce = AggNonce::from_str(&payout_response.agg_musig_nonce_hex)
 			.map_err(|e| anyhow!("Error parsing agg nonce: {}", e))?;
-		let agg_pubk_ctx = KeyAggContext::from_hex(&payout_response.agg_musig_nonce_hex)
+		let agg_pubk_ctx = KeyAggContext::from_hex(&payout_response.agg_musig_pubkey_ctx_hex)
 			.map_err(|e| anyhow!("Error parsing agg pubkey ctx: {}", e))?;
 		Ok((final_psbt, agg_nonce, agg_pubk_ctx))
 	}
@@ -317,6 +319,32 @@ impl TradeObligationsUnsatisfied {
 			.json(&request)
 			.send()?;
 		if res.status() != 200 {
+			return Err(anyhow!(
+				"Submitting trade obligations unsatisfied failed. Status: {}",
+				res.status()
+			));
+		}
+		Ok(())
+	}
+}
+
+impl PayoutSignatureRequest {
+	pub fn send(trader_config: &TraderSettings, signature: &str, offer_id_hex: &str) -> Result<()> {
+		let request = Self {
+			robohash_hex: trader_config.robosats_robohash_hex.clone(),
+			offer_id_hex: offer_id_hex.to_string(),
+			partial_sig_hex: signature.to_string(),
+		};
+
+		let client = reqwest::blocking::Client::new();
+		let res = client
+			.post(format!(
+				"{}{}",
+				trader_config.coordinator_endpoint, "/submit-payout-signature"
+			))
+			.json(&request)
+			.send()?;
+		if res.status() != 200 && res.status() != 202 {
 			return Err(anyhow!(
 				"Submitting trade obligations unsatisfied failed. Status: {}",
 				res.status()

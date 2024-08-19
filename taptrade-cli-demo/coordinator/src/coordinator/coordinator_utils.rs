@@ -66,7 +66,7 @@ impl KeyspendContext {
 			wallet::aggregate_musig_pubkeys(maker_pk, taker_pk)?;
 		let agg_nonce: MusigAggNonce =
 			coordinator_utils::agg_hex_musig_nonces(maker_nonce, taker_nonce)?;
-		let keyspend_psbt = PartiallySignedTransaction::from_str(keyspend_psbt)?;
+		let keyspend_psbt = PartiallySignedTransaction::deserialize(&hex::decode(keyspend_psbt)?)?;
 
 		let partial_maker_sig = PartialSignature::from_hex(maker_sig)?;
 		let partial_taker_sig = PartialSignature::from_hex(taker_sig)?;

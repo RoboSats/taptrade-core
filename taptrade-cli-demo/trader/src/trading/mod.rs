@@ -22,6 +22,7 @@ use bdk::{
 	database::MemoryDatabase,
 	wallet::AddressInfo,
 };
+use communication::api::PayoutSignatureRequest;
 use reqwest::header::ACCEPT_LANGUAGE;
 use std::{str::FromStr, thread, time::Duration};
 
@@ -54,16 +55,16 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		let (payout_keyspend_psbt, agg_pub_nonce, agg_pubk_ctx) =
 			IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 		debug!("Payout PSBT received: {}", &payout_keyspend_psbt);
-		let signed_payout_psbt = wallet
+		let signature = wallet
 			.validate_payout_psbt(&payout_keyspend_psbt)?
-			.sign_keyspend_payout_psbt(
+			.create_keyspend_payout_signature(
 				payout_keyspend_psbt,
 				agg_pubk_ctx,
 				agg_pub_nonce,
 				offer.used_musig_config,
 			)?;
 		// submit signed payout psbt back to coordinator
-		panic!("Payout to be implemented!");
+		PayoutSignatureRequest::send(&maker_config, &signature, &offer.offer_id_hex)?;
 	} else {
 		error!("Trade failed. Initiating escrow mode.");
 		TradeObligationsUnsatisfied::request_escrow(&offer.offer_id_hex, maker_config)?;
@@ -96,14 +97,17 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 			IsOfferReadyRequest::poll_payout(taker_config, &accepted_offer)?;
 
 		debug!("Received payout psbt: {}", &payout_keyspend_psbt);
-		let signed_payout_psbt = wallet
+		let signature = wallet
 			.validate_payout_psbt(&payout_keyspend_psbt)?
-			.sign_keyspend_payout_psbt(
+			.create_keyspend_payout_signature(
 				payout_keyspend_psbt,
 				agg_pubk_ctx,
 				agg_pub_nonce,
 				accepted_offer.used_musig_config,
 			)?;
+
+		// submit partial signature back to coordinator
+		PayoutSignatureRequest::send(&taker_config, &signature, &accepted_offer.offer_id_hex)?;
 	// here we need to handle if the other party is not cooperating
 	} else {
 		error!("Trade failed.");

@@ -13,11 +13,10 @@ pub async fn process_order(
 	let wallet = &coordinator.coordinator_wallet;
 	let database = &coordinator.coordinator_db;
 
-	let bond_address = wallet.get_new_address().await?;
-	let locking_amount_sat = offer.amount_satoshi * offer.bond_ratio as u64 / 100;
+	let locking_amount_sat = offer.amount_satoshi * u64::from(offer.bond_ratio) / 100;
 
 	let bond_requirements = BondRequirementResponse {
-		bond_address,
+		bond_address: wallet.get_new_address().await?,
 		locking_amount_sat,
 	};
 
@@ -272,17 +271,36 @@ pub async fn handle_final_payout(
 			.await
 			.map_err(|e| RequestError::Database(e.to_string()))?;
 
-		let payout_keyspend_psbt_hex = coordinator
-			.coordinator_wallet
-			.assemble_keyspend_payout_psbt(&escrow_payout_data)
+		let payout_keyspend_psbt_hex = if let Some(payout_psbt_hex) = database
+			.fetch_keyspend_payout_psbt(&payload.offer_id_hex)
 			.await
-			.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
+			.map_err(|e| RequestError::Database(e.to_string()))?
+		{
+			payout_psbt_hex
+		} else {
+			if !database
+				.toggle_processing(&payload.offer_id_hex)
+				.await
+				.map_err(|e| RequestError::Database(e.to_string()))?
+			{
+				return Ok(PayoutProcessingResult::NotReady);
+			}
+			let payout_keyspend_psbt_hex = coordinator
+				.coordinator_wallet
+				.assemble_keyspend_payout_psbt(&escrow_payout_data)
+				.await
+				.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
 
-		database
-			.insert_keyspend_payout_psbt(&payload.offer_id_hex, &payout_keyspend_psbt_hex)
-			.await
-			.map_err(|e| RequestError::Database(e.to_string()))?;
-
+			database
+				.insert_keyspend_payout_psbt(&payload.offer_id_hex, &payout_keyspend_psbt_hex)
+				.await
+				.map_err(|e| RequestError::Database(e.to_string()))?;
+			database
+				.toggle_processing(&payload.offer_id_hex)
+				.await
+				.map_err(|e| RequestError::Database(e.to_string()))?;
+			payout_keyspend_psbt_hex
+		};
 		return Ok(PayoutProcessingResult::ReadyPSBT(PayoutResponse {
 			payout_psbt_hex: payout_keyspend_psbt_hex,
 			agg_musig_nonce_hex: escrow_payout_data.agg_musig_nonce.to_string(),
@@ -327,7 +345,7 @@ pub async fn handle_payout_signature(
 	coordinator: Arc<Coordinator>,
 ) -> Result<bool, RequestError> {
 	let database = &coordinator.coordinator_db;
-	let _wallet = &coordinator.coordinator_wallet;
+	// let _wallet = &coordinator.coordinator_wallet;
 
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
 
@@ -340,16 +358,16 @@ pub async fn handle_payout_signature(
 		.await
 		.map_err(|e| RequestError::Database(e.to_string()))?;
 
-	let keyspend_information = if let Some(keyspend_context) = database
+	let keyspend_information = match database
 		.fetch_keyspend_payout_information(&payload.offer_id_hex)
 		.await
 		.map_err(|e| RequestError::Database(e.to_string()))?
 	{
-		keyspend_context
-	} else {
-		return Ok(false);
+		Some(context) => context,
+		None => return Ok(false),
 	};
-	dbg!("Keyspend info: {}", keyspend_information);
+
+	debug!("Keyspend info: {:?}", keyspend_information);
 	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
 
 	Ok(true)

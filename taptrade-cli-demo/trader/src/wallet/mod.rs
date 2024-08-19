@@ -213,7 +213,7 @@ impl TradingWallet {
 
 	/// creates a partial signature to spend the keyspend path of the escrow output
 	/// which will be returned to the coordinator for aggregation
-	pub fn sign_keyspend_payout_psbt(
+	pub fn create_keyspend_payout_signature(
 		&self,
 		validated_payout_psbt: PartiallySignedTransaction,
 		key_agg_context: KeyAggContext,

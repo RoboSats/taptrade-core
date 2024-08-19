@@ -1,21 +1,22 @@
+use bdk::FeeRate;
+
 /// construction of the transaction spending the escrow output after a successfull trade as keyspend transaction
 use super::*;
 
 fn get_tx_fees_abs_sat(blockchain_backend: &RpcBlockchain) -> Result<(u64, u64)> {
-	let feerate = blockchain_backend.estimate_fee(6)?;
+	let feerate = match blockchain_backend.estimate_fee(6) {
+		Ok(feerate) => feerate,
+		Err(e) => {
+			error!("Failed to estimate fee: {}. Using fallback 40 sat/vb`", e);
+			FeeRate::from_sat_per_vb(40.0)
+		}
+	};
 	let keyspend_payout_tx_size_vb = 140; // ~, always 1 input, 2 outputs
 
 	let tx_fee_abs = feerate.fee_vb(keyspend_payout_tx_size_vb);
 
 	Ok((tx_fee_abs, tx_fee_abs / 2))
 }
-
-// pub fn aggregate_partial_signatures(
-// 	maker_sig_hex: &str,
-// 	taker_sig_hex: &str,
-// ) -> anyhow::Result<String> {
-// 	Ok(())
-// }
 
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	fn get_escrow_utxo(

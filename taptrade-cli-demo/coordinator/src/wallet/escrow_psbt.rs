@@ -30,16 +30,16 @@ pub fn aggregate_musig_pubkeys(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
 ) -> Result<KeyAggContext> {
-	debug!(
-		"Aggregating musig pubkeys: {} and {}",
-		maker_musig_pubkey, taker_musig_pubkey
-	);
 	let pubkeys: [MuSig2PubKey; 2] = [
 		MuSig2PubKey::from_str(maker_musig_pubkey).context("Error parsing musig pk 1")?,
 		MuSig2PubKey::from_str(taker_musig_pubkey).context("Error parsing musig pk 2")?,
 	];
 
 	let key_agg_ctx = KeyAggContext::new(pubkeys).context("Error aggregating musig pubkeys")?;
+	debug!(
+		"Aggregating musig pubkeys: {} and {} to {:?}",
+		maker_musig_pubkey, taker_musig_pubkey, key_agg_ctx
+	);
 	Ok(key_agg_ctx)
 }
 

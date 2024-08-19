@@ -121,3 +121,10 @@ pub struct TradeObligationsUnsatisfied {
 	pub robohash_hex: String,
 	pub offer_id_hex: String,
 }
+
+#[derive(Debug, Serialize)]
+pub struct PayoutSignatureRequest {
+	pub partial_sig_hex: String,
+	pub offer_id_hex: String,
+	pub robohash_hex: String,
+}
