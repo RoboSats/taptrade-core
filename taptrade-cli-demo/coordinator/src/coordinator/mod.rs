@@ -368,6 +368,11 @@ pub async fn handle_payout_signature(
 	};
 
 	debug!("Keyspend info: {:?}", keyspend_information);
+	trace!(
+		"Keyspend agg sig : {} \n Agg pubk: {}",
+		keyspend_information.agg_sig.to_string(),
+		keyspend_information.agg_keyspend_pk.to_string()
+	);
 	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
 
 	Ok(true)

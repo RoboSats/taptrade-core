@@ -22,7 +22,7 @@ async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase>
 			username: env::var("BITCOIN_RPC_USER").unwrap(),
 			password: env::var("BITCOIN_RPC_PASSWORD").unwrap(),
 		},
-		network: Regtest,
+		network: Network::Regtest,
 		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		wallet_name: bdk::wallet::wallet_name_from_descriptor(
 			Bip86(wallet_xprv, KeychainKind::External),
@@ -339,7 +339,7 @@ fn test_create_escrow_spending_psbt() {
 			username: env::var("BITCOIN_RPC_USER").unwrap(),
 			password: env::var("BITCOIN_RPC_PASSWORD").unwrap(),
 		},
-		network: Regtest,
+		network: Network::Regtest,
 		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
 		wallet_name: bdk::wallet::wallet_name_from_descriptor(
 			test_descriptor,
@@ -358,4 +358,12 @@ fn test_create_escrow_spending_psbt() {
 	let escrow_utxo = escrow_output_wallet.list_unspent().unwrap();
 	dbg!(&escrow_utxo);
 	assert!(escrow_utxo.len() > 0);
+}
+
+#[test]
+#[allow(unused)]
+fn test_signing_keyspend_payout() {
+	let keyspend_payout = PartiallySignedTransaction::from_str("cHNidP8BAIkBAAAAAY+TZIhOwH4s+pwY3IyReX+uTDcTk/Z0uyR+8nMry1SFAgAAAAD+////ApgIAAAAAAAAIlEgFnkGWGJhc3wojQDfZ5/ZHeFozXkveTMP6yEHi3Gzo7A4jwEAAAAAACJRICTtYuOGKvI2WT//MicE6aMb2W5KEhmf55LFdApZj+tKoggAAAABASuwrQEAAAAAACJRICy8+LA5padCPyw6dB0oMiZVV3zATeY+q83+7H4kiAQzYhXA8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/tFsKZjNKhUZWQ0TslhZ1I5Kt1rGUZOlBUctAWL70dZ7kzhGQ99VWndyHBjT06XjMNhkpiuLWZT3vXWNLhoyTl5RSDx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUa0gN6bkMMmVPGdUTe3O7Ybsga70jcmRElBRumWrD09h5H6swGIVwPAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7TcSMPrBzbJ9+vK8/+WWM6ViQ5io+JfpLsugeicDL/ZpV2tNiQ45e2JtrA5JyFjS/kxMJ3f7FU0BxFa1DsXV/dkkgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tIPHx2wgSavEFl0zeYCEJZSXtOQz5t83l/tsXoLFu0xFRrQIACLHAYhXA8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/uY9HZ5BRo2WZJvd3h4T+v6Hrjf3IeNmxcXcogB+JYsKEzhGQ99VWndyHBjT06XjMNhkpiuLWZT3vXWNLhoyTl5RSBJh/PeIKmx+m92xnWJNJU6jWFeQV8aZW8PZWNpS1MQfa0gN6bkMMmVPGdUTe3O7Ybsga70jcmRElBRumWrD09h5H6swGIVwPAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7m/TgFYO8ITv+HjmsFMcY8cecvfDa+X6rDLa+Yzo4FjhV2tNiQ45e2JtrA5JyFjS/kxMJ3f7FU0BxFa1DsXV/dicgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tAsQvscAhFjem5DDJlTxnVE3tzu2G7IGu9I3JkRJQUbplqw9PYeR+RQJFsKZjNKhUZWQ0TslhZ1I5Kt1rGUZOlBUctAWL70dZ7pj0dnkFGjZZkm93eHhP6/oeuN/ch42bFxdyiAH4liwoL648ECEWSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH1lA0WwpmM0qFRlZDROyWFnUjkq3WsZRk6UFRy0BYvvR1nuTcSMPrBzbJ9+vK8/+WWM6ViQ5io+JfpLsugeicDL/Zqb9OAVg7whO/4eOawUxxjxx5y98Nr5fqsMtr5jOjgWOAxO7F0hFvAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7BQCETUSTIRbx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUUUCmPR2eQUaNlmSb3d4eE/r+h6439yHjZsXF3KIAfiWLCib9OAVg7whO/4eOawUxxjxx5y98Nr5fqsMtr5jOjgWOGyh2C0BFyDwCUnW3RzpmgP4ihpPWRF9VTsNpRcou3/VuY+/VBM3+wEYIAOftg8wJKEbEYW4XjrBpfwVkPwEJaZiYmlU0fM8ljA/AAAA").unwrap();
+	let agg_sig = LiftedSignature::from_str("918862505ef919959328f29af4ff2b0bfedaec4489c8db8e3bee33d7ea49aea899ee1cf6ddfad8684f195094945e177378c3c743527f23137e972d7af5546de4").unwrap();
+	let agg_pubk_ctx = KeyAggContext::from_str("0000000002034987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d02f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151").unwrap();
 }

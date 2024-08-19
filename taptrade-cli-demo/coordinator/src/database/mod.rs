@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod db_tests;
 
-use axum::routing::trace;
-
 use super::*;
 
 #[derive(Clone, Debug)]

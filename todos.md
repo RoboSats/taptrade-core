@@ -1,6 +1,7 @@
 Thinks to improve when implementing the production ready library/coordinator:
 * secure user authentification scheme for calls / unique trade ids
 * make api more generic (smaller) / maybe use websockets
+* make bond punishment logic more advanced (raising fees, quicker monitoring, redundant mempools?)
 * review escrow output descriptor, maybe make it smaller(less specific cases, more generic)?
 * maybe hard code descriptor instead of compiling it from pieces?
 * review for security flaws (error handling, logic bugs, crypto bugs)
