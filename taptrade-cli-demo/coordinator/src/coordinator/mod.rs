@@ -374,6 +374,10 @@ pub async fn handle_payout_signature(
 		keyspend_information.agg_keyspend_pk.to_string()
 	);
 	warn!("Use musig2 validate partial sig to validate sigs before using to blame users providing wrong sigs");
-
+	coordinator
+		.coordinator_wallet
+		.broadcast_keyspend_tx(&keyspend_information)
+		.await
+		.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
 	Ok(true)
 }

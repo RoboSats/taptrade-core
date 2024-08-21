@@ -22,14 +22,12 @@ use axum::{
 };
 use bdk::{
 	bitcoin::{
-		self,
 		address::Payload,
 		bip32::ExtendedPrivKey,
 		consensus::encode::deserialize,
-		hashes::Hash,
 		key::{secp256k1, XOnlyPublicKey},
 		psbt::{Input, PartiallySignedTransaction, Prevouts},
-		sighash::{SighashCache, TapSighashType},
+		sighash::SighashCache,
 		Address, Network, OutPoint, Transaction, TxIn, Txid,
 	},
 	bitcoincore_rpc::{

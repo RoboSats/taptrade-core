@@ -11,6 +11,32 @@ use bdk::{
 	miniscript::{policy::Concrete, Descriptor, Tap},
 	Wallet,
 };
+use bitcoin;
+use bitcoin::consensus::Decodable;
+
+fn get_backend() -> RpcBlockchain {
+	dotenv().ok();
+	let test_descriptor = "tr(f00949d6dd1ce99a03f88a1a4f59117d553b0da51728bb7fd5b98fbf541337fb,{{and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(8f808f457423ff5e4e20a36d317ce9426f9da2fde875e74e15a04481b94bec06)),and_v(v:pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151),pk(8f808f457423ff5e4e20a36d317ce9426f9da2fde875e74e15a04481b94bec06))},{and_v(v:and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151)),after(2048)),and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),after(12228))}})#0edq24m2";
+	let secp_context = secp256k1::Secp256k1::new();
+	let rpc_config = RpcConfig {
+		url: env::var("BITCOIN_RPC_ADDRESS_PORT").unwrap().to_string(),
+		auth: Auth::UserPass {
+			username: env::var("BITCOIN_RPC_USER").unwrap(),
+			password: env::var("BITCOIN_RPC_PASSWORD").unwrap(),
+		},
+		network: Network::Regtest,
+		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		wallet_name: bdk::wallet::wallet_name_from_descriptor(
+			test_descriptor,
+			None,
+			Network::Regtest,
+			&secp_context,
+		)
+		.unwrap(),
+		sync_params: None,
+	};
+	RpcBlockchain::from_config(&rpc_config).unwrap()
+}
 
 async fn new_test_wallet(wallet_xprv: &str) -> CoordinatorWallet<MemoryDatabase> {
 	dotenv().ok();
@@ -363,7 +389,54 @@ fn test_create_escrow_spending_psbt() {
 #[test]
 #[allow(unused)]
 fn test_signing_keyspend_payout() {
-	let keyspend_payout = PartiallySignedTransaction::from_str("cHNidP8BAIkBAAAAAY+TZIhOwH4s+pwY3IyReX+uTDcTk/Z0uyR+8nMry1SFAgAAAAD+////ApgIAAAAAAAAIlEgFnkGWGJhc3wojQDfZ5/ZHeFozXkveTMP6yEHi3Gzo7A4jwEAAAAAACJRICTtYuOGKvI2WT//MicE6aMb2W5KEhmf55LFdApZj+tKoggAAAABASuwrQEAAAAAACJRICy8+LA5padCPyw6dB0oMiZVV3zATeY+q83+7H4kiAQzYhXA8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/tFsKZjNKhUZWQ0TslhZ1I5Kt1rGUZOlBUctAWL70dZ7kzhGQ99VWndyHBjT06XjMNhkpiuLWZT3vXWNLhoyTl5RSDx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUa0gN6bkMMmVPGdUTe3O7Ybsga70jcmRElBRumWrD09h5H6swGIVwPAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7TcSMPrBzbJ9+vK8/+WWM6ViQ5io+JfpLsugeicDL/ZpV2tNiQ45e2JtrA5JyFjS/kxMJ3f7FU0BxFa1DsXV/dkkgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tIPHx2wgSavEFl0zeYCEJZSXtOQz5t83l/tsXoLFu0xFRrQIACLHAYhXA8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/uY9HZ5BRo2WZJvd3h4T+v6Hrjf3IeNmxcXcogB+JYsKEzhGQ99VWndyHBjT06XjMNhkpiuLWZT3vXWNLhoyTl5RSBJh/PeIKmx+m92xnWJNJU6jWFeQV8aZW8PZWNpS1MQfa0gN6bkMMmVPGdUTe3O7Ybsga70jcmRElBRumWrD09h5H6swGIVwPAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7m/TgFYO8ITv+HjmsFMcY8cecvfDa+X6rDLa+Yzo4FjhV2tNiQ45e2JtrA5JyFjS/kxMJ3f7FU0BxFa1DsXV/dicgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tAsQvscAhFjem5DDJlTxnVE3tzu2G7IGu9I3JkRJQUbplqw9PYeR+RQJFsKZjNKhUZWQ0TslhZ1I5Kt1rGUZOlBUctAWL70dZ7pj0dnkFGjZZkm93eHhP6/oeuN/ch42bFxdyiAH4liwoL648ECEWSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH1lA0WwpmM0qFRlZDROyWFnUjkq3WsZRk6UFRy0BYvvR1nuTcSMPrBzbJ9+vK8/+WWM6ViQ5io+JfpLsugeicDL/Zqb9OAVg7whO/4eOawUxxjxx5y98Nr5fqsMtr5jOjgWOAxO7F0hFvAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7BQCETUSTIRbx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUUUCmPR2eQUaNlmSb3d4eE/r+h6439yHjZsXF3KIAfiWLCib9OAVg7whO/4eOawUxxjxx5y98Nr5fqsMtr5jOjgWOGyh2C0BFyDwCUnW3RzpmgP4ihpPWRF9VTsNpRcou3/VuY+/VBM3+wEYIAOftg8wJKEbEYW4XjrBpfwVkPwEJaZiYmlU0fM8ljA/AAAA").unwrap();
-	let agg_sig = LiftedSignature::from_str("918862505ef919959328f29af4ff2b0bfedaec4489c8db8e3bee33d7ea49aea899ee1cf6ddfad8684f195094945e177378c3c743527f23137e972d7af5546de4").unwrap();
-	let agg_pubk_ctx = KeyAggContext::from_str("0000000002034987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d02f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151").unwrap();
+	let keyspend_payout = bitcoin::Psbt::from_str("cHNidP8BAIkBAAAAASot4B9PBjdDjbgmOX/vfTk/FDS30ejTBu8dx3NJbPORAgAAAAD+////AjiPAQAAAAAAIlEgoZWbDMyvOKWEsTWwmthl3se6/M00x/bk2/4ELlCyCHSYCAAAAAAAACJRIHEcvg3V6lJW5RcQRmSz4Zj5gYP8C7RKMMwuVQ26vfH1qgcAAAABASuwrQEAAAAAACJRIPvD+LXxB25lAO+cwhHVKNlBgAPuS5QN9K2kFa5nAUhbYhXB8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/sJv25s7HlPjxujOG0+WdJm6rnzQC0/DqM/Kl9zpbzzSkzhGQ99VWndyHBjT06XjMNhkpiuLWZT3vXWNLhoyTl5RSDx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUa0g3FqLzlTfAuvoX+A8TbtP5naEIhEikUXXdYYGwn/ADp6swGIVwfAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7TcSMPrBzbJ9+vK8/+WWM6ViQ5io+JfpLsugeicDL/ZpTGq6PyYTAXjMMx8QHcRpmSR/S5w7BsoGyEG9PK9qsEkkgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tIPHx2wgSavEFl0zeYCEJZSXtOQz5t83l/tsXoLFu0xFRrQIACLHAYhXB8AlJ1t0c6ZoD+IoaT1kRfVU7DaUXKLt/1bmPv1QTN/ub9OAVg7whO/4eOawUxxjxx5y98Nr5fqsMtr5jOjgWOFMaro/JhMBeMwzHxAdxGmZJH9LnDsGygbIQb08r2qwSJyBJh/PeIKmx+m92xnWJNJU6jWFeQV8aZW8PZWNpS1MQfa0CxC+xwGIVwfAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7wK3W/OD10zUnuKlYOeZzff8M3puuqUs5FopzHBxnb+BM4RkPfVVp3chwY09Ol4zDYZKYri1mU9711jS4aMk5eUUgSYfz3iCpsfpvdsZ1iTSVOo1hXkFfGmVvD2VjaUtTEH2tINxai85U3wLr6F/gPE27T+Z2hCIRIpFF13WGBsJ/wA6erMAhFkmH894gqbH6b3bGdYk0lTqNYV5BXxplbw9lY2lLUxB9ZQMJv25s7HlPjxujOG0+WdJm6rnzQC0/DqM/Kl9zpbzzSk3EjD6wc2yffryvP/lljOlYkOYqPiX6S7LoHonAy/2am/TgFYO8ITv+HjmsFMcY8cecvfDa+X6rDLa+Yzo4FjgMTuxdIRbcWovOVN8C6+hf4DxNu0/mdoQiESKRRdd1hgbCf8AOnkUCCb9ubOx5T48bozhtPlnSZuq580AtPw6jPypfc6W880rArdb84PXTNSe4qVg55nN9/wzem66pSzkWinMcHGdv4NzV3gchFvAJSdbdHOmaA/iKGk9ZEX1VOw2lFyi7f9W5j79UEzf7BQCETUSTIRbx8dsIEmrxBZdM3mAhCWUl7TkM+bfN5f7bF6CxbtMRUUUCm/TgFYO8ITv+HjmsFMcY8cecvfDa+X6rDLa+Yzo4FjjArdb84PXTNSe4qVg55nN9/wzem66pSzkWinMcHGdv4Gyh2C0BFyDwCUnW3RzpmgP4ihpPWRF9VTsNpRcou3/VuY+/VBM3+wEYIHUdvPOwH4IODj95hMoeLCf/7D01JV+CRgY/QOS+4hTfAAAA").unwrap();
+
+	let agg_sig = LiftedSignature::from_str("f14ce71d49cefeb7b3f5dc903dc26a84abaf5c7ccc1bf29e4c029073e07525078bd3441b369ca1e80d2d3f12c401ffa6cccc10a86c70429a53841e7b4e92ed60").unwrap();
+	// let agg_pubk_ctx = KeyAggContext::from_str("").unwrap();
+
+	let mut bitcoin_032_tx: bitcoin::Transaction = keyspend_payout.clone().extract_tx().unwrap();
+	let secp_signature =
+		bitcoin::secp256k1::schnorr::Signature::from_slice(&agg_sig.to_bytes()).unwrap();
+	// dbg!(secp_signature);
+
+	let sighash_type = keyspend_payout.inputs[0].taproot_hash_ty().unwrap();
+	let rust_bitcoin_sig = bitcoin::taproot::Signature {
+		signature: secp_signature,
+		sighash_type,
+	};
+	let unsigned_tx_hex = bitcoin::consensus::encode::serialize_hex(&bitcoin_032_tx);
+
+	// 1st way to sign input
+	let witness = bitcoin::Witness::p2tr_key_spend(&rust_bitcoin_sig);
+	let escrow_input: &mut bitcoin::TxIn = bitcoin_032_tx.input.get_mut(0).unwrap();
+	escrow_input.witness = witness.clone();
+
+	// 2nd way to sign input
+	// let input = &mut keyspend_payout.inputs[0];
+	// input.tap_key_sig = Some(rust_bitcoin_sig);
+	// let secp_context = bitcoin::secp256k1::Secp256k1::new();
+	// let finalized = keyspend_payout.finalize(&secp_context).unwrap();
+
+	let signed_hex_tx = bitcoin::consensus::encode::serialize_hex(&bitcoin_032_tx);
+
+	// check the tx is different from the unsigned tx (sig has been added)
+	assert_ne!(signed_hex_tx, unsigned_tx_hex);
+
+	dbg!(&signed_hex_tx);
+	dbg!(&unsigned_tx_hex);
+	// let hex_tx = bitcoin::consensus::encode::serialize_hex(&finalized.extract_tx().unwrap());
+
+	// convert the hex tx back into a bitcoin030 tx
+	let bdk_bitcoin_030_tx: bdk::bitcoin::Transaction =
+		deserialize(&hex::decode(signed_hex_tx.clone()).unwrap()).unwrap();
+
+	// check the bitcoin030 tx is the same as the bitcoin032 tx
+	assert_eq!(
+		signed_hex_tx,
+		bdk::bitcoin::consensus::encode::serialize_hex(&bdk_bitcoin_030_tx)
+	);
+
+	let backend = get_backend();
+	// backend.broadcast(&bdk_bitcoin_030_tx).unwrap();
+	// dbg!(bdk_bitcon_030_tx);
 }

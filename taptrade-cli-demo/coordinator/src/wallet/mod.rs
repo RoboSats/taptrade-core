@@ -69,7 +69,7 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 	let wallet = Wallet::new(
 		Bip86(wallet_xprv, KeychainKind::External),
 		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
-		bitcoin::Network::Regtest,
+		Network::Regtest,
 		MemoryDatabase::new(),
 	)?;
 

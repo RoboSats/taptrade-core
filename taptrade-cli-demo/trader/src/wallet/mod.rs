@@ -16,7 +16,7 @@ use bdk::{
 		consensus::encode::serialize_hex,
 		hashes::Hash,
 		key::{KeyPair, Secp256k1, XOnlyPublicKey},
-		psbt::{serialize, Input, PartiallySignedTransaction, Prevouts},
+		psbt::{raw, serialize, Input, PartiallySignedTransaction, Prevouts},
 		sighash::{SighashCache, TapSighash, TapSighashType},
 		Address, Network, TxOut,
 	},
@@ -220,19 +220,22 @@ impl TradingWallet {
 		agg_pub_nonce: AggNonce,
 		local_musig_state: MuSigData,
 	) -> Result<String> {
-		let mut sig_hash_cache = SighashCache::new(validated_payout_psbt.unsigned_tx.clone());
+		// let tweak = validated_payout_psbt.spend_info()?;
+		let mut sig_hash_cache = SighashCache::new(&validated_payout_psbt.unsigned_tx);
 
 		let utxo = validated_payout_psbt
 			.iter_funding_utxos()
 			.next()
 			.ok_or(anyhow!("No UTXO found in payout psbt"))??
 			.clone();
+		let sighash_type = validated_payout_psbt.inputs[0].taproot_hash_ty()?;
 
 		// get the msg (sighash) to sign with the musig key
 		let binding = sig_hash_cache
-			.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), TapSighashType::All)
+			.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), sighash_type)
 			.context("Failed to create keyspend sighash")?;
-		let keyspend_sig_hash_msg = binding.as_byte_array();
+		let raw_sig_hash = binding.to_raw_hash();
+		// let keyspend_sig_hash_msg = binding.as_byte_array();
 
 		let secret_nonce = local_musig_state.nonce.get_sec_for_signing()?;
 		let seckey = local_musig_state.secret_key;
@@ -242,7 +245,7 @@ impl TradingWallet {
 			seckey,
 			secret_nonce,
 			&agg_pub_nonce,
-			keyspend_sig_hash_msg,
+			raw_sig_hash,
 		)?;
 
 		match keyspend_sig {

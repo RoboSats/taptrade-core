@@ -1,3 +1,6 @@
+use bitcoin::secp256k1::Scalar;
+use hex::ToHex;
+
 use super::*;
 
 #[derive(Debug)]
@@ -61,9 +64,11 @@ impl KeyspendContext {
 		maker_pk: &str,
 		taker_pk: &str,
 		keyspend_psbt: &str,
+		descriptor: &str,
 	) -> anyhow::Result<Self> {
+		let tweak = get_keyspend_tweak_scalar(descriptor)?;
 		let agg_keyspend_pk: musig2::KeyAggContext =
-			wallet::aggregate_musig_pubkeys(maker_pk, taker_pk)?;
+			aggregate_musig_pubkeys_with_tweak(maker_pk, taker_pk, tweak)?;
 		let agg_nonce: MusigAggNonce =
 			coordinator_utils::agg_hex_musig_nonces(maker_nonce, taker_nonce)?;
 		let keyspend_psbt = PartiallySignedTransaction::deserialize(&hex::decode(keyspend_psbt)?)?;
@@ -82,18 +87,19 @@ impl KeyspendContext {
 				.ok_or(anyhow!("No UTXO found in payout psbt"))??
 				.clone();
 
+			let sighash_type = keyspend_psbt.inputs[0].taproot_hash_ty()?;
 			// get the msg (sighash) to sign with the musig key
 			let binding = sig_hash_cache
-				.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), TapSighashType::All)
+				.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), sighash_type)
 				.context("Failed to create keyspend sighash")?;
-			binding.as_byte_array().to_vec()
+			binding.to_raw_hash()
 		};
 
 		let agg_sig: LiftedSignature = musig2::aggregate_partial_signatures(
 			&agg_keyspend_pk,
 			&agg_nonce,
 			partial_signatures,
-			msg.as_slice(),
+			msg,
 		)
 		.context("Aggregating partial signatures failed")?;
 
@@ -104,6 +110,47 @@ impl KeyspendContext {
 			keyspend_psbt,
 		})
 	}
+}
+
+fn get_keyspend_tweak_scalar(descriptor: &str) -> Result<bdk::bitcoin::secp256k1::Scalar> {
+	let tr_descriptor: Descriptor<XOnlyPublicKey> =
+		bdk::descriptor::Descriptor::from_str(descriptor)?;
+	let spend_info = if let Descriptor::Tr(tr) = tr_descriptor {
+		tr.spend_info()
+	} else {
+		return Err(anyhow!(
+			"Descriptor {descriptor} is not a taproot descriptor"
+		));
+	};
+	let tweak = spend_info.tap_tweak();
+	debug!(
+		"Internal key: {}, Tweaked (outer) key: {}, Tweak: {}",
+		spend_info.internal_key(),
+		spend_info.output_key(),
+		tweak
+	);
+	Ok(tweak.to_scalar())
+}
+
+pub fn aggregate_musig_pubkeys_with_tweak(
+	maker_musig_pubkey: &str,
+	taker_musig_pubkey: &str,
+	tweak_scalar: bdk::bitcoin::secp256k1::Scalar,
+) -> Result<KeyAggContext> {
+	let musig_scalar = musig2::secp256k1::Scalar::from_be_bytes(tweak_scalar.to_be_bytes())?;
+	let pubkeys: [MuSig2PubKey; 2] = [
+		MuSig2PubKey::from_str(maker_musig_pubkey).context("Error parsing musig pk 1")?,
+		MuSig2PubKey::from_str(taker_musig_pubkey).context("Error parsing musig pk 2")?,
+	];
+
+	let key_agg_ctx = KeyAggContext::new(pubkeys)
+		.context("Error aggregating musig pubkeys")?
+		.with_tweak(musig_scalar, true)?;
+	debug!(
+		"Aggregating musig pubkeys: {} and {} to {:?}",
+		maker_musig_pubkey, taker_musig_pubkey, key_agg_ctx
+	);
+	Ok(key_agg_ctx)
 }
 
 impl PayoutData {
@@ -119,8 +166,10 @@ impl PayoutData {
 		musig_pk_hex_maker: &str,
 		musig_pk_hex_taker: &str,
 	) -> Result<Self> {
+		let tweak = get_keyspend_tweak_scalar(escrow_output_descriptor)?;
 		let aggregated_musig_pubkey_ctx_hex = hex::encode(
-			aggregate_musig_pubkeys(musig_pk_hex_maker, musig_pk_hex_taker)?.to_bytes(),
+			aggregate_musig_pubkeys_with_tweak(musig_pk_hex_maker, musig_pk_hex_taker, tweak)?
+				.to_bytes(),
 		);
 
 		let agg_musig_nonce: MusigAggNonce =

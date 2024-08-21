@@ -156,10 +156,21 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			// 	bitcoin::Network::Regtest,
 			// 	MemoryDatabase::new(),
 			// )?;
+
 			let escrow_address =
 				escrow_output_descriptor.address(bdk::bitcoin::Network::Regtest)?;
-
-			debug!("Created escrow address: {escrow_address}");
+			// dbg!("building untweaked address now");
+			// let agg_untweaked: musig2::secp256k1::PublicKey = aggregate_musig_pubkeys(
+			// 	&maker_psbt_input_data.musig_pubkey_compressed_hex,
+			// 	&taker_psbt_input_data.musig_pubkey_compressed_hex,
+			// )?
+			// .aggregated_pubkey_untweaked();
+			// let xonly_hex = agg_untweaked.x_only_public_key().0.to_string();
+			// let bdk_xonly = bdk::bitcoin::key::XOnlyPublicKey::from_str(&xonly_hex)?;
+			// let output_key = TweakedPublicKey::dangerous_assume_tweaked(bdk_xonly);
+			// let escrow_address = bdk::bitcoin::Address::p2tr_tweaked(output_key, Network::Regtest);
+			// escrow_output_descriptor = Descriptor::<XOnlyPublicKey>::new_tr(bdk_xonly, None)
+			// 	.context("Error assembling escrow output descriptor")?;
 
 			// dummy escrow address for testing the psbt signing flow
 			// let escrow_address =

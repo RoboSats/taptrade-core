@@ -961,7 +961,7 @@ impl CoordinatorDB {
 		let row = sqlx::query(
 			"SELECT musig_partial_sig_hex_maker, musig_partial_sig_hex_taker,
 			musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
-			payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?",
+			payout_transaction_psbt_hex, escrow_output_descriptor FROM taken_offers WHERE offer_id = ?",
 		).bind(offer_id_hex).fetch_one(&*self.db_pool).await?;
 
 		let maker_sig: Option<String> = row.try_get("musig_partial_sig_hex_maker")?;
@@ -974,6 +974,7 @@ impl CoordinatorDB {
 		let taker_nonce: String = row.try_get("musig_pub_nonce_hex_taker")?;
 
 		let keyspend_psbt: String = row.try_get("payout_transaction_psbt_hex")?;
+		let descriptor: String = row.try_get("escrow_output_descriptor")?;
 
 		if let (Some(maker), Some(taker)) = (maker_sig, taker_sig) {
 			Ok(Some(KeyspendContext::from_hex_str(
@@ -984,6 +985,7 @@ impl CoordinatorDB {
 				&maker_pubkey,
 				&taker_pubkey,
 				&keyspend_psbt,
+				&descriptor,
 			)?))
 		} else {
 			Ok(None)
