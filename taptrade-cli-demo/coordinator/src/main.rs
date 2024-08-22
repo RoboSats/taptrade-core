@@ -63,7 +63,7 @@ use tokio::{
 	sync::{oneshot, Mutex},
 };
 use validator::{Validate, ValidationError};
-use wallet::{escrow_psbt::*, wallet_utils::*, *};
+use wallet::{wallet_utils::*, *};
 
 pub struct Coordinator {
 	pub coordinator_db: Arc<CoordinatorDB>,

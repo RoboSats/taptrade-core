@@ -379,5 +379,14 @@ pub async fn handle_payout_signature(
 		.broadcast_keyspend_tx(&keyspend_information)
 		.await
 		.map_err(|e| RequestError::CoordinatorError(e.to_string()))?;
+	database
+		.delete_complete_offer(&payload.offer_id_hex)
+		.await
+		.map_err(|e| {
+			RequestError::Database(format!(
+				"Failed to delete complete offer from taken_offers: {}",
+				e.to_string()
+			))
+		})?;
 	Ok(true)
 }

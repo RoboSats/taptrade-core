@@ -1,6 +1,3 @@
-use bitcoin::secp256k1::Scalar;
-use hex::ToHex;
-
 use super::*;
 
 #[derive(Debug)]

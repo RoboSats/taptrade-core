@@ -1022,4 +1022,12 @@ impl CoordinatorDB {
 		trace!("Toggled processing status for offer {}", offer_id);
 		Ok(result.get::<i64, _>(0) == 1)
 	}
+
+	pub async fn delete_complete_offer(&self, offer_id: &str) -> Result<()> {
+		sqlx::query("DELETE FROM taken_offers WHERE offer_id = ?")
+			.bind(offer_id)
+			.execute(&*self.db_pool)
+			.await?;
+		Ok(())
+	}
 }
