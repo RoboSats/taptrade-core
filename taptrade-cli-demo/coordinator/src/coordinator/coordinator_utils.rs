@@ -53,6 +53,7 @@ pub fn agg_hex_musig_nonces(maker_nonce: &str, taker_nonce: &str) -> Result<Musi
 }
 
 impl KeyspendContext {
+	#[allow(clippy::too_many_arguments)]
 	pub fn from_hex_str(
 		maker_sig: &str,
 		taker_sig: &str,

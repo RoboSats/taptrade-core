@@ -1,6 +1,5 @@
 use super::*;
 
-// Receiving this struct as input to the server
 #[derive(Deserialize, Serialize, Debug, Validate)]
 pub struct OfferRequest {
 	pub robohash_hex: String, // identifier of the trader
@@ -13,7 +12,6 @@ pub struct OfferRequest {
 	pub offer_duration_ts: u64, // unix timestamp how long the offer should stay available
 }
 
-// Define a struct representing your response data
 #[derive(Serialize, PartialEq, Debug, Validate)]
 pub struct BondRequirementResponse {
 	pub bond_address: String,
@@ -21,7 +19,6 @@ pub struct BondRequirementResponse {
 }
 
 // maker step 2
-// (submission of signed bond and other data neccessary to coordinate the trade)
 #[derive(Deserialize, Serialize, Debug)]
 pub struct BondSubmissionRequest {
 	pub robohash_hex: String,

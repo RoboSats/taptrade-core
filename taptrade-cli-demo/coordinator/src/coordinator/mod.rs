@@ -385,7 +385,7 @@ pub async fn handle_payout_signature(
 		.map_err(|e| {
 			RequestError::Database(format!(
 				"Failed to delete complete offer from taken_offers: {}",
-				e.to_string()
+				e
 			))
 		})?;
 	Ok(true)

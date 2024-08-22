@@ -66,7 +66,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		// submit signed payout psbt back to coordinator
 		PayoutSignatureRequest::send(&maker_config, &signature, &offer.offer_id_hex)?;
 	} else {
-		error!("Trade failed. Initiating escrow mode.");
+		warn!("Trader unsatisfied. Initiating escrow mode.");
 		TradeObligationsUnsatisfied::request_escrow(&offer.offer_id_hex, maker_config)?;
 		let escrow_payout_script_psbt = IsOfferReadyRequest::poll_payout(maker_config, &offer)?;
 	}
@@ -110,7 +110,7 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 		PayoutSignatureRequest::send(&taker_config, &signature, &accepted_offer.offer_id_hex)?;
 	// here we need to handle if the other party is not cooperating
 	} else {
-		error!("Trade failed.");
+		error!("Trader unsatisfied. Initiating escrow mode.");
 		panic!("Escrow to be implemented!");
 	}
 	Ok(())
