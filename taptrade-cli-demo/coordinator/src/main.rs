@@ -3,16 +3,6 @@ mod coordinator;
 mod database;
 mod wallet;
 
-use std::{
-	collections::{HashMap, HashSet},
-	env, fmt,
-	net::SocketAddr,
-	ops::Deref,
-	str::FromStr,
-	sync::{Arc, RwLock},
-	time::{SystemTime, UNIX_EPOCH},
-};
-
 use anyhow::{anyhow, Context, Result};
 use axum::{
 	http::StatusCode,
@@ -42,6 +32,7 @@ use bdk::{
 	wallet::verify::*,
 	KeychainKind, SignOptions, SyncOptions, Wallet,
 };
+use chrono::Local;
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
 	bond_monitoring::*, coordinator_utils::*, mempool_monitoring::MempoolHandler,
@@ -58,6 +49,19 @@ use musig2::{
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sqlx::{sqlite::SqlitePoolOptions, Pool, Row, Sqlite};
+use std::{
+	collections::{HashMap, HashSet},
+	env, fmt,
+	io::Write,
+	net::SocketAddr,
+	ops::Deref,
+	str::FromStr,
+	sync::{
+		atomic::{AtomicBool, Ordering},
+		Arc, RwLock,
+	},
+	time::{SystemTime, UNIX_EPOCH},
+};
 use tokio::{
 	net::TcpListener,
 	sync::{oneshot, Mutex},
@@ -70,12 +74,41 @@ pub struct Coordinator {
 	pub coordinator_wallet: Arc<CoordinatorWallet<MemoryDatabase>>,
 }
 
+static LOGGING_ENABLED: AtomicBool = AtomicBool::new(true);
+
+fn get_logging_color_code(level: log::Level) -> &'static str {
+	match level {
+		log::Level::Error => "\x1B[31m", // Red
+		log::Level::Warn => "\x1B[33m",  // Yellow
+		log::Level::Info => "\x1B[32m",  // Green
+		log::Level::Debug => "\x1B[34m", // Blue
+		log::Level::Trace => "\x1B[36m", // Cyan
+	}
+}
+
 // populate .env with values before starting
 #[tokio::main]
 async fn main() -> Result<()> {
 	env_logger::builder()
 		.filter_module("coordinator", log::LevelFilter::Trace)
 		.filter_level(log::LevelFilter::Info)
+		.format(|buf, record| {
+			if LOGGING_ENABLED.load(Ordering::Relaxed) {
+				let level = record.level();
+				let color_code = get_logging_color_code(level);
+				writeln!(
+					buf,
+					"{} [{}{}{}] - {}",
+					Local::now().format("%Y-%m-%d %H:%M:%S"),
+					color_code,
+					level,
+					"\x1B[0m", // Reset color
+					record.args()
+				)
+			} else {
+				Ok(())
+			}
+		})
 		.init();
 	dotenv().ok();
 	debug!("Starting coordinator");

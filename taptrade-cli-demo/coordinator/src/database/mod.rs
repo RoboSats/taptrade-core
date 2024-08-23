@@ -150,7 +150,7 @@ impl CoordinatorDB {
 		)
 		.execute(&db_pool)
 		.await?;
-		dbg!("Database initialized");
+		debug!("Database initialized");
 		let shared_db_pool = Arc::new(db_pool);
 		Ok(Self {
 			db_pool: shared_db_pool,
@@ -745,6 +745,8 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	// checked by the payout handler on request to determine if the trade is ready for payout and
+	// if escrow is required
 	pub async fn fetch_trader_happiness(&self, offer_id: &str) -> Result<TraderHappiness> {
 		let row = sqlx::query(
 			"SELECT maker_happy, taker_happy, escrow_ongoing FROM taken_offers WHERE offer_id = ?",
@@ -764,6 +766,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	// this will be checked by the payout handler on request, the escrow winner will be set trough CLI input
 	pub async fn fetch_escrow_result(&self, offer_id: &str) -> Result<Option<String>> {
 		let row = sqlx::query("SELECT escrow_winner_robohash FROM taken_offers WHERE offer_id = ?")
 			.bind(offer_id)
@@ -775,30 +778,6 @@ impl CoordinatorDB {
 
 		Ok(winner_robohash)
 	}
-
-	// pub async fn fetch_escrow_tx_payout_data(
-	// 	&self,
-	// 	offer_id: &str,
-	// ) -> Result<EscrowPsbtConstructionData> {
-	// 	let row = sqlx::query("SELECT taproot_xonly_pubkey_hex_maker, taproot_xonly_pubkey_hex_taker, musig_pubkey_compressed_hex_maker, musig_pubkey_compressed_hex_taker FROM taken_offers WHERE offer_id = ?")
-	// 		.bind(offer_id)
-	// 		.fetch_one(&*self.db_pool)
-	// 		.await?;
-
-	// 	let taproot_xonly_pubkey_hex_maker: String = row.get("taproot_xonly_pubkey_hex_maker");
-	// 	let taproot_xonly_pubkey_hex_taker: String = row.get("taproot_xonly_pubkey_hex_taker");
-	// 	let musig_pubkey_compressed_hex_maker: String =
-	// 		row.get("musig_pubkey_compressed_hex_maker");
-	// 	let musig_pubkey_compressed_hex_taker: String =
-	// 		row.get("musig_pubkey_compressed_hex_taker");
-
-	// 	Ok(EscrowPsbtConstructionData {
-	// 		taproot_xonly_pubkey_hex_maker,
-	// 		taproot_xonly_pubkey_hex_taker,
-	// 		musig_pubkey_compressed_hex_maker,
-	// 		musig_pubkey_compressed_hex_taker,
-	// 	})
-	// }
 
 	pub async fn get_escrow_tx_amounts(
 		&self,

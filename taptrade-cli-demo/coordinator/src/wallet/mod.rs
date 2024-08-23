@@ -76,7 +76,7 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 	wallet
 		.sync(&backend, SyncOptions::default())
 		.context("Connection to blockchain server failed.")?; // we could also use Esplora to make this async
-	dbg!(wallet.get_balance()?);
+	info!("{}", wallet.get_balance()?);
 	Ok(CoordinatorWallet {
 		wallet: Arc::new(Mutex::new(wallet)),
 		backend: Arc::new(backend),

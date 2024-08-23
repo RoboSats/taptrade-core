@@ -191,7 +191,7 @@ async fn submit_obligation_confirmation(
 // or
 
 // gets called if one of the traders wants to initiate escrow (e.g. claiming they didn't receive the fiat)
-// before timeout ends
+// before timeout ends, just sets the maker unhappy and escrow onging flag in the db
 async fn request_escrow(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<TradeObligationsUnsatisfied>,
