@@ -69,21 +69,11 @@ use tokio::{
 use validator::{Validate, ValidationError};
 use wallet::{wallet_utils::*, *};
 
+static LOGGING_ENABLED: AtomicBool = AtomicBool::new(true);
+
 pub struct Coordinator {
 	pub coordinator_db: Arc<CoordinatorDB>,
 	pub coordinator_wallet: Arc<CoordinatorWallet<MemoryDatabase>>,
-}
-
-static LOGGING_ENABLED: AtomicBool = AtomicBool::new(true);
-
-fn get_logging_color_code(level: log::Level) -> &'static str {
-	match level {
-		log::Level::Error => "\x1B[31m", // Red
-		log::Level::Warn => "\x1B[33m",  // Yellow
-		log::Level::Info => "\x1B[32m",  // Green
-		log::Level::Debug => "\x1B[34m", // Blue
-		log::Level::Trace => "\x1B[36m", // Cyan
-	}
 }
 
 // populate .env with values before starting
@@ -138,4 +128,14 @@ async fn main() -> Result<()> {
 	// Start the API server
 	api_server(coordinator).await?;
 	Ok(())
+}
+
+fn get_logging_color_code(level: log::Level) -> &'static str {
+	match level {
+		log::Level::Error => "\x1B[31m", // Red
+		log::Level::Warn => "\x1B[33m",  // Yellow
+		log::Level::Info => "\x1B[32m",  // Green
+		log::Level::Debug => "\x1B[34m", // Blue
+		log::Level::Trace => "\x1B[36m", // Cyan
+	}
 }
