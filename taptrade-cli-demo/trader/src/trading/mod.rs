@@ -32,6 +32,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 	let offer = ActiveOffer::create(&wallet, maker_config)?;
 	info!("Maker offer created: {:#?}", &offer);
 
+	// waits until taker accepts offer, then gets the escrow psbt in return to sign the inputs
 	let escrow_psbt_requirements = offer.wait_until_taken(maker_config)?;
 	let mut escrow_psbt =
 		PartiallySignedTransaction::from_str(escrow_psbt_requirements.escrow_psbt_hex.as_str())?;
@@ -46,7 +47,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 		maker_config,
 	)?;
 
-	// wait for confirmation
+	// wait for confirmation of the escrow locking transaction (polling)
 	offer.wait_on_trade_ready_confirmation(maker_config)?;
 	if offer.fiat_confirmation_cli_input(maker_config)? {
 		// this represents the "confirm payment" / "confirm fiat recieved" button

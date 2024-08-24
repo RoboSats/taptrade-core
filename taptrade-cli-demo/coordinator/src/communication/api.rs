@@ -22,11 +22,11 @@ pub struct BondRequirementResponse {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
-	pub signed_bond_hex: String, // signed bond transaction, hex encoded
-	pub payout_address: String,  // does this make sense here?
-	pub taproot_pubkey_hex: String,
+	pub signed_bond_hex: String,    // signed bond transaction, hex encoded
+	pub payout_address: String,     // does this make sense here?
+	pub taproot_pubkey_hex: String, // used for script path spending
 	pub musig_pub_nonce_hex: String,
-	pub musig_pubkey_hex: String,
+	pub musig_pubkey_hex: String, // used for key path spending
 	pub bdk_psbt_inputs_hex_csv: String,
 	pub client_change_address: String,
 }

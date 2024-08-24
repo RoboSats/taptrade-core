@@ -24,11 +24,11 @@ pub struct BondRequirementResponse {
 #[derive(Serialize, Debug)]
 pub struct BondSubmissionRequest {
 	pub robohash_hex: String,
-	pub signed_bond_hex: String, // signed bond transaction, hex encoded
-	pub payout_address: String,  // does this make sense here?
-	pub taproot_pubkey_hex: String,
+	pub signed_bond_hex: String,    // signed bond transaction, hex encoded
+	pub payout_address: String,     // does this make sense here?
+	pub taproot_pubkey_hex: String, // used for script path spending
 	pub musig_pub_nonce_hex: String,
-	pub musig_pubkey_hex: String,
+	pub musig_pubkey_hex: String, // used for key path spending
 	pub bdk_psbt_inputs_hex_csv: String,
 	pub client_change_address: String,
 }
@@ -77,7 +77,7 @@ pub struct PublicOffer {
 	pub amount_sat: u64,
 	pub offer_id_hex: String,
 	pub required_bond_amount_sat: u64,
-	pub bond_locking_address: String,
+	pub bond_locking_address: String, // its probably bad privacy to make the locking address static
 }
 
 // request to receive the escrow psbt to sign for the specified offer to take it
