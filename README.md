@@ -33,39 +33,56 @@ in another transacion the trader has a cost associated to creating offers on the
 This bond mechanism should be sufficient for the associated risks as long as out-of-band mining doesn't get extremely cheap.
 
 ```
-                      +--------------------+
-                      |                    |
-                 +--->+ coordinator output |
-                 |    |                    |
-  +-------------+|    +--------------------+
-  |             ||
-  | trader input+|    +--------------------+
-  |             ||    |                    |
-  +-------------++--->+ trader change      |
-                 |    |                    |
-                 |    +--------------------+
-                 |
-                 |    +--------------------+
-                 |    |                    |
-                 +--->+ tx fee             |
-                      |                    |
-                      +--------------------+
+Bond TX, signed, not broadcasted:
+
+                  |-----> Bond output (coordinator)
+Trader input(s)-->|-----> Change output
+                  |-----> Tx fee (high)
+```
+
+#### Escrow locking transaction
+After a taker accepted a public offer (valid bond submitted) both traders have to lock funds in a locking transaction that can only be spent again in collaboration. This locking transaction is a collaborative transaction containing inputs of both maker and taker. Both traders have to sign the locking transaction 
+which is then combined by the coordinator. The coordinator will allow the use of the same inputs as in the bond transaction. Once this locking transaction has sufficient confirmations the fiat exchange can begin.
+
+```
+                  |---> Escrow locking output (will be used for the payout tx)
+Maker input(s)----|---> Coordinator fee output (service fee for coordinator)
+                  |---> Maker change output
+Taker input(s)----|---> Taker change output
+                  |---> Transaction fee
+```
+#### Escrow locking output
+The taproot escrow output can be unlocked in different ways depending on the trade outcome. In the
+happy case of a successful trade the output can be spent using the keyspend path with an aggregated signature two partial signatures from maker and taker, using the Musig2 scheme. In the case of disputes different script paths can be used to enable unlocking by the coordinator in collaboration with one of the traders. 
+Other scripts can be added for edge cases, like a timeout script if the coordinator vanishes.
+```
+                     taproot output key
+                              |
+                              |
+          --------------------------------------------
+          |                                          |
+          |                                          |
+     internal key                              Escrow spending scripts
+  Aggregated pubkey of                Maker + Coordinator        Taker + Coordinator
+    Maker and Taker   
 ```
 
 ## Trade protocol  
-
+WIP
 
 ## Implementation
+WIP
+
 BDK+RustBitcoin+MuSig2+Axum+SQlite+Tokio+...
 
 The protocol partly handled by a coordinator and partly by the client. The coordinator, running on the exchange side, handles trader matching, construction of transactions, monitoring of bonds and more tasks. The client could be bundled to a wasm library and included in the RoboSats frontend. Currently clients are only supposed to talk to the coordinator, not to each other.
 
 ## Status
-
+WIP
 ## Contribution
-
+WIP
 ## Resources
-
+WIP
 <!-- ### Research
 Find the current research as [Obsidian](https://obsidian.md/) formatted documents under /docs/TapTrade_obs.
 
