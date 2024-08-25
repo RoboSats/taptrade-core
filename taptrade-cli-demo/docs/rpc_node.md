@@ -1,19 +1,19 @@
-# RPC Node
+# Regtest Node
 
-This folder contains the documentation for setting up and using the RPC Node in the TapTrade Core repository.
+This folder contains the documentation for setting up and using the Regtest Node in the TapTrade Core repository.
 
 Any developer can use this to test this repository in an isolated Regtest node.
 
 ## Prerequisites
 
-Before using the RPC Node, make sure you have the following prerequisites installed:
+Before using the Regtest Node, make sure you have the following prerequisites installed:
 
 - docker
 - docker compose
 
 ## Installation
 
-To install the RPC Node, follow these steps:
+To install the Regtest Node, follow these steps:
 
 1. Clone the TapTrade Core repository to your local machine.
 
@@ -43,14 +43,6 @@ To install the RPC Node, follow these steps:
     ```
     docker ps
     ```
-
-## Usage
-
-The mine-blocks.sh script is designed to automatically create a wallet, generate initial blocks, and then continue generating blocks at intervals.
-```
-docker exec -it bitcoin ./mine-blocks.sh bcrt1pcc5nx64a9d6rpk5fkvr6v2lnk06cwxqmgpv3894ehgwkeeal2qusjgjrk3
-```
-
 
 ## API Documentation
 
