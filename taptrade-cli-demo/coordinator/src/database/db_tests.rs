@@ -372,7 +372,7 @@ async fn test_fetch_taker_bond_requirements() -> Result<()> {
 
 	// Call the fetch_taker_bond_requirements function
 	let result = database
-		.fetch_taker_bond_requirements(&offer_id_hex.to_string())
+		.fetch_taker_bond_requirements(offer_id_hex)
 		.await?;
 
 	// Verify the result

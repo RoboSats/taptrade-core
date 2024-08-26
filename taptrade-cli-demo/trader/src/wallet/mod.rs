@@ -251,7 +251,7 @@ impl TradingWallet {
 		match keyspend_sig {
 			MaybeScalar::Valid(s) => Ok(s.encode_hex()),
 			MaybeScalar::Zero => {
-				return Err(anyhow!("keyspend sig maybe scalar is Zero"));
+				Err(anyhow!("keyspend sig maybe scalar is Zero"))
 			}
 		}
 	}
