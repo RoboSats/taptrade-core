@@ -39,6 +39,11 @@ Trader input(s)-->|-----> Change output
                   |-----> Tx fee (high)
 ```
 
+Example transaction [hex]:
+```
+0100000000010129a7c05b63693a5cb3ced62192929dc7074f988852301554cdb34e1aa04db1c90000000000feffffff02c56b029500000000225120ddce5be8a1713afb247da815f1545ccb997f593248e6b6d19e0e72a502baf6f28813000000000000225120fe8d8d8ff0985a33bc0b9c16508f8d4fe3d5d4df568a1fe6ad4c3022bbd185fb0140a448c42d65ad6a8febdae8db01d2ff388d8d746c2de84b0524ac9fc0d5af9c09a86c4f8da50ae91a993ce51ce99458bfcf9ba51f3da4aad4a43dd9ac6909cf1823180000
+```
+
 #### <u>Escrow locking transaction</u>
 After a taker accepted a public offer (valid bond submitted) both traders have to lock funds in a locking transaction that can only be spent again in collaboration. This locking transaction is a collaborative transaction containing inputs of both maker and taker. Both traders have to sign the locking transaction
 which is then combined by the coordinator. The coordinator will allow the use of the same inputs as in the bond transaction. Once this locking transaction has sufficient confirmations the fiat exchange can begin.
@@ -52,6 +57,11 @@ Taker input(s)----|---> Taker change output
 
 Buyer input amount:  Bond + 1/2 coordinator service fee + 1/2 tx fee
 Seller input amount: Bond + 1/2 coordinator service fee + 1/2 tx fee + amount to sell
+```
+
+Example transaction [hex]:
+```
+01000000000102176c5c190fd523e6afeead69c04bff1269654500ffb87d67f880f08b6fe4f8cf0000000000feffffff1c97e5c22e16265cd971ba0b3ff1bf7ecf9359406547e0117d031b46215fbe0c0000000000feffffff046847019500000000225120f3ad0c624fa99f7430f63ead6343bf16508cb0d29baddd87f57bc2fb9dc2d6ce9026814a000000002251208c60833747870f8f94a947b63973ee8027615854432e5a7f9a420eccb3387f58b0ad010000000000225120dba8af662648dd045cea2986cf763e0971e034fdee96508043e0a4a9b1d27066d00700000000000022512027e02dc2cb93d385edc792b259598f52030e55cfc06d281418c95796bfc7789c01407f45bde83c7d2867d9b68f729738ad031fd9ff366337be3ba475743600362a74bd36c139cba460771804ea3a8ababb04cc1a478a3072e537f454bab239a1a2b2014045673c8327865d043d66bf59ab29a44ab4c24a1258b775244d435a4af1643b84479952e118b602b59d461806c7fee7706c5d1c3236866d0f5b2054acd28f718e22180000
 ```
 #### <u>Escrow locking output</u>
 The [taproot](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki) escrow output can be unlocked in different ways depending on the trade outcome. In the
@@ -92,9 +102,9 @@ let escrow_output_descriptor = "tr(f00949d6dd1ce99a03f88a1a4f59117d553b0da51728b
 ```
 
 #### <u>Payout transaction</u>
-Once the exchange has been completed or a trader requested escrow the escrow output will be spent again to complete the trade.
+Once the exchange has been completed, or a trader requested escrow, the escrow output will be spent again to complete the trade.
 The transaction is assembled by the coordinator and shared with the clients for signing. Once the coordinator collected the
-necessary information the transaction gets finalized and broadcasted.
+necessary signatures the transaction gets finalized and broadcasted.
 
 **Example transaction**, both traders satisfied, keypath spend using aggregated signature (2-of-2):
 ```
@@ -104,6 +114,8 @@ escrow utxo --> | --> bond -> Seller
 (signed using
 agg. sig for
 keypath)
+
+Example transaction [hex]: 01000000000101c544f644f6f31ca07dfa87a12aac0f103f3cf91483511f275ceeab316f6fa9c90200000000feffffff029808000000000000225120f610990da79b3bddd44a0820e31546319630c06221ea81bd3b798e4dfe9f5c6e388f0100000000002251201aa6d2c49082ae948e87ceb8551496cd6d951b093def3a3269d812db9e3808cf0140c0d07846e1b2b1deeca4a0cf35843417fefbe63086ff491ecc07638a099c0901138ac6e59a9e8b9a0878c098b206bee3427156dd0248d80de80fbdd8540ea00422180000
 ```
 
 **Example transaction**, buyer sent fiat and won escrow, seller doesn't cooperate:
@@ -115,14 +127,19 @@ escrow utxo --> | --> tx fee
 ```
 
 ## Implementation
-WIP
-
-BDK+RustBitcoin+MuSig2+Axum+SQlite+Tokio+...
 
 The protocol partly handled by a coordinator and partly by the client. The coordinator, running on the exchange side, handles trader matching, construction of transactions, monitoring of bonds and more tasks. The client could be bundled to a wasm library and included in the RoboSats frontend. Currently clients are only supposed to talk to the coordinator, not to each other.
 
-## Status
-WIP
+Used libraries:
+* [bdk](https://docs.rs/bdk/latest/bdk/) + [rust-bitcoin](https://docs.rs/bitcoin/latest/bitcoin/index.html): Transaction construction, signing, serialization, broadcasting
+* [musig2](https://docs.rs/musig2/latest/musig2/): Signature aggregation
+* [sqlx](https://docs.rs/sqlx/latest/sqlx/): Storing trade state in a sqlite database
+* [axum](https://docs.rs/axum/latest/axum/): HTTP API (communication client <-> coordinator)
+
+
+## Project Status
+The repository contains a working CLI demonstrator that is able to complete the trade flow using the MuSig keypath spend on regtest or testnet. This demonstrator can be used to validate and experiment with the concept but is not intended for production use.
+
 ## Contribution
 WIP
 ## Resources
