@@ -14,8 +14,7 @@ Therefore the implementation of a purely on-chain pipeline would enable larger t
 2. Implementation of client and coordinator
 3. Integration of the client in RoboSats frontend
 
-## Architecture
-
+## Trade protocol
 #### <u>Bonds</u>
 Traders are required to submit a bond to the coordinator as first step of their trade. This bond is required to prevent misbehaviour like orderbook spamming or unreliable trade partners, it establishes a real cost to create offers and not finish them as agreed upon.
 
@@ -92,12 +91,28 @@ let policy_d_string = format!("and(and(pk({}),pk({})),after(2048))", maker_pk, t
 let escrow_output_descriptor = "tr(f00949d6dd1ce99a03f88a1a4f59117d553b0da51728bb7fd5b98fbf541337fb,{{and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(62333597c10487d959265bfc992514435daf74e26fd636f6b70e8936b4a82f3e)),and_v(v:pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151),pk(62333597c10487d959265bfc992514435daf74e26fd636f6b70e8936b4a82f3e))},{and_v(v:and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151)),after(2048)),and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),after(12228))}})#wufuc530"
 ```
 
-<!-- #### <u>Payout transaction</u> -->
+#### <u>Payout transaction</u>
+Once the exchange has been completed or a trader requested escrow the escrow output will be spent again to complete the trade.
+The transaction is assembled by the coordinator and shared with the clients for signing. Once the coordinator collected the
+necessary information the transaction gets finalized and broadcasted.
 
+**Example transaction**, both traders satisfied, keypath spend using aggregated signature (2-of-2):
+```
+                | --> bought amount + bond -> Buyer
+escrow utxo --> | --> bond -> Seller
+                | --> tx fee
+(signed using
+agg. sig for
+keypath)
+```
 
+**Example transaction**, buyer sent fiat and won escrow, seller doesn't cooperate:
+```
+                | --> bought amount + buyer bond + seller bond -> Buyer
+escrow utxo --> | --> tx fee
 
-## Trade protocol
-WIP
+(signed using script path with buyer + coordinator signatures, could also use MuSig)
+```
 
 ## Implementation
 WIP
