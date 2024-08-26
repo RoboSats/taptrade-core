@@ -136,16 +136,27 @@ Used libraries:
 * [sqlx](https://docs.rs/sqlx/latest/sqlx/): Storing trade state in a sqlite database
 * [axum](https://docs.rs/axum/latest/axum/): HTTP API (communication client <-> coordinator)
 
+#### Transaction sharing and signing
+Transactions are shared between client and coordinator in form of [PSBTs](https://bitcoinops.org/en/topics/psbt/). Clients add their signature and the coordinator combines the signed psbts to have a fully signed transaction.
 
 ## Project Status
-The repository contains a working CLI demonstrator that is able to complete the trade flow using the MuSig keypath spend on regtest or testnet. This demonstrator can be used to validate and experiment with the concept but is not intended for production use.
+The repository contains a working CLI demonstrator that is able to complete the trade flow using the MuSig keypath spend on [regtest](https://developer.bitcoin.org/examples/testing.html#regtest-mode). This demonstrator can be used to validate and experiment with the concept but is not intended for production use.
+
+### Running the demonstrator
+1. Start the [bitcoin core](https://bitcoincore.org/) regtest node and [electrum server](https://github.com/romanz/electrs) according to ./taptrade-cli-demo/docs/rpc_node.md
+2. Go to the ./taptrade-cli-demo/trader dir and run it with cargo run, once as maker, once as taker
+and copy the generated bitcoin addresses
+3. Send regtest bitcoin to both addresses using ./taptrade-cli-demo/rpc_node/regtest/get-coins-to-address.sh ADDRESS
+4. Run the coordinator by running cargo run in ./taptrade-cli-demo/coordinator
+5. Run the maker and taker (different shells) by running cargo run in ./taptrade-cli-demo/trader and entering
+the according input (load from .env with y)
+6. Watch the trade flow and act if user input is requested by the cli.
+
+To see the transactions better you can load the [XPRVs](https://river.com/learn/terms/x/xprv-extended-private-key/) from the .env files (coordinator, maker and taker) in [Sparow wallet](https://sparrowwallet.com/) and [connect it to](https://sparrowwallet.com/docs/faq.html#how-can-i-run-testnet) the regtest node.
 
 ## Contribution
-WIP
-## Resources
-WIP
-<!-- ### Research
-Find the current research as [Obsidian](https://obsidian.md/) formatted documents under /docs/TapTrade_obs.
+This is an open source project under MIT license. Feel free to open PRs and ask questions in the
+SimpleX group chat.
 
-### Implementation -->
-<!-- TBD -->
+## Resources
+There are many ressources and thoughts documented in an Obsidian vault in this repo at /docs/TapTrade_obs.
