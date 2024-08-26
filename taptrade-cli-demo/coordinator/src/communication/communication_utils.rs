@@ -1,5 +1,51 @@
 use super::*;
-
+/// Validates the timestamp of an offer duration.
+///
+/// This function takes an offer duration timestamp as input and validates it against the current time.
+/// It checks if the offer duration is within a valid range, which is between the current time plus 3 hours
+/// and the current time plus 7 days. If the offer duration is too short or too long, it returns a validation error.
+///
+/// # Arguments
+///
+/// * `offer_duration_ts` - The offer duration timestamp to validate.
+///
+/// # Returns
+///
+/// * `Result<(), ValidationError>` - An empty result if the offer duration is valid, or a validation error if it is not.
+///
+/// # Example
+///
+/// ```
+/// use coordinator::communication::communication_utils::validate_timestamp;
+/// use std::time::{SystemTime, UNIX_EPOCH};
+///
+/// // Get the current time
+/// let now = SystemTime::now();
+/// // Convert the current time to a UNIX timestamp
+/// let unix_timestamp = now
+///     .duration_since(UNIX_EPOCH)
+///     .expect("Time went backwards")
+///     .as_secs();
+///
+/// // Use a timestamp that is within the valid range (current time + 4 hours)
+/// let offer_duration_ts = unix_timestamp + 4 * 3600;
+/// let result = validate_timestamp(offer_duration_ts);
+/// assert!(result.is_ok());
+/// ```
+///
+/// # Errors
+///
+/// This function can return the following errors:
+///
+/// * `ValidationError` - If the offer duration is too short or too long.
+///
+/// # Panics
+///
+/// This function may panic if the system time goes backwards during the calculation of the current time.
+///
+/// # Safety
+///
+/// This function is safe to use.
 pub fn validate_timestamp(offer_duration_ts: u64) -> Result<(), ValidationError> {
 	// Get the current time
 	let now = SystemTime::now();
