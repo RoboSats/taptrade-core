@@ -1,7 +1,7 @@
-mod communication;
-mod coordinator;
-mod database;
-mod wallet;
+pub mod communication;
+pub mod coordinator;
+pub mod database;
+pub mod wallet;
 
 use anyhow::{anyhow, Context, Result};
 use axum::{

@@ -34,3 +34,7 @@ chrono = "0.4.38"
 lto = true
 opt-level = 3
 strip = true
+
+[lib]
+name = "coordinator"
+path = "src/main.rs"
