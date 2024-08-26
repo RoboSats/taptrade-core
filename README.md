@@ -143,7 +143,7 @@ Transactions are shared between client and coordinator in form of [PSBTs](https:
 The repository contains a working CLI demonstrator that is able to complete the trade flow using the MuSig keypath spend on [regtest](https://developer.bitcoin.org/examples/testing.html#regtest-mode). This demonstrator can be used to validate and experiment with the concept but is not intended for production use.
 
 ### Running the demonstrator
-1. Start the [bitcoin core](https://bitcoincore.org/) regtest node and [electrum server](https://github.com/romanz/electrs) according to ./taptrade-cli-demo/docs/rpc_node.md
+1. Start the [bitcoin core](https://bitcoincore.org/) regtest node and [electrum server](https://github.com/romanz/electrs) according to [rpc_node.md](./docs/rpc_node.md)
 2. Go to the ./taptrade-cli-demo/trader dir and run it with cargo run, once as maker, once as taker
 and copy the generated bitcoin addresses
 3. Send regtest bitcoin to both addresses using ./taptrade-cli-demo/rpc_node/regtest/get-coins-to-address.sh ADDRESS
@@ -159,4 +159,4 @@ This is an open source project under MIT license. Feel free to open PRs and ask 
 SimpleX group chat.
 
 ## Resources
-There are many ressources and thoughts documented in an Obsidian vault in this repo at /docs/TapTrade_obs.
+There are many ressources and thoughts documented in an [Obsidian](https://obsidian.md/) vault in this repo at [./docs/Obsidian](./docs/Obsidian/)
