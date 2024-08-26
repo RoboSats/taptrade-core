@@ -12,7 +12,6 @@ use bdk::{
 	Wallet,
 };
 use bitcoin;
-use bitcoin::consensus::Decodable;
 
 fn get_backend() -> RpcBlockchain {
 	dotenv().ok();
@@ -152,7 +151,7 @@ async fn test_transaction_without_signature() {
 	};
 
 	let result = test_wallet
-		.validate_bond_tx_hex(&bond_without_signature, &requirements)
+		.validate_bond_tx_hex(bond_without_signature, &requirements)
 		.await;
 	assert!(result.is_err());
 	test_wallet.shutdown().await;
@@ -170,7 +169,7 @@ async fn test_transaction_with_invalid_signature() {
 	};
 
 	let result = test_wallet
-		.validate_bond_tx_hex(&bond_with_invalid_signature, &requirements)
+		.validate_bond_tx_hex(bond_with_invalid_signature, &requirements)
 		.await;
 	assert!(result.is_err());
 	test_wallet.shutdown().await;
@@ -187,7 +186,7 @@ async fn test_bond_with_spent_input() {
 	};
 
 	let result = test_wallet
-		.validate_bond_tx_hex(&bond_with_spent_input, &requirements)
+		.validate_bond_tx_hex(bond_with_spent_input, &requirements)
 		.await;
 	assert!(result.is_err());
 	test_wallet.shutdown().await;
@@ -203,7 +202,7 @@ async fn test_valid_bond_tx() {
 		bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx".to_string(),
 	};
 
-	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	let result = test_wallet.validate_bond_tx_hex(bond, &requirements).await;
 	assert!(result.is_ok());
 	test_wallet.shutdown().await;
 }
@@ -218,7 +217,7 @@ async fn test_invalid_bond_tx_low_input_sum() {
 		bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx".to_string(),
 	};
 
-	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	let result = test_wallet.validate_bond_tx_hex(bond, &requirements).await;
 	assert!(result.is_err());
 	assert!(result
 		.unwrap_err()
@@ -237,7 +236,7 @@ async fn test_invalid_bond_tx_low_output_sum() {
 		bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx".to_string(),
 	};
 
-	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	let result = test_wallet.validate_bond_tx_hex(bond, &requirements).await;
 	test_wallet.shutdown().await;
 	assert!(result.is_err());
 	assert!(result
@@ -256,7 +255,7 @@ async fn test_invalid_bond_tx_low_fee_rate() {
 		bond_address: "tb1p5yh969z6fgatg0mvcyvggd08fujnat8890vcdud277q06rr9xgmqwfdkcx".to_string(),
 	};
 
-	let result = test_wallet.validate_bond_tx_hex(&bond, &requirements).await;
+	let result = test_wallet.validate_bond_tx_hex(bond, &requirements).await;
 	test_wallet.shutdown().await;
 	assert!(result.is_err());
 	assert!(result
@@ -383,7 +382,7 @@ fn test_create_escrow_spending_psbt() {
 
 	let escrow_utxo = escrow_output_wallet.list_unspent().unwrap();
 	dbg!(&escrow_utxo);
-	assert!(escrow_utxo.len() > 0);
+	assert!(!escrow_utxo.is_empty());
 }
 
 #[test]

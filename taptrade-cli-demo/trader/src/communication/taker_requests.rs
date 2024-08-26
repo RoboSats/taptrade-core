@@ -28,7 +28,7 @@ impl PublicOffers {
 			}
 		};
 		if res.status() == 204 {
-			return Ok(PublicOffers { offers: None });
+			Ok(PublicOffers { offers: None })
 		} else {
 			match res.json::<PublicOffers>() {
 				Ok(offers) => {
