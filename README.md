@@ -16,19 +16,19 @@ Therefore the implementation of a purely on-chain pipeline would enable larger t
 
 ## Architecture
 
-#### Bonds
-Traders are required to submit a bond to the coordinator as first step of their trade. This bond is required to prevent misbehaviour like orderbook spamming or unreliable trade partners, it establishes a real cost to create offers and not finish them as agreed upon. 
+#### <u>Bonds</u>
+Traders are required to submit a bond to the coordinator as first step of their trade. This bond is required to prevent misbehaviour like orderbook spamming or unreliable trade partners, it establishes a real cost to create offers and not finish them as agreed upon.
 
-The bond is sent to the coordinator in form of a signed bitcoin transaction spending to the coordinator with a high transaction fee. The required bond amount can be communicated by the coordinator. The input to the bond transaction should be the same input that will be used in the following escrow locking transaction to reduce the risk of a griefing coordinator. 
+The bond is sent to the coordinator in form of a signed bitcoin transaction spending to the coordinator with a high transaction fee. The required bond amount can be communicated by the coordinator. The input to the bond transaction should be the same input that will be used in the following escrow locking transaction to reduce the risk of a griefing coordinator.
 It can also be required that the input sum should be at least the amount of the trade for sellers so there
 is evidence the seller actually owns the bitcoin he wants to sell, increasing cost to fake offers.
-The bond will be stored by the coordinator and the coordinator is supposed to monitor the mempool and the 
-blockchain for the used inputs. 
+The bond will be stored by the coordinator and the coordinator is supposed to monitor the mempool and the
+blockchain for the used inputs.
 
 In case the trader misbehaves the coordinator can broadcast the bond transaction and receives the bond output.
-If the trader double spends the input to the bond the coordinator is able to increase the transaction fee ([CPFP](https://bitcoinops.org/en/topics/cpfp/)) up to the amount of the bond output. Even in the case 
+If the trader double spends the input to the bond the coordinator is able to increase the transaction fee ([CPFP](https://bitcoinops.org/en/topics/cpfp/)) up to the amount of the bond output. Even in the case
 of [out-of-band mining](https://thebitcoinmanual.com/articles/out-of-band-btc-transaction/) of the bond input
-in another transacion the trader has a cost associated to creating offers on the exchange. 
+in another transacion the trader has a cost associated to creating offers on the exchange.
 
 This bond mechanism should be sufficient for the associated risks as long as out-of-band mining doesn't get extremely cheap.
 
@@ -40,8 +40,8 @@ Trader input(s)-->|-----> Change output
                   |-----> Tx fee (high)
 ```
 
-#### Escrow locking transaction
-After a taker accepted a public offer (valid bond submitted) both traders have to lock funds in a locking transaction that can only be spent again in collaboration. This locking transaction is a collaborative transaction containing inputs of both maker and taker. Both traders have to sign the locking transaction 
+#### <u>Escrow locking transaction</u>
+After a taker accepted a public offer (valid bond submitted) both traders have to lock funds in a locking transaction that can only be spent again in collaboration. This locking transaction is a collaborative transaction containing inputs of both maker and taker. Both traders have to sign the locking transaction
 which is then combined by the coordinator. The coordinator will allow the use of the same inputs as in the bond transaction. Once this locking transaction has sufficient confirmations the fiat exchange can begin.
 
 ```
@@ -50,10 +50,13 @@ Maker input(s)----|---> Coordinator fee output (service fee for coordinator)
                   |---> Maker change output
 Taker input(s)----|---> Taker change output
                   |---> Transaction fee
+
+Buyer input amount:  Bond + 1/2 coordinator service fee + 1/2 tx fee
+Seller input amount: Bond + 1/2 coordinator service fee + 1/2 tx fee + amount to sell
 ```
-#### Escrow locking output
-The taproot escrow output can be unlocked in different ways depending on the trade outcome. In the
-happy case of a successful trade the output can be spent using the keyspend path with an aggregated signature two partial signatures from maker and taker, using the Musig2 scheme. In the case of disputes different script paths can be used to enable unlocking by the coordinator in collaboration with one of the traders. 
+#### <u>Escrow locking output</u>
+The [taproot](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki) escrow output can be unlocked in different ways depending on the trade outcome. In the
+case of a successful trade the output can be spent using the [keypath](https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#user-content-Taproot_key_path_spending_signature_validation) with an aggregated signature from two partial signatures of maker and taker, using the MuSig2 scheme. In the case of disputes different script paths can be used to enable unlocking by the coordinator in collaboration with one of the traders.
 Other scripts can be added for edge cases, like a timeout script if the coordinator vanishes.
 ```
                      taproot output key
@@ -62,12 +65,38 @@ Other scripts can be added for edge cases, like a timeout script if the coordina
           --------------------------------------------
           |                                          |
           |                                          |
-     internal key                              Escrow spending scripts
-  Aggregated pubkey of                Maker + Coordinator        Taker + Coordinator
-    Maker and Taker   
+     internal key                              escrow spending scripts root
+          =                                                 =
+   Aggregated pubkey of            ---------------------          ---------------------
+     Maker and Taker              | Maker + Coordinator |   +    | Taker + Coordinator |
+                                   ---------------------          ---------------------
+                                            and more potential useful scripts
 ```
 
-## Trade protocol  
+The following script paths are currently implemented in the demonstrator:
+```rust
+// Maker wins escrow:
+let policy_a_string = format!("and(pk({}),pk({}))", maker_pk, coordinator_pk);
+
+// Taker wins escrow:
+let policy_b_string = format!("and(pk({}),pk({}))", taker_pk, coordinator_pk);
+
+// To prevent the possibility of extortion through the coordinator:
+let policy_c_string = format!("and(pk({}),after(12228))", maker_pk);
+
+// In case the coordinator vanishes or doesn't cooperate anymore,
+// could be used with a cli toolkit as rescue method for traders.
+let policy_d_string = format!("and(and(pk({}),pk({})),after(2048))", maker_pk, taker_pk);
+
+// a fully assembled output descriptor would look like this (containing the XOnly pubkeys):
+let escrow_output_descriptor = "tr(f00949d6dd1ce99a03f88a1a4f59117d553b0da51728bb7fd5b98fbf541337fb,{{and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(62333597c10487d959265bfc992514435daf74e26fd636f6b70e8936b4a82f3e)),and_v(v:pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151),pk(62333597c10487d959265bfc992514435daf74e26fd636f6b70e8936b4a82f3e))},{and_v(v:and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),pk(f1f1db08126af105974cde6021096525ed390cf9b7cde5fedb17a0b16ed31151)),after(2048)),and_v(v:pk(4987f3de20a9b1fa6f76c6758934953a8d615e415f1a656f0f6563694b53107d),after(12228))}})#wufuc530"
+```
+
+<!-- #### <u>Payout transaction</u> -->
+
+
+
+## Trade protocol
 WIP
 
 ## Implementation
