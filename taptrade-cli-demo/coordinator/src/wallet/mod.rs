@@ -29,6 +29,7 @@ pub struct EscrowPsbt {
 	pub escrow_fee_sat_per_participant: u64,
 }
 
+/// struct to hold the necessary data to construct the bond transaction
 #[derive(PartialEq, Debug, Clone)]
 pub struct BondRequirements {
 	pub bond_address: String,
@@ -182,6 +183,8 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 						return Err(anyhow!(e));
 					}
 				};
+
+				// check if the fee rate is high enough
 				if ((input_sum - tx.all_output_sum()) / tx.vsize() as u64) < 200 {
 					invalid_bonds.insert(
 						bond.id()?,
@@ -198,7 +201,8 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			}
 		}
 
-		// now test all bonds with bitcoin core rpc testmempoolaccept
+		// now test all bonds with bitcoin core rpc testmempoolaccept, this would be triggered if the bond inputs are spent in another
+		// transaction on the chain (e.g. out of band mining)
 		let json_rpc_client = self.json_rpc_client.clone();
 		let bonds_clone = Arc::clone(&bonds);
 		let mempool_accept_future = tokio::task::spawn_blocking(move || {
@@ -207,12 +211,14 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		let invalid_bonds_testmempoolaccept = mempool_accept_future.await??;
 		invalid_bonds.extend(invalid_bonds_testmempoolaccept.into_iter());
 
+		// looks up inputs in the mempool, would be triggered if a transaction appears in the mempool that spends the bond inputs
 		let mempool_bonds = self.mempool.lookup_mempool_inputs(&bonds).await?;
 		invalid_bonds.extend(mempool_bonds.into_iter());
 		debug!("validate_bond_tx_hex(): Bond validation done.");
 		Ok(invalid_bonds)
 	}
 
+	/// Publishes the bond transaction to the mempool as punishment
 	pub fn publish_bond_tx_hex(&self, bond: &str) -> Result<()> {
 		warn!("publish_bond_tx_hex(): publishing cheating bond tx!");
 		let blockchain = &*self.backend;
@@ -222,6 +228,8 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		Ok(())
 	}
 
+	/// derive a new address from the coordinator wallet and extract the xonly taproot pubkey for use in the
+	/// trade protocol
 	pub async fn get_coordinator_taproot_pk(&self) -> Result<XOnlyPublicKey> {
 		let wallet = self.wallet.lock().await;
 		let address = wallet.get_address(bdk::wallet::AddressIndex::New)?;
@@ -234,6 +242,7 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 	}
 }
 
+/// lookup a MonitoringBond by its txid in a Vec of MonitoringBonds
 fn search_monitoring_bond_by_txid(
 	monitoring_bonds: &Vec<MonitoringBond>,
 	txid: &str,
@@ -247,6 +256,7 @@ fn search_monitoring_bond_by_txid(
 	Err(anyhow!("Bond not found in monitoring bonds"))
 }
 
+/// tests all passed MonitoringBonds against bitcoin core rpc testmempoolaccept and returns a HashMap of invalid bonds
 fn test_mempool_accept_bonds(
 	json_rpc_client: Arc<Client>,
 	bonds: Arc<Vec<MonitoringBond>>,

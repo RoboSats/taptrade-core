@@ -13,6 +13,7 @@ pub enum Table {
 	Memory,
 }
 
+/// struct to pass around a Bond and its metadata
 #[derive(Debug, Clone)]
 pub struct MonitoringBond {
 	pub bond_tx_hex: String,
@@ -57,6 +58,8 @@ impl MonitoringBond {
 	}
 }
 
+/// this function fetches all bonds from the database, checks if the inputs are being used in the mempool or chain
+/// and punishes if necessary
 pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 	let coordinator_db = Arc::clone(&coordinator.coordinator_db);
 	let coordinator_wallet = Arc::clone(&coordinator.coordinator_wallet);
@@ -94,6 +97,7 @@ pub async fn monitor_bonds(coordinator: Arc<Coordinator>) -> Result<()> {
 	}
 }
 
+// sha256 hash function wrapper
 fn sha256(data: &[u8]) -> Vec<u8> {
 	let mut hasher = Sha256::new();
 	hasher.update(data);

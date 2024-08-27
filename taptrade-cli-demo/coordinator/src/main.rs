@@ -110,7 +110,7 @@ async fn main() -> Result<()> {
 		coordinator_wallet: Arc::new(init_coordinator_wallet().await?),
 	});
 
-	// begin monitoring bonds
+	// begin monitoring bonds as separate tokio taks which runs concurrently
 	let coordinator_ref = Arc::clone(&coordinator);
 	tokio::spawn(async move {
 		loop {
