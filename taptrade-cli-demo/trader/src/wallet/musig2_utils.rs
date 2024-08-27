@@ -1,3 +1,23 @@
+/// This module provides utility functions for working with MuSig2 in the context of wallets.
+///
+/// The `MuSigData` struct represents the data required for MuSig2 signing. It contains the nonce,
+/// public key, and secret key.
+///
+/// The `MusigNonce` struct represents the nonce used in MuSig2 signing. It contains the secret
+/// nonce, as well as flags indicating whether it has been accessed for signing or sharing.
+///
+/// The `generate` function in the `MusigNonce` implementation generates a new `MusigNonce` with a
+/// secret nonce based on the current timestamp.
+///
+/// The `get_sec_for_signing` function in the `MusigNonce` implementation returns the secret nonce
+/// for signing, ensuring that it has not been accessed for signing before.
+///
+/// The `get_pub_for_sharing` function in the `MusigNonce` implementation returns the public nonce
+/// for sharing, ensuring that the nonce has not been accessed for sharing or signing before.
+///
+/// The `create` function in the `MuSigData` implementation creates a new `MuSigData` instance
+/// based on an extended private key and a secp256k1 context. It generates a new `MusigNonce` and
+/// converts the keypair to the appropriate types for MuSig2 signing.
 use crate::wallet::bitcoin::key::{Parity, Secp256k1, XOnlyPublicKey};
 use crate::wallet::{wallet_utils::get_seed, KeychainKind};
 use anyhow::{anyhow, Error, Result};
