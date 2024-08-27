@@ -69,6 +69,7 @@ use tokio::{
 use validator::{Validate, ValidationError};
 use wallet::{wallet_utils::*, *};
 
+// can be set false to disable logging in runtime (while awaiting cli input)
 static LOGGING_ENABLED: AtomicBool = AtomicBool::new(true);
 
 pub struct Coordinator {
@@ -79,6 +80,7 @@ pub struct Coordinator {
 // populate .env with values before starting
 #[tokio::main]
 async fn main() -> Result<()> {
+	// Initialize the logger to write logs to stdout
 	env_logger::builder()
 		.filter_module("coordinator", log::LevelFilter::Trace)
 		.filter_level(log::LevelFilter::Info)
@@ -88,11 +90,10 @@ async fn main() -> Result<()> {
 				let color_code = get_logging_color_code(level);
 				writeln!(
 					buf,
-					"{} [{}{}{}] - {}",
+					"{} [{}{}\x1B[0m] - {}",
 					Local::now().format("%Y-%m-%d %H:%M:%S"),
 					color_code,
-					level,
-					"\x1B[0m", // Reset color
+					level, // Reset color
 					record.args()
 				)
 			} else {
@@ -130,6 +131,8 @@ async fn main() -> Result<()> {
 	Ok(())
 }
 
+// get color code for logging based on log level
+#[allow(dead_code)]
 fn get_logging_color_code(level: log::Level) -> &'static str {
 	match level {
 		log::Level::Error => "\x1B[31m", // Red

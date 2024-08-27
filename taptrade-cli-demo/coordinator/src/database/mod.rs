@@ -68,6 +68,7 @@ impl CoordinatorDB {
 			.map_err(|e| anyhow!("Failed to connect to SQLite database: {}", e))?;
 
 		// Create the trades table if it doesn't exist
+		// this table contains requests of makers awaiting submission of bond
 		sqlx::query(
 			// robohash is hash as bytes
 			"CREATE TABLE IF NOT EXISTS maker_requests (
@@ -82,6 +83,8 @@ impl CoordinatorDB {
 		)
 		.execute(&db_pool)
 		.await?;
+
+		// this table contains offers that are active in the orderbook awaiting a taker
 		sqlx::query(
 			// robohash is hash as bytes
 			"CREATE TABLE IF NOT EXISTS active_maker_offers (
@@ -106,6 +109,7 @@ impl CoordinatorDB {
 		.execute(&db_pool)
 		.await?;
 
+		// this table contains offers that are taken and are in the trade process
 		sqlx::query(
 			"CREATE TABLE IF NOT EXISTS taken_offers (
 				offer_id TEXT PRIMARY KEY,
@@ -157,6 +161,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// insert a new maker request to create an offer in the table
 	pub async fn insert_new_maker_request(
 		&self,
 		order: &OfferRequest,
@@ -180,6 +185,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	/// fetch the bond requirements for a maker request
 	pub async fn fetch_bond_requirements(&self, robohash: &String) -> Result<BondRequirements> {
 		let maker_request = sqlx::query(
 			"SELECT bond_address, bond_amount_sat, amount_sat FROM maker_requests WHERE robohash = ?",
@@ -195,6 +201,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// deletes the maker offer from the pending table and returns it
 	async fn fetch_and_delete_offer_from_bond_table(
 		&self,
 		robohash_hex: &str,
@@ -227,6 +234,7 @@ impl CoordinatorDB {
 		Ok(awaiting_bond_offer)
 	}
 
+	/// on reciept of a valid bond this will fetch the offer from the pending table and insert it into the active trades table (orderbook)
 	pub async fn move_offer_to_active(
 		&self,
 		data: &BondSubmissionRequest,
@@ -270,6 +278,7 @@ impl CoordinatorDB {
 		Ok(remaining_offer_information.offer_duration_ts)
 	}
 
+	/// called by the taker, returns offers that match the taker's request
 	pub async fn fetch_suitable_offers(
 		&self,
 		requested_offer: &OffersRequest,
@@ -305,6 +314,7 @@ impl CoordinatorDB {
 		Ok(Some(available_offers))
 	}
 
+	/// fetches the bond requirements for the taker
 	pub async fn fetch_taker_bond_requirements(
 		&self,
 		offer_id_hex: &str,
@@ -324,6 +334,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// used to fetch and delete the offer from the orderbook (active_maker_offers) table
 	async fn fetch_and_delete_offer_from_public_offers_table(
 		&self,
 		offer_id_hex: &str,
@@ -359,17 +370,20 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// once the taker submitted his bond the offer is moved to the taken_offers table (removed from the orderbook)
 	pub async fn add_taker_info_and_move_table(
 		&self,
 		trade_and_taker_info: &OfferPsbtRequest,
 		escrow_tx_data: &EscrowPsbt,
 	) -> Result<()> {
+		// this fetches the offer and deletes it from the orderbook
 		let public_offer = self
 			.fetch_and_delete_offer_from_public_offers_table(
 				&trade_and_taker_info.offer.offer_id_hex,
 			)
 			.await?;
 
+		// insert the offer into the taken_offers table
 		sqlx::query(
 				"INSERT OR REPLACE INTO taken_offers (offer_id, robohash_maker, robohash_taker, is_buy_order, amount_sat,
 						bond_ratio, offer_duration_ts, bond_address_maker, bond_address_taker, bond_amount_sat, bond_tx_hex_maker,
@@ -414,6 +428,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	/// fetches the escrow psbt from the db for the given offer
 	pub async fn fetch_escrow_output_information(
 		&self,
 		offer_id_hex: &str,
@@ -451,8 +466,8 @@ impl CoordinatorDB {
 		}))
 	}
 
-	// returns a hashmap of RoboHash, MonitoringBond for the monitoring loop
-	// in case this gets a bottleneck (db too large for heap) we can implement in place checking
+	/// returns a hashmap of RoboHash, MonitoringBond for the monitoring loop
+	/// in case this gets a bottleneck (db too large for heap) we can implement in place checking
 	pub async fn fetch_all_bonds(&self) -> Result<Vec<MonitoringBond>> {
 		let mut bonds = Vec::new();
 		let mut rows_orderbook = sqlx::query(
@@ -478,58 +493,10 @@ impl CoordinatorDB {
 			};
 			bonds.push(bond);
 		}
-
-		// we shouldn't need this as bonds will be locked onchain when trade is taken and we should
-		// move to taken_offers only once everything is confirmed
-		// let mut rows_taken = sqlx::query(
-		// 	"SELECT offer_id, robohash_maker, robohash_taker,
-		// 	bond_address_maker, bond_address_taker, bond_amount_sat, amount_sat, bond_tx_hex_maker, bond_tx_hex_taker
-		// 	FROM taken_offers",
-		// )
-		// .fetch(&*self.db_pool);
-
-		// while let Some(row) = rows_taken.next().await {
-		// 	let row = row?;
-
-		// 	let robohash_maker: Vec<u8> = row.get("robohash_maker");
-		// 	let robohash_taker: Vec<u8> = row.get("robohash_taker");
-		// 	let locking_amount_sat = row.get::<i64, _>("bond_amount_sat") as u64;
-		// 	let min_input_sum_sat = row.get::<i64, _>("amount_sat") as u64;
-		// 	let trade_id_hex: String = row.get("offer_id");
-
-		// 	let requirements_maker = BondRequirements {
-		// 		bond_address: row.get("bond_address_maker"),
-		// 		locking_amount_sat,
-		// 		min_input_sum_sat,
-		// 	};
-
-		// 	let bond_maker = MonitoringBond {
-		// 		bond_tx_hex: row.get("bond_tx_hex_maker"),
-		// 		robot: robohash_maker,
-		// 		trade_id_hex: trade_id_hex.clone(),
-		// 		requirements: requirements_maker,
-		// 		table: Table::ActiveTrades,
-		// 	};
-		// 	bonds.push(bond_maker);
-
-		// 	let requirements_maker = BondRequirements {
-		// 		bond_address: row.get("bond_address_taker"),
-		// 		locking_amount_sat,
-		// 		min_input_sum_sat,
-		// 	};
-
-		// 	let bond_taker = MonitoringBond {
-		// 		bond_tx_hex: row.get("bond_tx_hex_taker"),
-		// 		trade_id_hex,
-		// 		robot: robohash_taker,
-		// 		requirements: requirements_maker,
-		// 		table: Table::ActiveTrades,
-		// 	};
-		// 	bonds.push(bond_taker);
-		// }
 		Ok(bonds)
 	}
 
+	/// removes an offer from the orderbook (active_maker_offers) table, gets called when a bond violation is detected
 	pub async fn remove_violating_bond(&self, bond: &MonitoringBond) -> Result<()> {
 		if bond.table == Table::Orderbook {
 			sqlx::query("DELETE FROM active_maker_offers WHERE offer_id = ?")
@@ -542,22 +509,11 @@ impl CoordinatorDB {
 				"Invalid table type when trying to remove violating bond from db"
 			));
 		}
-
-		// we shouldn't need this as bonds will be locked onchain when trade is taken and we should
-		// move to taken_offers only once everything is confirmed
-		// } else if bond.table == Table::ActiveTrades {
-		// 	sqlx::query("DELETE FROM taken_offers WHERE offer_id = ?")
-		// 		.bind(bond.trade_id_hex)
-		// 		.execute(&*self.db_pool)
-		// 		.await?;
-
-		// sqlx::query("DELETE FROM active_maker_offers WHERE offer_id = ?")
-		// 	.bind(trade_id_hex)
-		// 	.execute(&*self.db_pool)
-		// 	.await?;
 		Ok(())
 	}
 
+	/// fetches all txids of escrow transactions that have the flag escrow_psbt_is_confirmed set to 0
+	/// used to check if theses txids are confirmed onchain
 	pub async fn fetch_unconfirmed_escrow_txids(&self) -> Result<Vec<String>> {
 		let mut txids = Vec::new();
 		let mut rows = sqlx::query(
@@ -572,6 +528,7 @@ impl CoordinatorDB {
 		Ok(txids)
 	}
 
+	/// sets all passed escrow txids to confirmed
 	pub async fn confirm_bond_txids(&self, confirmed_txids: Vec<String>) -> Result<()> {
 		for txid in confirmed_txids {
 			sqlx::query(
@@ -584,6 +541,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	/// used to check if txid is set to confirmed in the db
 	pub async fn get_txid_confirmation_status(&self, txid: &String) -> Result<bool> {
 		let status = sqlx::query(
 			"SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE escrow_psbt_txid = ?",
@@ -594,6 +552,7 @@ impl CoordinatorDB {
 		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
 	}
 
+	/// used to verify that a robohash/user id is actually part of a trade and contained in the table
 	pub async fn is_valid_robohash_in_table(
 		&self,
 		robohash_hex: &str,
@@ -611,6 +570,7 @@ impl CoordinatorDB {
 		Ok(robohash.is_some())
 	}
 
+	/// used to check if a user id / robohash is the maker or taker (true if maker, false if taker)
 	async fn is_maker_in_taken_offers(&self, offer_id: &str, robohash_hex: &str) -> Result<bool> {
 		let robohash_bytes = hex::decode(robohash_hex)?;
 
@@ -631,6 +591,7 @@ impl CoordinatorDB {
 		Ok(is_maker)
 	}
 
+	/// insert a returned, signed escrow psbt into the db, if it was already existent return false, else return true if inserted
 	pub async fn insert_signed_escrow_psbt(
 		&self,
 		signed_escow_psbt_data: &PsbtSubmissionRequest,
@@ -686,6 +647,7 @@ impl CoordinatorDB {
 		}
 	}
 
+	/// used to fetch both signed escrow locking psbts from the db
 	pub async fn fetch_both_signed_escrow_psbts(
 		&self,
 		offer_id_hex: &str,
@@ -706,6 +668,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// used to check if the escrow locking transaction has been confirmed onchain
 	pub async fn fetch_escrow_tx_confirmation_status(&self, offer_id: &str) -> Result<bool> {
 		let status =
 			sqlx::query("SELECT escrow_psbt_is_confirmed FROM taken_offers WHERE offer_id = ?")
@@ -715,6 +678,7 @@ impl CoordinatorDB {
 		Ok(status.get::<i64, _>("escrow_psbt_is_confirmed") == 1)
 	}
 
+	/// used to set that a trader is satisfied with the trade (true)
 	pub async fn set_trader_happy_field(
 		&self,
 		offer_id: &str,
@@ -745,8 +709,8 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
-	// checked by the payout handler on request to determine if the trade is ready for payout and
-	// if escrow is required
+	/// checked by the payout handler on request to determine if the trade is ready for payout and
+	/// if escrow is required
 	pub async fn fetch_trader_happiness(&self, offer_id: &str) -> Result<TraderHappiness> {
 		let row = sqlx::query(
 			"SELECT maker_happy, taker_happy, escrow_ongoing FROM taken_offers WHERE offer_id = ?",
@@ -766,7 +730,7 @@ impl CoordinatorDB {
 		})
 	}
 
-	// this will be checked by the payout handler on request, the escrow winner will be set trough CLI input
+	/// this will be checked by the payout handler on request, the escrow winner will be set trough CLI input
 	pub async fn fetch_escrow_result(&self, offer_id: &str) -> Result<Option<String>> {
 		let row = sqlx::query("SELECT escrow_winner_robohash FROM taken_offers WHERE offer_id = ?")
 			.bind(offer_id)
@@ -779,6 +743,7 @@ impl CoordinatorDB {
 		Ok(winner_robohash)
 	}
 
+	/// fetch the amounts the traders have to contribute to the escrow locking transaction
 	pub async fn get_escrow_tx_amounts(
 		&self,
 		trade_id: &str,
@@ -808,6 +773,7 @@ impl CoordinatorDB {
 		))
 	}
 
+	/// fetch the data required to construct the escrow psbt for the maker
 	pub async fn fetch_maker_escrow_psbt_data(
 		&self,
 		trade_id: &str,
@@ -830,6 +796,7 @@ impl CoordinatorDB {
 		})
 	}
 
+	/// fetch the data required to construct the musig keyspend payout transaction to be signed by the traders on payout initialization
 	pub async fn fetch_payout_data(&self, trade_id: &str) -> Result<PayoutData> {
 		let row = sqlx::query(
 			"SELECT escrow_output_descriptor, payout_address_maker,
@@ -866,6 +833,7 @@ impl CoordinatorDB {
 		)
 	}
 
+	/// insert the keyspend payout transaction into the db
 	pub async fn insert_keyspend_payout_psbt(
 		&self,
 		offer_id_hex: &str,
@@ -879,6 +847,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	/// insert a partial signature submitted by the trader into the db
 	pub async fn insert_partial_sig(
 		&self,
 		partial_sig_hex: &str,
@@ -933,6 +902,7 @@ impl CoordinatorDB {
 		Ok(())
 	}
 
+	/// fetches all data required to execute the keyspend payout (including the signatures)
 	pub async fn fetch_keyspend_payout_information(
 		&self,
 		offer_id_hex: &str,
@@ -971,6 +941,7 @@ impl CoordinatorDB {
 		}
 	}
 
+	/// fetches the keyspend payout psbt from the db
 	pub async fn fetch_keyspend_payout_psbt(&self, offer_id_hex: &str) -> Result<Option<String>> {
 		let row =
 			sqlx::query("SELECT payout_transaction_psbt_hex FROM taken_offers WHERE offer_id = ?")
@@ -982,6 +953,7 @@ impl CoordinatorDB {
 		Ok(payout_psbt)
 	}
 
+	/// used to as db lock to prevent race conditions when the payout is being handled
 	pub async fn toggle_processing(&self, offer_id: &str) -> Result<bool> {
 		let result = sqlx::query(
 			r#"
@@ -1002,6 +974,7 @@ impl CoordinatorDB {
 		Ok(result.get::<i64, _>(0) == 1)
 	}
 
+	/// deletes a finished offer from the database 🎉
 	pub async fn delete_complete_offer(&self, offer_id: &str) -> Result<()> {
 		sqlx::query("DELETE FROM taken_offers WHERE offer_id = ?")
 			.bind(offer_id)
