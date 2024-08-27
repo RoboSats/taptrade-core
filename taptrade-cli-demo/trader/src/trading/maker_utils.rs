@@ -55,7 +55,7 @@ impl ActiveOffer {
 	// returns the PSBT of the escrow trade transaction we have to validate, sign and return
 	pub fn wait_until_taken(&self, trader_config: &TraderSettings) -> Result<OfferTakenResponse> {
 		loop {
-			thread::sleep(Duration::from_secs(10));
+			thread::sleep(Duration::from_secs(2));
 			if let Some(offer_taken_response) = OfferTakenResponse::check(self, trader_config)? {
 				return Ok(offer_taken_response);
 			}

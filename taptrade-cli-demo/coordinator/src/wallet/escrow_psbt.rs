@@ -159,6 +159,12 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			// upfront and substract the fee from the change outputs (10k == ~30/sat vbyte)
 			let tx_fee_abs = 10000;
 
+			debug!(
+				"Escrow amounts: maker: {}, fee: {}, input sum: {}",
+				escrow_amount_maker_sat,
+				escrow_fee_sat_per_participant,
+				maker_psbt_input_data.input_sum()?
+			);
 			let change_amount_maker = maker_psbt_input_data.input_sum()?
 				- (escrow_amount_maker_sat + escrow_fee_sat_per_participant + tx_fee_abs / 2);
 			let change_amount_taker = taker_psbt_input_data.input_sum()?
