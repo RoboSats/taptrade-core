@@ -123,23 +123,7 @@ async fn submit_escrow_psbt(
 			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
 		}
 		_ => Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response()),
-		// Err(RequestError::NotFound) => {
-		// 	info!("Offer for escrow psbt not found");
-		// 	Ok(StatusCode::NOT_FOUND.into_response())
-		// }
-		// Err(RequestError::NotConfirmed) => {
-		// 	info!("Offer for escrow psbt not confirmed");
-		// 	Ok(StatusCode::NOT_ACCEPTABLE.into_response())
-		// }
-		// Err(RequestError::Database(e)) => {
-		// 	error!("Database error fetching escrow psbt: {e}");
-		// 	Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-		// }
 	}
-	// check if psbt is correct, valid and signed
-	// publish psbt if it is correct
-	// return 200 if everything is correct
-	// return 400 if something is wrong
 }
 
 /// Will get polled by the traders once they submitted their PSBT part. The coorinator will return status code 200 once he received both PSBTs and they got mined,
@@ -163,6 +147,7 @@ async fn poll_escrow_confirmation(
 	}
 }
 
+/// gets called if the trader is happy and does not want to initiate escrow
 async fn submit_obligation_confirmation(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
@@ -190,8 +175,8 @@ async fn submit_obligation_confirmation(
 
 // or
 
-// gets called if one of the traders wants to initiate escrow (e.g. claiming they didn't receive the fiat)
-// before timeout ends, just sets the maker unhappy and escrow onging flag in the db
+/// gets called if one of the traders wants to initiate escrow (e.g. claiming they didn't receive the fiat)
+/// before timeout ends, just sets the maker unhappy and escrow onging flag in the db
 async fn request_escrow(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<TradeObligationsUnsatisfied>,
@@ -255,6 +240,7 @@ async fn poll_final_payout(
 	}
 }
 
+/// recieves the partial signature for the keyspend payout transaction
 async fn submit_payout_signature(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<PayoutSignatureRequest>,
@@ -266,18 +252,6 @@ async fn submit_payout_signature(
 		// this was the first signature
 		Ok(false) => Ok(StatusCode::ACCEPTED.into_response()),
 
-		// 	Err(RequestError::NotConfirmed) => {
-		// 		info!("Offer tx for final payout not confirmed");
-		// 		Ok(StatusCode::NOT_ACCEPTABLE.into_response())
-		// 	}
-		// 	Err(RequestError::NotFound) => {
-		// 		info!("Offer for final payout not found");
-		// 		Ok(StatusCode::NOT_FOUND.into_response())
-		// 	}
-		// 	Err(RequestError::Database(e)) => {
-		// 		error!("Database error fetching final payout: {e}");
-		// 		Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
-		// 	}
 		e => {
 			error!("Unknown error handling submit_payout_signature(): {:?}", e);
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
@@ -285,6 +259,7 @@ async fn submit_payout_signature(
 	}
 }
 
+/// testing endpoint
 async fn test_api() -> &'static str {
 	"Hello, World!"
 }
@@ -312,7 +287,7 @@ pub async fn api_server(coordinator: Arc<Coordinator>) -> Result<()> {
 	let port: u16 = env::var("PORT")
 		.unwrap_or_else(|_| "9999".to_string())
 		.parse()?;
-	info!("Listening on {}", port);
+	info!("Coordinator is listening on port {}", port);
 	let addr = SocketAddr::from(([127, 0, 0, 1], port));
 	let tcp = TcpListener::bind(&addr).await.unwrap();
 	axum::serve(tcp, app).await?;

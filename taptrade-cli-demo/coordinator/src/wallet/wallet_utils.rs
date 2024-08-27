@@ -5,6 +5,7 @@ pub struct PsbtInput {
 	pub utxo: bdk::bitcoin::OutPoint,
 }
 
+/// implements functions required for bond transactions on the bdk::bitcoin::Transaction struct
 pub trait BondTx {
 	fn input_sum<D: Database, B: GetTx>(&self, blockchain: &B, db: &D) -> Result<u64>;
 	fn bond_output_sum(&self, bond_address: &str) -> Result<u64>;
@@ -57,6 +58,7 @@ impl BondTx for Transaction {
 	}
 }
 
+/// converts a csv string of bincode binary serialized, hex encoded bdk psbt inputs to a vector of PsbtInput
 pub fn csv_hex_to_bdk_input(inputs_csv_hex: &str) -> Result<Vec<PsbtInput>> {
 	let mut inputs: Vec<PsbtInput> = Vec::new();
 	for input_hex in inputs_csv_hex.split(',') {

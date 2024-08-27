@@ -19,6 +19,8 @@ pub struct PayoutData {
 	pub aggregated_musig_pubkey_ctx_hex: String,
 }
 
+/// KeyspendContext contains all data neccessary to create the
+/// signed keyspend payout transaction
 #[derive(Debug, Clone)]
 pub struct KeyspendContext {
 	pub agg_sig: LiftedSignature,
@@ -27,7 +29,10 @@ pub struct KeyspendContext {
 	pub keyspend_psbt: PartiallySignedTransaction,
 }
 
+/// takes two hex encoded pub musig nonces (serialized according to musig2 crate) and
+/// aggregates them into a single MusigAggNonce
 pub fn agg_hex_musig_nonces(maker_nonce: &str, taker_nonce: &str) -> Result<MusigAggNonce> {
+	// decode the hex strings into MusigPubNonces
 	let musig_pub_nonce_maker = match MusigPubNonce::from_hex(maker_nonce) {
 		Ok(musig_pub_nonce_maker) => musig_pub_nonce_maker,
 		Err(e) => {
@@ -47,12 +52,14 @@ pub fn agg_hex_musig_nonces(maker_nonce: &str, taker_nonce: &str) -> Result<Musi
 		}
 	};
 
+	// aggregate the two pub nonces
 	let agg_nonce = musig2::AggNonce::sum([musig_pub_nonce_maker, musig_pub_nonce_taker]);
 
 	Ok(agg_nonce)
 }
 
 impl KeyspendContext {
+	/// Create a new KeyspendContext from hex encoded strings recieved from the maker and taker
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_hex_str(
 		maker_sig: &str,
@@ -64,21 +71,26 @@ impl KeyspendContext {
 		keyspend_psbt: &str,
 		descriptor: &str,
 	) -> anyhow::Result<Self> {
+		// obtain the tweak scalar from the escrow output descriptor
 		let tweak = get_keyspend_tweak_scalar(descriptor)?;
+		// aggregate the maker and taker musig pubkeys with the tweak
 		let agg_keyspend_pk: musig2::KeyAggContext =
 			aggregate_musig_pubkeys_with_tweak(maker_pk, taker_pk, tweak)?;
+		// aggregate the public nonces
 		let agg_nonce: MusigAggNonce =
 			coordinator_utils::agg_hex_musig_nonces(maker_nonce, taker_nonce)?;
+		// deserialize the keyspend psbt
 		let keyspend_psbt = PartiallySignedTransaction::deserialize(&hex::decode(keyspend_psbt)?)?;
 
 		let partial_maker_sig = PartialSignature::from_hex(maker_sig)?;
 		let partial_taker_sig = PartialSignature::from_hex(taker_sig)?;
 		let partial_signatures = vec![partial_maker_sig, partial_taker_sig];
 
-		// let msg = keyspend_psbt.
+		// obtain the message to sign (taproot key spend signature hash)
 		let msg = {
 			let mut sig_hash_cache = SighashCache::new(keyspend_psbt.unsigned_tx.clone());
 
+			// it should only contain one utxo, the escrow locking UTXO
 			let utxo = keyspend_psbt
 				.iter_funding_utxos()
 				.next()
@@ -110,6 +122,7 @@ impl KeyspendContext {
 	}
 }
 
+/// get the scalar used to tweak the keyspend output key from the escrow output descriptor
 fn get_keyspend_tweak_scalar(descriptor: &str) -> Result<bdk::bitcoin::secp256k1::Scalar> {
 	let tr_descriptor: Descriptor<XOnlyPublicKey> =
 		bdk::descriptor::Descriptor::from_str(descriptor)?;
@@ -130,6 +143,7 @@ fn get_keyspend_tweak_scalar(descriptor: &str) -> Result<bdk::bitcoin::secp256k1
 	Ok(tweak.to_scalar())
 }
 
+/// Aggregate two hex encoded musig pubkeys with a tweak scalar
 pub fn aggregate_musig_pubkeys_with_tweak(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
@@ -152,6 +166,8 @@ pub fn aggregate_musig_pubkeys_with_tweak(
 }
 
 impl PayoutData {
+	/// assembles the information retrieved from the database into a PayoutData struct which is used for
+	/// constructing the keyspend payout transaction passed on to the traders for signing
 	#[allow(clippy::too_many_arguments)]
 	pub fn new_from_strings(
 		escrow_output_descriptor: &str,
@@ -189,17 +205,20 @@ impl PayoutData {
 	}
 }
 
-pub fn generate_random_order_id(len: usize) -> String {
+/// generates a random order id of size `size` bytes and returns it as hex encoded string
+pub fn generate_random_order_id(size: usize) -> String {
 	// Generate `len` random bytes
 	let bytes: Vec<u8> = rand::thread_rng()
 		.sample_iter(&rand::distributions::Standard)
-		.take(len)
+		.take(size)
 		.collect();
 
 	// Convert bytes to hex string
 	hex::encode(bytes)
 }
 
+/// does check both that a robhash and offerID are actually existing in the database
+/// and that the escrow locking transaction is confirmed
 pub async fn check_offer_and_confirmation(
 	offer_id_hex: &str,
 	robohash_hex: &str,

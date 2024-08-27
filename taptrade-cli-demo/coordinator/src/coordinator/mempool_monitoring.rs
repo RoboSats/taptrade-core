@@ -87,6 +87,8 @@ pub struct MempoolHandler {
 }
 
 impl MempoolHandler {
+	/// creates a new mempool handler connected to a json rpc client which spawns
+	/// a new tokio thread which keeps track of the mempool state
 	pub async fn new(json_rpc_client: Arc<Client>) -> Self {
 		let mempool = Arc::new(Mempool::new(json_rpc_client));
 		let mempool_clone = Arc::clone(&mempool);
@@ -101,6 +103,7 @@ impl MempoolHandler {
 		}
 	}
 
+	/// called to look for UTXOs in the mempool
 	pub async fn lookup_mempool_inputs(
 		&self,
 		bonds: &Vec<MonitoringBond>,
@@ -125,6 +128,7 @@ impl MempoolHandler {
 		Ok(bonds_to_punish)
 	}
 
+	/// kills the mempool thread, needed to prevent long running when ending the program, especially in tests
 	pub async fn shutdown(&self) {
 		if let Some(sender) = self.shutdown_sender.lock().await.take() {
 			let _ = sender.send(()); // Ignore the result, as the receiver might have been dropped

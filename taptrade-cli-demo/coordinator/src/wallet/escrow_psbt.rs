@@ -12,6 +12,7 @@ pub struct EscrowPsbtConstructionData {
 }
 
 impl EscrowPsbtConstructionData {
+	/// get the sum of the input utxos
 	pub fn input_sum(&self) -> Result<u64> {
 		let mut input_sum = 0;
 		for input in &self.escrow_input_utxos {
@@ -26,6 +27,7 @@ impl EscrowPsbtConstructionData {
 	}
 }
 
+/// aggregate hex encoded musig pubkeys to a KeyAggContext without tweaking
 pub fn aggregate_musig_pubkeys(
 	maker_musig_pubkey: &str,
 	taker_musig_pubkey: &str,
@@ -43,7 +45,7 @@ pub fn aggregate_musig_pubkeys(
 	Ok(key_agg_ctx)
 }
 
-/// this function builds the escrow output with all possible spending conditions
+/// this function builds the escrow output descriptor with all possible spending conditions
 pub fn build_escrow_transaction_output_descriptor(
 	maker_escrow_data: &EscrowPsbtConstructionData,
 	taker_escrow_data: &EscrowPsbtConstructionData,
@@ -113,8 +115,8 @@ pub fn build_escrow_transaction_output_descriptor(
 	Ok(descriptor) // then spend to descriptor.address(Network::Regtest)
 }
 
-// pub fn assemble_escrow_psbts(
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
+	/// assemble the escrow locking transaction as psbt and return it with relevant associated data
 	pub async fn create_escrow_psbt(
 		&self,
 		db: &Arc<CoordinatorDB>,
@@ -149,32 +151,9 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 			.await?;
 
 		let (escrow_psbt, details) = {
-			// maybe we can generate a address/taproot pk directly from the descriptor without a new wallet?
-			// let temp_wallet = Wallet::new(
-			// 	&escrow_output_descriptor,
-			// 	None,
-			// 	bitcoin::Network::Regtest,
-			// 	MemoryDatabase::new(),
-			// )?;
-
+			// get address for escrow output from the descriptor
 			let escrow_address =
 				escrow_output_descriptor.address(bdk::bitcoin::Network::Regtest)?;
-			// dbg!("building untweaked address now");
-			// let agg_untweaked: musig2::secp256k1::PublicKey = aggregate_musig_pubkeys(
-			// 	&maker_psbt_input_data.musig_pubkey_compressed_hex,
-			// 	&taker_psbt_input_data.musig_pubkey_compressed_hex,
-			// )?
-			// .aggregated_pubkey_untweaked();
-			// let xonly_hex = agg_untweaked.x_only_public_key().0.to_string();
-			// let bdk_xonly = bdk::bitcoin::key::XOnlyPublicKey::from_str(&xonly_hex)?;
-			// let output_key = TweakedPublicKey::dangerous_assume_tweaked(bdk_xonly);
-			// let escrow_address = bdk::bitcoin::Address::p2tr_tweaked(output_key, Network::Regtest);
-			// escrow_output_descriptor = Descriptor::<XOnlyPublicKey>::new_tr(bdk_xonly, None)
-			// 	.context("Error assembling escrow output descriptor")?;
-
-			// dummy escrow address for testing the psbt signing flow
-			// let escrow_address =
-			// Address::from_str(self.get_new_address().await?.as_str())?.assume_checked();
 
 			// using absolute fee for now, in production we should come up with a way to determine the tx weight
 			// upfront and substract the fee from the change outputs (10k == ~30/sat vbyte)

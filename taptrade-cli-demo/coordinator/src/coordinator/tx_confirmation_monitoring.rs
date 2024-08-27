@@ -1,5 +1,6 @@
 use super::*;
 
+/// fetches confirmations of the txids in unconfirmed_txids using core rpc
 fn get_confirmations(
 	unconfirmed_txids: Vec<String>,
 	coordinator: Arc<Coordinator>,
@@ -58,6 +59,9 @@ fn get_confirmations(
 	Ok(now_confirmed_txs)
 }
 
+/// pulls txids of unconfirmed escrow transactions from the database, checks
+/// for confirmations using the bitcoin core rpc api and updates the database
+/// entries with the confirmation
 pub async fn update_transaction_confirmations(coordinator: Arc<Coordinator>) {
 	loop {
 		tokio::time::sleep(std::time::Duration::from_secs(30)).await;
@@ -78,6 +82,7 @@ pub async fn update_transaction_confirmations(coordinator: Arc<Coordinator>) {
 			continue;
 		}
 		let coordinator_clone = Arc::clone(&coordinator);
+		// spawn blocking because the core rpc call is blocking
 		let newly_confirmed_txids = match tokio::task::spawn_blocking(move || {
 			get_confirmations(unconfirmed_transactions, coordinator_clone)
 		})

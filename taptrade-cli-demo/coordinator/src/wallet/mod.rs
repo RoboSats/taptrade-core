@@ -37,6 +37,7 @@ pub struct BondRequirements {
 	pub min_input_sum_sat: u64,
 }
 
+/// sets up the coordinator bdk wallet from the env variables
 pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabase>> {
 	let wallet_xprv = ExtendedPrivKey::from_str(
 		&env::var("WALLET_XPRV").context("loading WALLET_XPRV from .env failed")?,
@@ -49,7 +50,7 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 			password: env::var("BITCOIN_RPC_PASSWORD")?,
 		},
 		network: Network::Regtest,
-		// wallet_name: env::var("BITCOIN_RPC_WALLET_NAME")?,
+		// derives wallet name from xprv/wallet
 		wallet_name: bdk::wallet::wallet_name_from_descriptor(
 			Bip86(wallet_xprv, KeychainKind::External),
 			Some(Bip86(wallet_xprv, KeychainKind::Internal)),
@@ -63,10 +64,9 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 		rpc_config.auth.clone().into(),
 	)?);
 	let json_rpc_client_clone = Arc::clone(&json_rpc_client);
+	// start new mempool instance
 	let mempool = MempoolHandler::new(json_rpc_client_clone).await;
 	let backend = RpcBlockchain::from_config(&rpc_config)?;
-	// let backend = EsploraBlockchain::new(&env::var("ESPLORA_BACKEND")?, 1000);
-	// let sled_db = sled::open(env::var("BDK_DB_PATH")?)?.open_tree("default_wallet")?;
 	let wallet = Wallet::new(
 		Bip86(wallet_xprv, KeychainKind::External),
 		Some(Bip86(wallet_xprv, KeychainKind::Internal)),
@@ -88,17 +88,21 @@ pub async fn init_coordinator_wallet() -> Result<CoordinatorWallet<MemoryDatabas
 }
 
 impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
+	/// shutdown function to end the mempool task
 	pub async fn shutdown(&self) {
 		debug!("Shutting down wallet");
 		self.mempool.shutdown().await;
 	}
 
+	/// get a new address of the coordinator wallet
 	pub async fn get_new_address(&self) -> Result<String> {
 		let wallet = self.wallet.lock().await;
 		let address = wallet.get_address(bdk::wallet::AddressIndex::New)?;
 		Ok(address.address.to_string())
 	}
 
+	/// used to validate submitted bond transactions using the same logic as in the continoous monitoring
+	/// puts the bond in a dummy MonitoringBond struct use the existing logic
 	pub async fn validate_bond_tx_hex(
 		&self,
 		bond_tx_hex: &str,
@@ -263,6 +267,7 @@ fn test_mempool_accept_bonds(
 ) -> Result<HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)>> {
 	let mut invalid_bonds: HashMap<Vec<u8>, (MonitoringBond, anyhow::Error)> = HashMap::new();
 
+	// split bonds into chunks of 25 to avoid hitting the maxmimum allowed size of the rpc call
 	let raw_bonds: Vec<Vec<String>> = bonds
 		.iter()
 		.map(|bond| bond.bond_tx_hex.clone().raw_hex())
