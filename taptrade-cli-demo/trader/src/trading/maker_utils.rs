@@ -11,11 +11,15 @@ impl ActiveOffer {
 		trading_wallet: &TradingWallet,
 		maker_config: &TraderSettings,
 	) -> Result<ActiveOffer> {
+		// fetches the bond requirements necessary to assemble the bond for the requested offer
 		let offer_conditions = BondRequirementResponse::fetch(maker_config)?;
 		debug!("Offer conditions fetched: {:#?}", &offer_conditions);
+		// assembles the bond required by the coordinator, also generates the musig data (keys, nonces) and a payout address
+		// which are being submitted to the coordinator for the further trade
 		let (bond, mut musig_data, payout_address) =
 			trading_wallet.trade_onchain_assembly(&offer_conditions, maker_config)?;
 
+		// get necessary data for the coordinator to assemble the escrow locking psbt (inputs owned by maker, change address)
 		let (psbt_inputs_hex_csv, escrow_change_address) =
 			trading_wallet.get_escrow_psbt_inputs(offer_conditions.locking_amount_sat as i64)?;
 
@@ -34,6 +38,7 @@ impl ActiveOffer {
 			client_change_address: escrow_change_address.clone(),
 		};
 
+		// send the bond submission request to the coordinator, returns submission result with offer id and unix timestamp of bond lock
 		let submission_result = bond_submission_request.send_maker(maker_config)?;
 		Ok(ActiveOffer {
 			offer_id_hex: submission_result.offer_id_hex,

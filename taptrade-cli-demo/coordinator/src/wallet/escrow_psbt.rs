@@ -208,11 +208,14 @@ impl<D: bdk::database::BatchDatabase> CoordinatorWallet<D> {
 		})
 	}
 
+	/// placeholder to validate the returned, signed escrow psbt
 	pub async fn validate_escrow_init_psbt(&self, _escrow_init_psbt: &str) -> Result<()> {
 		warn!("Implement escrow psbt validation. For now, returning Ok");
 		Ok(())
 	}
 
+	/// combines the two signed, hex serialized escrow locking psbts returned by the traders, finalizes it
+	/// and broadcasts the escrow transaction
 	pub async fn combine_and_broadcast_escrow_psbt(
 		&self,
 		signed_maker_psbt_hex: &str,

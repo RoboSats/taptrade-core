@@ -62,6 +62,7 @@ impl PublicOffers {
 }
 
 impl OfferPsbtRequest {
+	/// submits the taker bond to the coordinator and receives the escrow PSBT to sign in exchange if the bond was accepted
 	pub fn taker_request(
 		offer: &PublicOffer,
 		trade_data: BondSubmissionRequest,

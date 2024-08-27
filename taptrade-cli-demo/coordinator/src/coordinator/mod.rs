@@ -6,6 +6,8 @@ pub mod tx_confirmation_monitoring;
 
 use super::*;
 
+/// Accepts the request to create a new offer, inserts it in the database and
+/// returns the required bond information to the maker.
 pub async fn process_order(
 	coordinator: Arc<Coordinator>,
 	offer: &OfferRequest,
@@ -28,6 +30,8 @@ pub async fn process_order(
 	Ok(bond_requirements)
 }
 
+/// Accepts the signed bond transaction passed by the maker, validates it and inserts it in the database for further monitoring.
+/// Moves the offer from the pending table to the active_maker_offers table ("the Orderbook").
 pub async fn handle_maker_bond(
 	payload: &BondSubmissionRequest,
 	coordinator: Arc<Coordinator>,
@@ -35,23 +39,30 @@ pub async fn handle_maker_bond(
 	let wallet = &coordinator.coordinator_wallet;
 	let database = &coordinator.coordinator_db;
 
+	// get the according bond requirements from the database to validate against them
 	let bond_requirements = database
 		.fetch_bond_requirements(&payload.robohash_hex)
 		.await
 		.map_err(|_| BondError::BondNotFound)?;
 
+	// validate the signed bond transaction
 	wallet
 		.validate_bond_tx_hex(&payload.signed_bond_hex, &bond_requirements)
 		.await
 		.map_err(|e| BondError::InvalidBond(e.to_string()))?;
 	debug!("\nBond validation successful");
+	// generates a random offer id to be able to identify the offer
 	let offer_id_hex: String = generate_random_order_id(16); // 16 bytes random offer id, maybe a different system makes more sense later on? (uuid or increasing counter...)
 														 // create address for taker bond
+
+	// get new address for the taker bond to which the taker has to lock its bond when accepting this offer
 	let new_taker_bond_address = wallet
 		.get_new_address()
 		.await
 		.map_err(|e| BondError::CoordinatorError(e.to_string()))?;
 
+	// move the offer from the pending table to the active_maker_offers table in the database, returns the unix timestamp until the
+	// bond is being monitored (the inputs shouldn't be touched by the trader except for the following escrow transaction)
 	let bond_locked_until_timestamp = database
 		.move_offer_to_active(payload, &offer_id_hex, new_taker_bond_address)
 		.await
@@ -63,6 +74,7 @@ pub async fn handle_maker_bond(
 	})
 }
 
+/// fetches all offers from the database that are suitable for the trade requested by the taker
 pub async fn get_public_offers(
 	request: &OffersRequest,
 	coordinator: Arc<Coordinator>,
@@ -80,6 +92,9 @@ pub async fn get_public_offers(
 	Ok(PublicOffers { offers })
 }
 
+/// Accepts the request of the taker to take an offer, validates the taker bond tx that is passed with the request,
+/// creates the escrow locking transaction and moves all information to the taken offers db table. Returns the
+/// information necessary for the taker to sign its input to the escrow locking psbt
 pub async fn handle_taker_bond(
 	payload: &OfferPsbtRequest,
 	coordinator: Arc<Coordinator>,
@@ -87,11 +102,13 @@ pub async fn handle_taker_bond(
 	let wallet = &coordinator.coordinator_wallet;
 	let database = &coordinator.coordinator_db;
 
+	// fetch the bond requirements for the taker bond from the database
 	let bond_requirements = database
 		.fetch_taker_bond_requirements(&payload.offer.offer_id_hex)
 		.await
 		.map_err(|_| BondError::BondNotFound)?;
 
+	// validate the signed taker bond transaction against the requirements
 	wallet
 		.validate_bond_tx_hex(&payload.trade_data.signed_bond_hex, &bond_requirements)
 		.await
@@ -99,6 +116,7 @@ pub async fn handle_taker_bond(
 
 	debug!("\nTaker bond validation successful");
 
+	// create the escrow locking transaction
 	let escrow_output_data = wallet
 		.create_escrow_psbt(database, payload)
 		.await
@@ -108,6 +126,7 @@ pub async fn handle_taker_bond(
 		escrow_output_data
 	);
 
+	// add the taker information to the database and move the offer to the taken_offers table
 	database
 		.add_taker_info_and_move_table(payload, &escrow_output_data)
 		.await
@@ -123,6 +142,10 @@ pub async fn handle_taker_bond(
 	})
 }
 
+/// gets called by the polling endpoint the maker polls when waiting for an offer taker,
+/// looks in the database if escrow output information is available for the offer id
+/// which means the offer has been taken, returns the escrow locking tx information if
+/// the offer has been taken so the maker can sign its input to it.
 pub async fn get_offer_status_maker(
 	payload: &OfferTakenRequest,
 	coordinator: Arc<Coordinator>,
@@ -157,6 +180,9 @@ pub async fn get_offer_status_maker(
 	})
 }
 
+/// gets polled by both traders so they can see if the exchange can safely begin.
+/// checks the database for the confirmation flag of the escrow transaction which is
+/// set by the concurrent confirmation monitoring task
 pub async fn fetch_escrow_confirmation_status(
 	payload: &OfferTakenRequest,
 	coordinator: Arc<Coordinator>,
@@ -178,6 +204,9 @@ pub async fn fetch_escrow_confirmation_status(
 		.map_err(|e| FetchEscrowConfirmationError::Database(e.to_string()))
 }
 
+/// handles the returned signed escrow locking psbt of both traders, if both are present in the db
+/// it combines them and broadcasts the escrow transaction to the network
+/// otherwise the tx will just get stored in the db.
 pub async fn handle_signed_escrow_psbt(
 	payload: &PsbtSubmissionRequest,
 	coordinator: Arc<Coordinator>,
@@ -223,6 +252,7 @@ pub async fn handle_signed_escrow_psbt(
 	Ok(())
 }
 
+/// sets the trader happy flag in the database which both traders have to either set true or false to continue with payout or escrow procedure
 pub async fn handle_obligation_confirmation(
 	payload: &OfferTakenRequest,
 	coordinator: Arc<Coordinator>,
@@ -237,6 +267,8 @@ pub async fn handle_obligation_confirmation(
 	Ok(())
 }
 
+/// if a trader requests escrow this function sets the trader happy flag to false in the db. Then a CLI for the coordinator should be opened
+/// to decide which trader is correct
 pub async fn initiate_escrow(
 	payload: &TradeObligationsUnsatisfied,
 	coordinator: Arc<Coordinator>,
@@ -252,6 +284,8 @@ pub async fn initiate_escrow(
 	Ok(())
 }
 
+/// if both traders are happy this function will assemble the final keyspend payout transaction and return it to the traders
+/// for them to be able to create the partial signatures
 pub async fn handle_final_payout(
 	payload: &OfferTakenRequest,
 	coordinator: Arc<Coordinator>,
@@ -263,6 +297,7 @@ pub async fn handle_final_payout(
 		.await
 		.map_err(|e| RequestError::Database(e.to_string()))?;
 
+	// both traders are happy, keyspend payout can begin
 	if trader_happiness.maker_happy.is_some_and(|x| x)
 		&& trader_happiness.taker_happy.is_some_and(|x| x)
 	{
@@ -306,6 +341,7 @@ pub async fn handle_final_payout(
 			agg_musig_nonce_hex: escrow_payout_data.agg_musig_nonce.to_string(),
 			agg_musig_pubkey_ctx_hex: escrow_payout_data.aggregated_musig_pubkey_ctx_hex,
 		}));
+	// at least one trader has not yet submitted the satisfaction request, or a escrow is already ongoing
 	} else if (trader_happiness.maker_happy.is_none() || trader_happiness.taker_happy.is_none())
 		&& !trader_happiness.escrow_ongoing
 	{
@@ -340,13 +376,13 @@ pub async fn handle_final_payout(
 	}
 }
 
+/// handles the returned partial signatures for the keyspend payout, if both are available it aggregates them,
+/// inserts the signature in the payout tx and broadcasts it
 pub async fn handle_payout_signature(
 	payload: &PayoutSignatureRequest,
 	coordinator: Arc<Coordinator>,
 ) -> Result<bool, RequestError> {
 	let database = &coordinator.coordinator_db;
-	// let _wallet = &coordinator.coordinator_wallet;
-
 	check_offer_and_confirmation(&payload.offer_id_hex, &payload.robohash_hex, database).await?;
 
 	database

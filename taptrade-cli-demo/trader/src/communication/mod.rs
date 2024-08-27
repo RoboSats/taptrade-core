@@ -45,6 +45,7 @@ impl BondRequirementResponse {
 		trace!("Fetching bond requirements from coordinator. (create-offer)");
 		let client = reqwest::blocking::Client::new();
 		let endpoint = format!("{}{}", trader_setup.coordinator_endpoint, "/create-offer");
+		// requests an offer from the coordinator according to the .env/cli input stored in trader_setup
 		let res = match client
 			.post(endpoint)
 			.json(&Self::_format_order_request(trader_setup))
@@ -125,6 +126,7 @@ impl OfferTakenResponse {
 }
 
 impl PsbtSubmissionRequest {
+	// submits the signed escrow psbt to the coordinator
 	pub fn submit_escrow_psbt(
 		psbt: &PartiallySignedTransaction,
 		offer_id_hex: String,
@@ -157,10 +159,10 @@ impl TradeObligationsSatisfied {
 	// if the trader is satisfied he can submit this to signal the coordinator readiness to close the trade
 	// if the other party also submits this the coordinator can initiate the closing transaction, otherwise
 	// escrow has to be initiated
-	pub fn submit(offer_id_hex: &String, trader_config: &TraderSettings) -> Result<()> {
+	pub fn submit(offer_id_hex: &str, trader_config: &TraderSettings) -> Result<()> {
 		let request = TradeObligationsSatisfied {
 			robohash_hex: trader_config.robosats_robohash_hex.clone(),
-			offer_id_hex: offer_id_hex.clone(),
+			offer_id_hex: offer_id_hex.to_string(),
 		};
 
 		let client = reqwest::blocking::Client::new();
@@ -182,6 +184,7 @@ impl TradeObligationsSatisfied {
 }
 
 impl IsOfferReadyRequest {
+	/// polls until the escrow locking transaction is signaled as confirmed by the coordinator. This could also be implemented client side in theory
 	pub fn poll(taker_config: &TraderSettings, offer: &ActiveOffer) -> Result<()> {
 		let request = IsOfferReadyRequest {
 			robohash_hex: taker_config.robosats_robohash_hex.clone(),
@@ -204,11 +207,13 @@ impl IsOfferReadyRequest {
 					res.status()
 				));
 			}
-			// Sleep for 10 sec and poll again
-			sleep(Duration::from_secs(10));
+			// Sleep for 2 sec and poll again
+			sleep(Duration::from_secs(2));
 		}
 	}
 
+	/// polls until the other trader also confirmed happiness, then the payout data required to
+	/// create the partial signature for the keyspend payout is returned
 	pub fn poll_payout(
 		trader_config: &TraderSettings,
 		offer: &ActiveOffer,
@@ -221,8 +226,8 @@ impl IsOfferReadyRequest {
 		let mut res: reqwest::blocking::Response;
 
 		loop {
-			// Sleep for 10 sec and poll
-			sleep(Duration::from_secs(10));
+			// Sleep for 2 sec and poll
+			sleep(Duration::from_secs(2));
 
 			res = client
 				.post(format!(
@@ -268,10 +273,11 @@ impl IsOfferReadyRequest {
 }
 
 impl TradeObligationsUnsatisfied {
-	pub fn request_escrow(offer_id_hex: &String, trader_config: &TraderSettings) -> Result<()> {
+	/// called to request escrow
+	pub fn request_escrow(offer_id_hex: &str, trader_config: &TraderSettings) -> Result<()> {
 		let request = TradeObligationsUnsatisfied {
 			robohash_hex: trader_config.robosats_robohash_hex.clone(),
-			offer_id_hex: offer_id_hex.clone(),
+			offer_id_hex: offer_id_hex.to_string(),
 		};
 
 		let client = reqwest::blocking::Client::new();

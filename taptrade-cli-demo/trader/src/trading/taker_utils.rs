@@ -21,8 +21,7 @@ impl ActiveOffer {
 		let (bond, mut musig_data, payout_address) =
 			trading_wallet.trade_onchain_assembly(&bond_requirements, taker_config)?;
 
-		// now we submit the signed bond transaction to the coordinator and receive the escrow PSBT we have to sign
-		// in exchange
+		// get inputs and a change address necessary for the coordinator to assemble the escrow locking psbt
 		let (bdk_psbt_inputs_hex_csv, client_change_address) =
 			trading_wallet.get_escrow_psbt_inputs(bond_requirements.locking_amount_sat as i64)?;
 
@@ -36,11 +35,15 @@ impl ActiveOffer {
 			bdk_psbt_inputs_hex_csv: bdk_psbt_inputs_hex_csv.clone(),
 			client_change_address: client_change_address.clone(),
 		};
+
+		// now we submit the signed bond transaction to the coordinator and receive the escrow PSBT we have to sign
+		// in exchange
 		let escrow_contract_requirements =
 			OfferPsbtRequest::taker_request(offer, bond_submission_request, taker_config)?;
 
 		let mut escrow_psbt =
 			PartiallySignedTransaction::from_str(&escrow_contract_requirements.escrow_psbt_hex)?;
+
 		// now we have to verify, sign and submit the escrow psbt again
 		trading_wallet
 			.validate_escrow_psbt(&escrow_psbt)?
@@ -53,6 +56,7 @@ impl ActiveOffer {
 			taker_config,
 		)?;
 
+		// offer is now active
 		Ok(ActiveOffer {
 			offer_id_hex: offer.offer_id_hex.clone(),
 			used_musig_config: musig_data,

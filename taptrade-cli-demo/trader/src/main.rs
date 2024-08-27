@@ -8,6 +8,7 @@ use anyhow::{anyhow, Result};
 use cli::CliSettings;
 use log::{debug, error, info, trace, warn};
 
+/// start the according trading mode depending on the CLI input or env variables/.env file [maker or taker]
 fn start_trade_pipeline(cli_input: &CliSettings) -> Result<()> {
 	match cli_input {
 		CliSettings::Maker(maker_config) => trading::run_maker(maker_config),

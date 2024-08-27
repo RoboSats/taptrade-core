@@ -98,54 +98,20 @@ impl TradingWallet {
 		trader_config: &TraderSettings,
 	) -> Result<(PartiallySignedTransaction, MuSigData, AddressInfo)> {
 		let trading_wallet = &self.wallet;
+		// assembles the bond according to the requirements
 		let bond = Bond::assemble(&self.wallet, offer_conditions, trader_config)?;
+
+		// get a new payout address from the trader wallet
 		let payout_address: AddressInfo =
 			trading_wallet.get_address(bdk::wallet::AddressIndex::New)?;
+
+		// generate new musig nonce and keys from the wallet xprv
 		let musig_data = MuSigData::create(&trader_config.wallet_xprv, trading_wallet.secp_ctx())?;
 
 		Ok((bond, musig_data, payout_address))
 	}
 
-	// pub fn get_escrow_psbt(
-	// 	&self,
-	// 	escrow_psbt_requirements: OfferTakenResponse,
-	// 	trader_config: &TraderSettings,
-	// ) -> Result<PartiallySignedTransaction> {
-	// 	let fee_output = Address::from_str(&escrow_psbt_requirements.escrow_tx_fee_address)?
-	// 		.assume_checked()
-	// 		.script_pubkey();
-	// 	let escrow_output = {
-	// 		let temp_wallet = Wallet::new(
-	// 			&escrow_psbt_requirements.escrow_output_descriptor,
-	// 			None,
-	// 			Network::Regtest,
-	// 			MemoryDatabase::new(),
-	// 		)?;
-	// 		temp_wallet.get_address(AddressIndex::New)?.script_pubkey()
-	// 	};
-	// 	self.wallet.sync(&self.backend, SyncOptions::default())?;
-
-	// 	let escrow_amount_sat = match trader_config.trade_type {
-	// 		OfferType::Buy(_) => escrow_psbt_requirements.escrow_amount_taker_sat,
-	// 		OfferType::Sell(_) => escrow_psbt_requirements.escrow_amount_maker_sat,
-	// 	};
-	// 	let (mut psbt, details) = {
-	// 		let mut builder = self.wallet.build_tx();
-	// 		builder
-	// 			.add_recipient(escrow_output, escrow_amount_sat)
-	// 			.add_recipient(
-	// 				fee_output,
-	// 				escrow_psbt_requirements.escrow_fee_sat_per_participant,
-	// 			)
-	// 			.fee_rate(FeeRate::from_sat_per_vb(10.0));
-	// 		builder.finish()?
-	// 	};
-	// 	debug!("Signing escrow psbt.");
-	// 	self.wallet.sign(&mut psbt, SignOptions::default())?;
-	// 	Ok(psbt)
-	// }
-
-	/// returns suitable inputs (hex, csv serialized) and a change address for the assembly of the escrow psbt (coordinator side)
+	/// returns suitable inputs (binary encoded using bincode, hex serialized, csv formatted) and a change address for the assembly of the escrow psbt (coordinator side)
 	pub fn get_escrow_psbt_inputs(&self, mut amount_sat: i64) -> Result<(String, String)> {
 		let mut inputs: Vec<String> = Vec::new();
 
@@ -175,15 +141,7 @@ impl TradingWallet {
 		Ok((serialized_inputs, change_address))
 	}
 
-	// validate that the taker psbt references the correct inputs and amounts
-	// taker input should be the same as in the previous bond transaction.
-	// input amount should be the bond amount when buying,
-	// pub fn validate_taker_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
-	// 	error!("IMPLEMENT TAKER PSBT VALIDATION!");
-	// 	// tbd once the trade psbt is implemented on coordinator side
-	// 	Ok(self)
-	// }
-
+	/// signs the inputs of the passed psbt that are controlled by the bdk wallet of the trader
 	pub fn sign_escrow_psbt(&self, escrow_psbt: &mut PartiallySignedTransaction) -> Result<&Self> {
 		// we need to finalize here too to make finalizing on the coordinator side work
 		let sign_options = SignOptions {
@@ -198,16 +156,14 @@ impl TradingWallet {
 	pub fn validate_escrow_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
 		warn!("IMPLEMENT MAKER PSBT VALIDATION for production use!");
 		// validate: change output address, amounts, fee
-		// tbd once the trade psbt is implemented on coordinator side
-
+		// tbd
 		Ok(self)
 	}
 
 	pub fn validate_payout_psbt(&self, psbt: &PartiallySignedTransaction) -> Result<&Self> {
 		warn!("IMPLEMENT PAYOUT PSBT VALIDATION for production use!");
 		// validate: change output address, amounts, fee
-		// tbd once the trade psbt is implemented on coordinator side
-
+		// tbd
 		Ok(self)
 	}
 
@@ -220,7 +176,6 @@ impl TradingWallet {
 		agg_pub_nonce: AggNonce,
 		local_musig_state: MuSigData,
 	) -> Result<String> {
-		// let tweak = validated_payout_psbt.spend_info()?;
 		let mut sig_hash_cache = SighashCache::new(&validated_payout_psbt.unsigned_tx);
 
 		let utxo = validated_payout_psbt
@@ -235,11 +190,13 @@ impl TradingWallet {
 			.taproot_key_spend_signature_hash(0, &Prevouts::All(&[utxo]), sighash_type)
 			.context("Failed to create keyspend sighash")?;
 		let raw_sig_hash = binding.to_raw_hash();
-		// let keyspend_sig_hash_msg = binding.as_byte_array();
 
+		// get secret nonce from trader musig state
 		let secret_nonce = local_musig_state.nonce.get_sec_for_signing()?;
+		// get secret key from trade musig state
 		let seckey = local_musig_state.secret_key;
 
+		// create partial signature for the taproot keyspend signature hash of the payout psbt
 		let keyspend_sig: musig2::PartialSignature = musig2::sign_partial(
 			&key_agg_context,
 			seckey,
@@ -250,9 +207,7 @@ impl TradingWallet {
 
 		match keyspend_sig {
 			MaybeScalar::Valid(s) => Ok(s.encode_hex()),
-			MaybeScalar::Zero => {
-				Err(anyhow!("keyspend sig maybe scalar is Zero"))
-			}
+			MaybeScalar::Zero => Err(anyhow!("keyspend sig maybe scalar is Zero")),
 		}
 	}
 }
