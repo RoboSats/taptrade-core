@@ -776,7 +776,7 @@ impl CoordinatorDB {
 		let escrow_fee_per_participant: u64 =
 			(amount_sat as f64 * (coordinator_feerate / 100.0)) as u64;
 
-		let (escrow_amount_maker_sat, escrow_amount_taker_sat) = if is_buy_order {
+		let (escrow_amount_maker_sat, escrow_amount_taker_sat) = if !is_buy_order {
 			(amount_sat + bond_amount_sat, bond_amount_sat)
 		} else {
 			(bond_amount_sat, amount_sat + bond_amount_sat)
@@ -815,7 +815,7 @@ impl CoordinatorDB {
 	/// fetch the data required to construct the musig keyspend payout transaction to be signed by the traders on payout initialization
 	pub async fn fetch_payout_data(&self, trade_id: &str) -> Result<PayoutData> {
 		let row = sqlx::query(
-			"SELECT escrow_output_descriptor, payout_address_maker,
+			"SELECT is_buy_order, escrow_output_descriptor, payout_address_maker,
 			payout_address_taker, musig_pub_nonce_hex_maker, musig_pub_nonce_hex_taker,
 			escrow_amount_maker_sat, escrow_amount_taker_sat, musig_pubkey_compressed_hex_maker,
 			musig_pubkey_compressed_hex_taker
@@ -831,8 +831,18 @@ impl CoordinatorDB {
 		let payout_address_taker = row.try_get("payout_address_taker")?;
 		let musig_pub_nonce_hex_maker: &str = row.try_get("musig_pub_nonce_hex_maker")?;
 		let musig_pub_nonce_hex_taker: &str = row.try_get("musig_pub_nonce_hex_taker")?;
-		let payout_amount_maker: u64 = row.try_get::<i64, _>("escrow_amount_maker_sat")? as u64;
-		let payout_amount_taker: u64 = row.try_get::<i64, _>("escrow_amount_taker_sat")? as u64;
+		// this hack needs a better solution
+		let (payout_amount_maker, payout_amount_taker) = if row.get::<i64, _>("is_buy_order") == 1 {
+			(
+				row.get::<i64, _>("escrow_amount_taker_sat") as u64,
+				row.get::<i64, _>("escrow_amount_maker_sat") as u64,
+			)
+		} else {
+			(
+				row.get::<i64, _>("escrow_amount_maker_sat") as u64,
+				row.get::<i64, _>("escrow_amount_taker_sat") as u64,
+			)
+		};
 		let musig_pubkey_hex_maker: &str = row.try_get("musig_pubkey_compressed_hex_maker")?;
 		let musig_pubkey_hex_taker: &str = row.try_get("musig_pubkey_compressed_hex_taker")?;
 
