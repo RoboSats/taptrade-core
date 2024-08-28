@@ -1021,7 +1021,7 @@ impl CoordinatorDB {
 
 	// set the winning robohash in the db
 	pub async fn resolve_escrow(&self, offer_id: &str, winner_robohash: &str) -> Result<()> {
-		sqlx::query("UPDATE taken_offers SET escrow_winner_robohash = ? WHERE offer_id = ?")
+		sqlx::query("UPDATE taken_offers SET escrow_ongoing = 0, escrow_winner_robohash = ? WHERE offer_id = ?")
 			.bind(winner_robohash)
 			.bind(offer_id)
 			.execute(&*self.db_pool)
