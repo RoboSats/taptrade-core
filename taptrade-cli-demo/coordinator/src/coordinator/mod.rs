@@ -1,5 +1,6 @@
 pub mod bond_monitoring;
 pub mod coordinator_utils;
+pub mod escrow_cli;
 pub mod mempool_monitoring;
 pub mod tx_confirmation_monitoring;
 // pub mod create_taproot;
@@ -384,6 +385,7 @@ pub async fn handle_final_payout(
 		}
 	} else {
 		// this will be returned if the coordinator hasn't decided yet
+		trace!("Escrow winner not yet chosen");
 		Ok(PayoutProcessingResult::DecidingEscrow)
 	}
 }

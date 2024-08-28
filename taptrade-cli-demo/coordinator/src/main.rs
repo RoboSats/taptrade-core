@@ -35,7 +35,8 @@ use bdk::{
 use chrono::Local;
 use communication::{api::*, api_server, communication_utils::*, handler_errors::*};
 use coordinator::{
-	bond_monitoring::*, coordinator_utils::*, mempool_monitoring::MempoolHandler,
+	bond_monitoring::*, coordinator_utils::*, escrow_cli::escrow_cli_loop,
+	mempool_monitoring::MempoolHandler,
 	tx_confirmation_monitoring::update_transaction_confirmations, *,
 };
 use database::CoordinatorDB;
@@ -125,6 +126,10 @@ async fn main() -> Result<()> {
 	// begin monitoring escrow transactions confirmations
 	let coordinator_ref = Arc::clone(&coordinator);
 	tokio::spawn(async move { update_transaction_confirmations(coordinator_ref).await });
+
+	// begin monitoring escrow requests
+	let db_ref = Arc::clone(&coordinator.coordinator_db);
+	tokio::spawn(async move { escrow_cli_loop(db_ref).await });
 
 	// Start the API server
 	api_server(coordinator).await?;

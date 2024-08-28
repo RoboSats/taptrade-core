@@ -236,6 +236,10 @@ impl IsOfferReadyRequest {
 				))
 				.json(&request)
 				.send()?;
+			debug!(
+				"Polling for final payout... Response status: {}",
+				res.status()
+			);
 			if res.status() == 200 {
 				// good case, psbt is returned
 				debug!("Payout psbt received. Signing...");
@@ -243,9 +247,9 @@ impl IsOfferReadyRequest {
 			} else if res.status() == 202 {
 				// still waiting, retry
 				continue;
-			} else if res.status() == 102 {
-				// other party initiated escrow
-				debug!("Other party initiated escrow. Waiting for coordinator to finalize.");
+			} else if res.status() == 201 {
+				// Escrow ongoing
+				debug!("Escrow ongoing, awaiting coordinator decision. Waiting for coordinator to finalize.");
 				continue;
 			} else if res.status() != 410 {
 				return Err(anyhow!(

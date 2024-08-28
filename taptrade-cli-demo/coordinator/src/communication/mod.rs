@@ -210,13 +210,13 @@ async fn poll_final_payout(
 	Extension(coordinator): Extension<Arc<Coordinator>>,
 	Json(payload): Json<OfferTakenRequest>,
 ) -> Result<Response, AppError> {
-	match handle_final_payout(&payload, coordinator).await {
+	let response = match handle_final_payout(&payload, coordinator).await {
 		Ok(PayoutProcessingResult::NotReady) => Ok(StatusCode::ACCEPTED.into_response()),
 		Ok(PayoutProcessingResult::LostEscrow) => Ok(StatusCode::GONE.into_response()),
 		Ok(PayoutProcessingResult::ReadyPSBT(psbt_and_nonce)) => {
 			Ok(Json(psbt_and_nonce).into_response())
 		}
-		Ok(PayoutProcessingResult::DecidingEscrow) => Ok(StatusCode::PROCESSING.into_response()),
+		Ok(PayoutProcessingResult::DecidingEscrow) => Ok(StatusCode::CREATED.into_response()),
 		Err(RequestError::NotConfirmed) => {
 			info!("Offer tx for final payout not confirmed");
 			Ok(StatusCode::NOT_ACCEPTABLE.into_response())
@@ -237,7 +237,9 @@ async fn poll_final_payout(
 			error!("Unknown error handling poll_final_payout(): {:?}", e);
 			Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response())
 		}
-	}
+	};
+	debug!("\nPayout response: {:?}", response);
+	response
 }
 
 /// recieves the partial signature for the keyspend payout transaction

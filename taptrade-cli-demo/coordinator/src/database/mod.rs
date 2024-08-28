@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod db_tests;
 
+use escrow_cli::EscrowCase;
+
 use super::*;
 
 #[derive(Clone, Debug)]
@@ -750,7 +752,10 @@ impl CoordinatorDB {
 
 		let winner_robohash: Option<String> =
 			row.try_get::<Option<String>, _>("escrow_winner_robohash")?;
-
+		trace!(
+			"Escrow winner robohash fetched from db: {:?}",
+			winner_robohash,
+		);
 		Ok(winner_robohash)
 	}
 
@@ -988,6 +993,36 @@ impl CoordinatorDB {
 	/// deletes a finished offer from the database 🎉
 	pub async fn delete_complete_offer(&self, offer_id: &str) -> Result<()> {
 		sqlx::query("DELETE FROM taken_offers WHERE offer_id = ?")
+			.bind(offer_id)
+			.execute(&*self.db_pool)
+			.await?;
+		Ok(())
+	}
+
+	/// fetch entries with escrow awaiting flag to request cli input
+	pub async fn get_open_escrows(&self) -> Result<Vec<EscrowCase>> {
+		let escrows = sqlx::query(
+			"SELECT offer_id, robohash_maker, robohash_taker
+			FROM taken_offers WHERE escrow_ongoing = 1",
+		)
+		.fetch_all(&*self.db_pool)
+		.await?;
+
+		let mut escrow_cases = Vec::new();
+		for escrow in escrows {
+			escrow_cases.push(EscrowCase {
+				offer_id: escrow.get("offer_id"),
+				maker_id: hex::encode(escrow.get::<Vec<u8>, _>("robohash_maker")),
+				taker_id: hex::encode(escrow.get::<Vec<u8>, _>("robohash_taker")),
+			});
+		}
+		Ok(escrow_cases)
+	}
+
+	// set the winning robohash in the db
+	pub async fn resolve_escrow(&self, offer_id: &str, winner_robohash: &str) -> Result<()> {
+		sqlx::query("UPDATE taken_offers SET escrow_winner_robohash = ? WHERE offer_id = ?")
+			.bind(winner_robohash)
 			.bind(offer_id)
 			.execute(&*self.db_pool)
 			.await?;

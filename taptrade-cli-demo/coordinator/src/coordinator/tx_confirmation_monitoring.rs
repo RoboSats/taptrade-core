@@ -48,7 +48,7 @@ fn get_confirmations(
 		};
 		if let Some(confirmations) = tx_info.confirmations {
 			debug!(
-				"Transaction {} in now confirmed with {} confirmations",
+				"Transaction {} is now confirmed with {} confirmations",
 				&txid, confirmations
 			);
 			if confirmations > 3 {
