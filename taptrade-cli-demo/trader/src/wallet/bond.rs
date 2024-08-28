@@ -99,6 +99,7 @@ mod tests {
 		let bond_target = BondRequirementResponse {
 			bond_address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx".to_string(),
 			locking_amount_sat: 10000,
+			escrow_locking_input_amount_without_trade_sum: 10000,
 		};
 		let trader_input = TraderSettings {
 			electrum_endpoint: "ssl://mempool.space:40002".to_string(),
@@ -123,6 +124,7 @@ mod tests {
 		let bond_target = BondRequirementResponse {
 			bond_address: "invalid_address".to_string(),
 			locking_amount_sat: 10000,
+			escrow_locking_input_amount_without_trade_sum: 10000,
 		};
 		let trader_input = TraderSettings {
 			electrum_endpoint: "ssl://mempool.space:40002".to_string(),
@@ -148,6 +150,7 @@ mod tests {
 			bond_address: "bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297"
 				.to_string(),
 			locking_amount_sat: 10000,
+			escrow_locking_input_amount_without_trade_sum: 10000,
 		};
 		let trader_input = TraderSettings {
 			electrum_endpoint: "ssl://mempool.space:40002".to_string(),
@@ -172,6 +175,7 @@ mod tests {
 		let bond_target = BondRequirementResponse {
 			bond_address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx".to_string(),
 			locking_amount_sat: 10000000000, // Very high amount
+			escrow_locking_input_amount_without_trade_sum: 10000,
 		};
 		let trader_input = TraderSettings {
 			electrum_endpoint: "ssl://mempool.space:40002".to_string(),
@@ -196,6 +200,7 @@ mod tests {
 		let bond_target = BondRequirementResponse {
 			bond_address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx".to_string(),
 			locking_amount_sat: 0,
+			escrow_locking_input_amount_without_trade_sum: 10000,
 		};
 		let trader_input = TraderSettings {
 			electrum_endpoint: "ssl://mempool.space:40002".to_string(),

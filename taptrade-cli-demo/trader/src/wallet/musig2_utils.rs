@@ -7,7 +7,7 @@
 /// nonce, as well as flags indicating whether it has been accessed for signing or sharing.
 ///
 /// The `generate` function in the `MusigNonce` implementation generates a new `MusigNonce` with a
-/// secret nonce based on the current timestamp.
+/// secret nonce based on the os rng salted with the current timestamp.
 ///
 /// The `get_sec_for_signing` function in the `MusigNonce` implementation returns the secret nonce
 /// for signing, ensuring that it has not been accessed for signing before.
@@ -39,7 +39,7 @@ pub struct MuSigData {
 	pub secret_key: MusigSecretKey,
 }
 
-// secret nonce has to be used only one time!
+/// nonce must not be used more than once
 #[derive(Debug)]
 pub struct MusigNonce {
 	secret_nonce: SecNonce,

@@ -35,6 +35,6 @@ lto = true
 opt-level = 3
 strip = true
 
-[lib]
-name = "coordinator"
-path = "src/main.rs"
+# [lib]
+# name = "coordinator"
+# path = "src/main.rs"

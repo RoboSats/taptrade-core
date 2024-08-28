@@ -13,10 +13,11 @@ pub struct OrderRequest {
 
 // coordinator answer to maker step 1
 // direct Json answer to step 1 (same request)
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct BondRequirementResponse {
 	pub bond_address: String, // address the bond ha/workspaces/taptrade-core/taptrade-cli-demo/trader/src/communications to be locked to
 	pub locking_amount_sat: u64, // min amount of the bond output in sat
+	pub escrow_locking_input_amount_without_trade_sum: u64, // minimum required amount of input to the escrow tx
 }
 
 // maker step 2
@@ -76,8 +77,7 @@ pub struct PublicOffers {
 pub struct PublicOffer {
 	pub amount_sat: u64,
 	pub offer_id_hex: String,
-	pub required_bond_amount_sat: u64,
-	pub bond_locking_address: String, // its probably bad privacy to make the locking address static
+	pub bond_requirements: BondRequirementResponse,
 }
 
 // request to receive the escrow psbt to sign for the specified offer to take it

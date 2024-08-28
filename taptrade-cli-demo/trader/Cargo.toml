@@ -13,8 +13,8 @@ hex = "0.4.3"
 log = "0.4.21"
 musig2 = "0.0.11"
 rand_core = "0.6.4"
-reqwest = { version = "0.12.4", features = ["blocking", "json"] }
-serde = "1.0.203"
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+serde = "1.0"
 sha2 = "0.10.8"
 
 [profile.release]

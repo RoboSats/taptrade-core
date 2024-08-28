@@ -18,6 +18,7 @@ struct AwaitingBondOffer {
 	offer_duration_ts: u64,
 	bond_address: String,
 	bond_amount_sat: u64,
+	escrow_locking_input_amount_without_trade_sum: u64,
 }
 
 #[derive(PartialEq, Debug)]
@@ -78,7 +79,8 @@ impl CoordinatorDB {
 					bond_ratio INTEGER NOT NULL,
 					offer_duration_ts INTEGER NOT NULL,
 					bond_address TEXT NOT NULL,
-					bond_amount_sat INTEGER NOT NULL
+					bond_amount_sat INTEGER NOT NULL,
+					escrow_locking_input_amount_without_trade_sum INTEGER NOT NULL
 				)",
 		)
 		.execute(&db_pool)
@@ -96,6 +98,7 @@ impl CoordinatorDB {
 				offer_duration_ts INTEGER NOT NULL,
 				bond_address TEXT NOT NULL,
 				bond_amount_sat INTEGER NOT NULL,
+				escrow_locking_input_amount_without_trade_sum INTEGER,
 				bond_tx_hex TEXT NOT NULL,
 				payout_address TEXT NOT NULL,
 				change_address_maker TEXT NOT NULL,
@@ -169,8 +172,8 @@ impl CoordinatorDB {
 	) -> Result<()> {
 		sqlx::query(
 			"INSERT OR REPLACE INTO maker_requests (robohash, is_buy_order, amount_sat,
-					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat)
-					VALUES (?, ?, ?, ?, ?, ?, ?)",
+					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, escrow_locking_input_amount_without_trade_sum)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(hex::decode(&order.robohash_hex)?)
 		.bind(bool_to_sql_int(order.is_buy_order))
@@ -179,6 +182,7 @@ impl CoordinatorDB {
 		.bind(order.offer_duration_ts as i64)
 		.bind(bond_requirements.bond_address.clone())
 		.bind(bond_requirements.locking_amount_sat as i64)
+		.bind(bond_requirements.escrow_locking_input_amount_without_trade_sum as i64)
 		.execute(&*self.db_pool)
 		.await?;
 
@@ -207,7 +211,7 @@ impl CoordinatorDB {
 		robohash_hex: &str,
 	) -> Result<AwaitingBondOffer> {
 		let fetched_values = sqlx::query_as::<_, (Vec<u8>, bool, i64, u8, i64, String, i64)> (
-			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat FROM maker_requests WHERE robohash = ?",
+			"SELECT robohash, is_buy_order, amount_sat, bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, escrow_locking_input_amount_without_trade_sum FROM maker_requests WHERE robohash = ?",
 		)
 		.bind(hex::decode(robohash_hex)?)
 		.fetch_one(&*self.db_pool)
@@ -226,6 +230,7 @@ impl CoordinatorDB {
 			offer_duration_ts: fetched_values.4 as u64,
 			bond_address: fetched_values.5,
 			bond_amount_sat: fetched_values.6 as u64,
+			escrow_locking_input_amount_without_trade_sum: fetched_values.6 as u64,
 		};
 		debug!(
 			"Deleted offer from maker_requests table. Fetched offer: {:#?}",
@@ -252,8 +257,8 @@ impl CoordinatorDB {
 		sqlx::query(
 			"INSERT OR REPLACE INTO active_maker_offers (offer_id, robohash, is_buy_order, amount_sat,
 					bond_ratio, offer_duration_ts, bond_address, bond_amount_sat, bond_tx_hex, payout_address, taproot_pubkey_hex_maker, musig_pub_nonce_hex, musig_pubkey_hex, taker_bond_address,
-					change_address_maker, escrow_inputs_hex_maker_csv)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					change_address_maker, escrow_inputs_hex_maker_csv, escrow_locking_input_amount_without_trade_sum)
+					VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		)
 		.bind(offer_id)
 		.bind(hex::decode(&data.robohash_hex)?)
@@ -271,6 +276,7 @@ impl CoordinatorDB {
 		.bind(taker_bond_address)
 		.bind(data.client_change_address.clone())
 		.bind(data.bdk_psbt_inputs_hex_csv.clone())
+		.bind(remaining_offer_information.escrow_locking_input_amount_without_trade_sum as i64)
 		.execute(&*self.db_pool)
 		.await?;
 
@@ -287,8 +293,8 @@ impl CoordinatorDB {
 			"Fetching suitable offers from db. Specification: {:#?}",
 			requested_offer
 		);
-		let fetched_offers = sqlx::query_as::<_, (String, i64, i64, String)> (
-            "SELECT offer_id, amount_sat, bond_amount_sat, taker_bond_address FROM active_maker_offers WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
+		let fetched_offers = sqlx::query_as::<_, (String, i64, i64, String, i64)> (
+            "SELECT offer_id, amount_sat, bond_amount_sat, taker_bond_address, escrow_locking_input_amount_without_trade_sum FROM active_maker_offers WHERE is_buy_order = ? AND amount_sat BETWEEN ? AND ?",
         )
         .bind(requested_offer.buy_offers)
         .bind(requested_offer.amount_min_sat as i64)
@@ -299,11 +305,16 @@ impl CoordinatorDB {
 		let available_offers: Vec<PublicOffer> = fetched_offers
 			.into_iter()
 			.map(
-				|(offer_id_hex, amount_sat, bond_amount_sat, bond_address_taker)| PublicOffer {
-					offer_id_hex,
-					amount_sat: amount_sat as u64,
-					required_bond_amount_sat: bond_amount_sat as u64,
-					bond_locking_address: bond_address_taker,
+				|(offer_id_hex, amount_sat, bond_amount_sat, bond_address_taker, min_inputs)| {
+					PublicOffer {
+						offer_id_hex,
+						amount_sat: amount_sat as u64,
+						bond_requirements: BondRequirementResponse {
+							bond_address: bond_address_taker,
+							locking_amount_sat: bond_amount_sat as u64,
+							escrow_locking_input_amount_without_trade_sum: min_inputs as u64,
+						},
+					}
 				},
 			)
 			.collect();
@@ -400,7 +411,7 @@ impl CoordinatorDB {
 			.bind(public_offer.bond_ratio)
 			.bind(public_offer.offer_duration_ts)
 			.bind(public_offer.bond_address_maker)
-			.bind(trade_and_taker_info.offer.bond_locking_address.clone())
+			.bind(trade_and_taker_info.offer.bond_requirements.bond_address.clone())
 			.bind(public_offer.bond_amount_sat)
 			.bind(public_offer.bond_tx_hex_maker)
 			.bind(trade_and_taker_info.trade_data.signed_bond_hex.clone())

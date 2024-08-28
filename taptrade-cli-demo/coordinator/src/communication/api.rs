@@ -86,10 +86,11 @@ pub struct OfferRequest {
 	pub offer_duration_ts: u64, // unix timestamp how long the offer should stay available
 }
 
-#[derive(Serialize, PartialEq, Debug, Validate)]
+#[derive(Serialize, PartialEq, Debug, Validate, Deserialize)]
 pub struct BondRequirementResponse {
 	pub bond_address: String,
 	pub locking_amount_sat: u64, // min amount of the bond output in sat
+	pub escrow_locking_input_amount_without_trade_sum: u64,
 }
 
 // maker step 2
@@ -124,8 +125,7 @@ pub struct OffersRequest {
 pub struct PublicOffer {
 	pub amount_sat: u64,
 	pub offer_id_hex: String,
-	pub required_bond_amount_sat: u64,
-	pub bond_locking_address: String,
+	pub bond_requirements: BondRequirementResponse,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

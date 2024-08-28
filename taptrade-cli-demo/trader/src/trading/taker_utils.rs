@@ -12,18 +12,23 @@ impl ActiveOffer {
 		taker_config: &TraderSettings,
 		offer: &PublicOffer,
 	) -> Result<ActiveOffer> {
-		let bond_requirements = BondRequirementResponse {
-			bond_address: offer.bond_locking_address.clone(),
-			locking_amount_sat: offer.required_bond_amount_sat,
-		};
-
 		// assembly of the Bond transaction and generation of MuSig data and payout address
 		let (bond, mut musig_data, payout_address) =
-			trading_wallet.trade_onchain_assembly(&bond_requirements, taker_config)?;
+			trading_wallet.trade_onchain_assembly(&offer.bond_requirements, taker_config)?;
 
 		// get inputs and a change address necessary for the coordinator to assemble the escrow locking psbt
+		let input_amount = if taker_config.trade_type.is_buy_order() {
+			offer
+				.bond_requirements
+				.escrow_locking_input_amount_without_trade_sum
+		} else {
+			offer
+				.bond_requirements
+				.escrow_locking_input_amount_without_trade_sum
+				+ taker_config.trade_type.value()
+		};
 		let (bdk_psbt_inputs_hex_csv, client_change_address) =
-			trading_wallet.get_escrow_psbt_inputs(bond_requirements.locking_amount_sat as i64)?;
+			trading_wallet.get_escrow_psbt_inputs(input_amount)?;
 
 		let bond_submission_request = BondSubmissionRequest {
 			robohash_hex: taker_config.robosats_robohash_hex.clone(),

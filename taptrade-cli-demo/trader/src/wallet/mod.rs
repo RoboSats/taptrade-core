@@ -112,7 +112,8 @@ impl TradingWallet {
 	}
 
 	/// returns suitable inputs (binary encoded using bincode, hex serialized, csv formatted) and a change address for the assembly of the escrow psbt (coordinator side)
-	pub fn get_escrow_psbt_inputs(&self, mut amount_sat: i64) -> Result<(String, String)> {
+	pub fn get_escrow_psbt_inputs(&self, amount_sat: u64) -> Result<(String, String)> {
+		let mut amount_sat = amount_sat as i64; // convert to signed int for subtraction
 		let mut inputs: Vec<String> = Vec::new();
 
 		self.wallet.sync(&self.backend, SyncOptions::default())?;

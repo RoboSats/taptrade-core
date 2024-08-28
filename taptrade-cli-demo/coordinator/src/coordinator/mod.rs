@@ -15,31 +15,23 @@ pub async fn process_order(
 	let wallet = &coordinator.coordinator_wallet;
 	let database = &coordinator.coordinator_db;
 
-	// the client also uses this amount to select inputs for the escrow psbt, this could be separated
-	// to make the required bond amount lower without causing the client to return too small inputs
-	// 5000 is the abs tx fee used in the escrow psbt per trader
-	panic!("This is borked");
-	let coordinator_feerate = (coordinator.coordinator_wallet.coordinator_feerate
-		* offer.amount_satoshi as f64) as u64
-		/ 100;
-	let locking_amount_sat = match offer.is_buy_order {
-		true => {
-			5000 + coordinator_feerate + offer.amount_satoshi * u64::from(offer.bond_ratio) / 100
-		}
-		false => {
-			(offer.amount_satoshi * u64::from(offer.bond_ratio) / 100)
-				+ offer.amount_satoshi
-				+ 5000 + coordinator_feerate
-		}
-	};
+	let bond_amount = (offer.bond_ratio as u64 * offer.amount_satoshi) / 100;
+	let coordinator_fee = ((coordinator.coordinator_wallet.coordinator_feerate
+		* offer.amount_satoshi as f64)
+		/ 100.0) as u64;
+	let absolute_tx_fee = 5000;
+	// 5000 is a buffer
+	let escrow_locking_input_amount_without_trade_sum =
+		bond_amount + coordinator_fee + absolute_tx_fee + 5000;
 	trace!(
 		"Offer amount: {}, Locking amount: {}",
 		offer.amount_satoshi,
-		locking_amount_sat
+		bond_amount
 	);
 	let bond_requirements = BondRequirementResponse {
 		bond_address: wallet.get_new_address().await?,
-		locking_amount_sat,
+		locking_amount_sat: bond_amount,
+		escrow_locking_input_amount_without_trade_sum,
 	};
 
 	database

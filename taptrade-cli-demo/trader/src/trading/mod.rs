@@ -69,7 +69,7 @@ pub fn run_maker(maker_config: &TraderSettings) -> Result<()> {
 			)?;
 		// submit signed payout psbt back to coordinator
 		PayoutSignatureRequest::send(maker_config, &signature, &offer.offer_id_hex)?;
-	// now the coordinator will broadcast the payout transaction and the trade should be finished
+		debug!("now the coordinator will broadcast the payout transaction and the trade should be finished");
 	} else {
 		warn!("Trader unsatisfied. Initiating escrow mode.");
 		TradeObligationsUnsatisfied::request_escrow(&offer.offer_id_hex, maker_config)?;
@@ -122,7 +122,7 @@ pub fn run_taker(taker_config: &TraderSettings) -> Result<()> {
 
 		// submit partial signature back to coordinator
 		PayoutSignatureRequest::send(taker_config, &signature, &accepted_offer.offer_id_hex)?;
-	// now the coordinator will broadcast the payout transaction and the trade should be finished
+		debug!("now the coordinator will broadcast the payout transaction and the trade should be finished");
 	// here we need to handle if the other party is not cooperating
 	} else {
 		error!("Trader unsatisfied. Initiating escrow mode.");

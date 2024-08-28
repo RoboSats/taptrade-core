@@ -20,8 +20,14 @@ impl ActiveOffer {
 			trading_wallet.trade_onchain_assembly(&offer_conditions, maker_config)?;
 
 		// get necessary data for the coordinator to assemble the escrow locking psbt (inputs owned by maker, change address)
+		let input_amount = if maker_config.trade_type.is_buy_order() {
+			offer_conditions.escrow_locking_input_amount_without_trade_sum
+		} else {
+			offer_conditions.escrow_locking_input_amount_without_trade_sum
+				+ maker_config.trade_type.value()
+		};
 		let (psbt_inputs_hex_csv, escrow_change_address) =
-			trading_wallet.get_escrow_psbt_inputs(offer_conditions.locking_amount_sat as i64)?;
+			trading_wallet.get_escrow_psbt_inputs(input_amount)?;
 
 		debug!(
 			"Submitting maker bond: {:#?}",
