@@ -156,7 +156,7 @@ To see the transactions better you can load the [XPRVs](https://river.com/learn/
 
 ## Contribution
 This is an open source project under MIT license. Feel free to open PRs and ask questions in the
-SimpleX group chat.
+[SimpleX group chat](https://simplex.chat/contact#/?v=2-5&smp=smp%3A%2F%2FenEkec4hlR3UtKx2NMpOUK_K4ZuDxjWBO1d9Y4YXVaA%3D%40smp14.simplex.im%2Fl9ZKkZObVUivB5n0xviB9Rjdl2t_him7%23%2F%3Fv%3D1-2%26dh%3DMCowBQYDK2VuAyEA-hV3pNDT2b1DZWoIyJ4NLFMTFyMnTTL-RzUFMzPQ9Qk%253D%26srv%3Daspkyu2sopsnizbyfabtsicikr2s4r3ti35jogbcekhm3fsoeyjvgrid.onion&data=%7B%22type%22%3A%22group%22%2C%22groupLinkId%22%3A%22ANU9ku4FkNjsggzUTmpYsQ%3D%3D%22%7D).
 
 ## Resources
 There are many ressources and thoughts documented in an [Obsidian](https://obsidian.md/) vault in this repo at [./docs/Obsidian](./docs/Obsidian/)
